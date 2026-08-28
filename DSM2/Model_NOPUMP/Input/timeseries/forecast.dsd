@@ -1,0 +1,24 @@
+
+     HECDSS Condensed Catalog of Record Pathnames in File C:\Users\lamanuel\Documents\github\STN_DSM2\Model_NOPUMP\Input\t
+
+     Catalog Created on Aug 19, 2026 at 16:09    File Created on Aug 12, 2026
+     Number of Records:     15                   DSS Version 6-WE,  File 6-KE
+     Sort Order: ABCFED
+
+ Tag  A Part     B Part    C Part          F Part             E Part   D Part
+
+ T1   FORE+CHAN  BYOLO040  FLOW            DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    CHCCC006  FLOW-DIVERSION  DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    CHDMC004  FLOW-EXPORT     DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    CHSWP003  FLOW-EXPORT     DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    CHVCT001  FLOW-EXPORT     DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    CHWST000  FLOW-ALLOTMENT  DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    - - - -   FLOW-MAX        DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    RCAL009   FLOW            DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    RCSM075   FLOW            DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    RMKL070   FLOW            DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    ROLD034   FLOW-EXPORT     DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    RSAC155   FLOW            DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    RSAN112   FLOW            DSM2-20260811-21A  1DAY     01JAN2026
+ T1   - - - -    SLBAR002  FLOW-EXPORT     DSM2-20260811-21A  1DAY     01JAN2026
+ T1   FORE+GATE  CHWST000  POS             DSM2-20260811-21A  IR-YEAR  01JAN2026

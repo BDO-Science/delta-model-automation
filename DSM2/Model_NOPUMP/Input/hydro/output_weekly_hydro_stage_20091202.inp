@@ -1,0 +1,12 @@
+# Description:
+# Stage text file for temp barrier DSM2 runs
+## sanity check output
+#	stage elevations at 3 upstream of the AG barriers location produced
+#	in 'stage.txt' (sent to 'output' folder with new geometry setup
+OUTPUT_CHANNEL
+NAME    CHAN_NO   DISTANCE        VARIABLE INTERVAL PERIOD_OP FILE              
+71_0	   71     0      	  stage     15min   inst      ${DSM2OUTPUTDIR}/${DSM2MODIFIER}stage.txt
+129_0     129     0     	  stage     15min   inst      ${DSM2OUTPUTDIR}/${DSM2MODIFIER}stage.txt
+205_4630  205     length          stage     15min   inst      ${DSM2OUTPUTDIR}/${DSM2MODIFIER}stage.txt
+183_0     183	  0	          stage	    15min   inst      ${DSM2OUTPUTDIR}/${DSM2MODIFIER}stage.txt
+END

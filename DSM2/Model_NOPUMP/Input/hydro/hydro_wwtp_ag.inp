@@ -1,0 +1,11 @@
+# wwtp input
+BOUNDARY_FLOW
+NAME      NODE SIGN FILLIN FILE                                     PATH                                                               
+#sac_wwtp   335    1 last   ./timeseries/wwtp_flow.dss   /hist+chan/sacr_wwtp/flow//1DAY/DWR-DMS/       
+#stockton_wwtp   15    1 last   ./timeseries/wwtp_flow.dss   /hist+chan/stoc_wwtp/flow//1DAY/DWR-DMS/                     
+#manteca_wwtp       6    1 last   ./timeseries/wwtp_flow.dss   /hist+chan/mant_wwtp/flow//1DAY/DWR-DMS/ 
+sac_wwtp   335    1 last   constant   160      
+stockton_wwtp   15    1 last   constant   45                    
+manteca_wwtp       6    1 last  constant   10 
+sjr_drainage    4   1   last constant  50                     
+END

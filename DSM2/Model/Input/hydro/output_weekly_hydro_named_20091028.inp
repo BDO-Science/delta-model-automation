@@ -1,0 +1,73 @@
+# Description:
+# Standard output for HYDRO at common-named locations. Do not create common names redundant with stations with prescribed RKIs.
+OUTPUT_CHANNEL
+NAME              CHAN_NO DISTANCE VARIABLE INTERVAL       PERIOD_OP   FILE              
+#weekly stage output
+ccfb2200	   218	  2200      stage     ${FINE_OUT}   inst	${WEEKLYSTAGE}
+chgrl012	   204	  1672      stage     ${FINE_OUT}   inst	${WEEKLYSTAGE}
+chgrl205	   205	  3000      stage     ${FINE_OUT}   inst	${WEEKLYSTAGE}
+rmid129		   129	  3000      stage     ${FINE_OUT}   inst	${WEEKLYSTAGE}
+rold047		   79	  2766      stage     ${FINE_OUT}   inst	${WEEKLYSTAGE}
+rold059		   71	  3116      stage     ${FINE_OUT}   inst	${WEEKLYSTAGE}
+#weekly Freeport output
+rsac155		  414    11921      flow       1HOUR	    ave 	${FREEPORTFLOW}
+rsac155		  414    11921      stage      1HOUR	    ave 	${FREEPORTFLOW}
+#RMA weekly output
+CHSWP003RMA	  82	length	    flow      ${FINE_OUT}   inst	${RMAOUTPUT}
+CHSWP003RMA	  82	length	    stage     ${FINE_OUT}   inst	${RMAOUTPUT}
+RMID015_144RMA    144	838         flow      ${FINE_OUT}   inst	${RMAOUTPUT}
+ROLD024RMA        106	2718        flow      ${FINE_OUT}   inst	${RMAOUTPUT}
+ROLD024RMA        106	2718        stage     ${FINE_OUT}   inst	${RMAOUTPUT}
+365_DCC_RMA       365   length      flow      ${FINE_OUT}   inst	${RMAOUTPUT}
+365_DCC_RMA       365   length      stage     ${FINE_OUT}   inst	${RMAOUTPUT}
+512_0_RMA         512   0           flow      ${FINE_OUT}   inst	${RMAOUTPUT}
+512_0_RMA         512   0           stage     ${FINE_OUT}   inst	${RMAOUTPUT}
+513_0_RMA         513   0           flow      ${FINE_OUT}   inst	${RMAOUTPUT}
+513_0_RMA         513   0           stage     ${FINE_OUT}   inst	${RMAOUTPUT}
+#Weekly output for Kate Le
+CH_513_15722	  513	15722	    stage     ${FINE_OUT}   inst	${SUISUNMARSH}
+CH_513_15722	  513	15722	    flow      ${FINE_OUT}   inst	${SUISUNMARSH}
+#OMR output
+RMID015_144      144	838	    flow      ${FINE_OUT}   inst	${HYDROOUTDSSFILE}
+RMID015_145      145	2114	    flow      ${FINE_OUT}   inst	${HYDROOUTDSSFILE}
+#Stage outside Clifton Court
+82_2609          82	    2609	    stage      1HOUR  inst	${HYDROOUTDSSFILE}
+#Tom Paine Output
+SLTMP183        183	    0            stage     ${FINE_OUT}   inst  ${HYDROOUTDSSFILE}
+SLTMP000        194	    1946            stage     ${FINE_OUT}   inst  ${HYDROOUTDSSFILE}
+SLTMP017	    185	    0            stage     ${FINE_OUT}   inst  ${HYDROOUTDSSFILE}
+END
+
+OUTPUT_GATE
+NAME          GATE_NAME             DEVICE      VARIABLE       INTERVAL PERIOD_OP FILE
+mrbarin       middle_r_barrier      none        install        1HOUR    inst      ${WEEKLYSTAGE}
+mrbarop       middle_r_barrier      pipes       op_from_node   1HOUR    inst      ${WEEKLYSTAGE}
+mrbarop2      middle_r_barrier      pipes       op_to_node     1HOUR    inst      ${WEEKLYSTAGE}
+mrbbarpf      middle_r_barrier      pipes       flow           1HOUR    inst      ${WEEKLYSTAGE}
+ortbarin      old_r@tracy_barrier   none        install        1HOUR    inst      ${WEEKLYSTAGE}
+ortbarop      old_r@tracy_barrier   pipes       op_to_node     1HOUR    inst      ${WEEKLYSTAGE}
+ortbarfl      old_r@tracy_barrier   barrier     flow           1HOUR    inst      ${WEEKLYSTAGE}
+ortbarpf      old_r@tracy_barrier   pipes       flow           1HOUR    inst      ${WEEKLYSTAGE}
+#ortbarel      old_r@tracy_barrier   barrier     elev           1HOUR    inst      ${WEEKLYSTAGE}
+#ortbarpe      old_r@tracy_barrier   pipes       elev           1HOUR    inst      ${WEEKLYSTAGE}
+glcbarop      grant_line_barrier    pipes       op_to_node     1HOUR    inst      ${WEEKLYSTAGE}
+glcbarin      grant_line_barrier    none        install        1HOUR    inst      ${WEEKLYSTAGE}
+glcbarfr      grant_line_barrier    pipes       op_from_node     1HOUR    inst      ${WEEKLYSTAGE}
+glcbarpf      grant_line_barrier    pipes       flow           1HOUR    inst      ${WEEKLYSTAGE}
+mtzflowgate   montezuma_salinity_control  radial_gates flow 1HOUR    inst      ${WEEKLYSTAGE}
+mtzflowgatetn   montezuma_salinity_control  radial_gates op_to_node 1HOUR    inst      ${WEEKLYSTAGE}
+mtzflowgatefn   montezuma_salinity_control  radial_gates op_from_node 1HOUR    inst      ${WEEKLYSTAGE}
+mtzflowbl   montezuma_salinity_control  boat_lock flow 1HOUR    inst      ${WEEKLYSTAGE}
+mtzflowfb   montezuma_salinity_control  flashboards flow 1HOUR    inst      ${WEEKLYSTAGE}
+CLFCTHEIGHT clifton_court     reservoir_gates        height        ${FINE_OUT}    inst      ${WEEKLYSTAGE}
+END
+
+OUTPUT_RESERVOIR
+NAME          RES_NAME      NODE VARIABLE INTERVAL    PERIOD_OP FILE            
+CLFCT      clifton_court   72 flow     1DAY ave      ${HYDROOUTDSSFILE}
+#RMA weekly output
+CLFCTRMA      clifton_court   72 flow     ${FINE_OUT} inst      ${RMAOUTPUT} 
+CLFCTRMA      clifton_court none stage    ${FINE_OUT} inst      ${RMAOUTPUT} 
+END
+
+
