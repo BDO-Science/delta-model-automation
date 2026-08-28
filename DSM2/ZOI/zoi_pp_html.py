@@ -102,10 +102,10 @@ channels   = channels1[~channels1["downnode"].isin(drop_nodes)].copy()
 # ─────────────────────────────────────────────────────────────────────────────
 import matplotlib.cm as cm
 _viridis = cm.get_cmap("viridis", 4)
-OMR_LEVELS = ["-2000", "-3500", "-10500", "-6500"]
+OMR_LEVELS = ["-2000", "-3500", "-5000", "-6500"]
 COLOR_MAP  = {lvl: _viridis(i / 3) for i, lvl in enumerate(OMR_LEVELS)}
 # Linetype map matching scale_linetype_discrete (R cycles: solid, dashed, dotted, dotdash)
-LINE_MAP   = {"-2000": "solid", "-3500": (0,(5,5)), "-10500": "dotted", "-6500": (0,(3,1,1,1))}
+LINE_MAP   = {"-2000": "solid", "-3500": (0,(5,5)), "-5000": "dotted", "-6500": (0,(3,1,1,1))}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5.  Helper functions
@@ -113,7 +113,7 @@ LINE_MAP   = {"-2000": "solid", "-3500": (0,(5,5)), "-10500": "dotted", "-6500":
 
 def parse_omr_flow(filename: str) -> str | None:
     """Extract OMR flow string from filename (Neg6500 → '-6500', etc.)."""
-    for neg, label in [("Neg6500", "-6500"), ("Neg5000", "-10500"),
+    for neg, label in [("Neg6500", "-6500"), ("Neg5000", "-5000"),
                        ("Neg3500", "-3500"), ("Neg2000", "-2000")]:
         if neg in filename:
             return label

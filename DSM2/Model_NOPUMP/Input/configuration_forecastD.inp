@@ -1,7 +1,7 @@
 
 ENVVAR
 NAME                     VALUE  
-WEEK					  20260811
+WEEK					  20260616
 RUN			 D
 RUNPERIOD                21
 DSM2MODIFIER             ${WEEK}-${RUNPERIOD}${RUN}               #Study name used for DSM2 output                  
@@ -12,17 +12,17 @@ HISTFLOWVERSION          DWR-DMS
 HISTSTAGEVERSION         ${HISTFLOWVERSION}
 HISTQUALVERSION          DWR-DMS
 #runtime                
-START_DATE               29Jul2026
+START_DATE               20May2026
 START_TIME               0000
-FORE_START_DATE		 11Aug2026
+FORE_START_DATE		 16Jun2026
 FORE_START_TIME		 0000
-QUAL_START_DATE          01Aug2026
-EC_START_DATE            04Aug2026
+QUAL_START_DATE          23May2026
+EC_START_DATE            09Jun2026
 PTM_START_DATE           ${QUAL_START_DATE}
-END_DATE                 01Sep2026
+END_DATE                 07Jul2026
 END_TIME                 2400
-QUAL_END_DATE            01Sep2026
-WARM_END_DATE            08Aug2026
+QUAL_END_DATE            07Jul2026
+WARM_END_DATE            13Jun2026
 QUAL_END_TIME            0000
 TEMPDIR                  z:/temp                                #Spacious directory for scratch files  
 RUNID			 DSM2-${DSM2MODIFIER}
