@@ -127,7 +127,7 @@ call :AskRun "Section 4 - PTM NP"
 if errorlevel 1 goto skip4
 
 set "PTM=.\bin\ptm.bat"
-rem call :RunPTMNP || goto :fail_NP
+call :RunPTMNP || goto :fail_NP
 
 :skip4
 call :logEcho Skipping or completed Section 4
@@ -139,7 +139,7 @@ call :AskRun "Section 5 - PTM PP"
 if errorlevel 1 goto skip5
 
 set "PTM=.\bin\ptm.bat"
-rem call :RunPTMPP || goto :fail_PP
+call :RunPTMPP || goto :fail_PP
 
 :skip5
 call :logEcho Skipping or completed Section 5
@@ -151,7 +151,7 @@ call :AskRun "Section 6 - PTM SP"
 if errorlevel 1 goto skip6
 
 set "PTM=.\bin\ptm.bat"
-rem call :RunPTMSP || goto :fail_SP
+call :RunPTMSP || goto :fail_SP
 
 :skip6
 call :logEcho Skipping or completed Section 6

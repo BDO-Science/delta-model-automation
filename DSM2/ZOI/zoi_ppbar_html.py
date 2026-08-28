@@ -27,7 +27,7 @@ from plotly.subplots import make_subplots
 def parse_omr_flow(filename: str) -> str:
     mapping = {
         "Neg6500": "-6500",
-        "Neg5000": "-10500",
+        "Neg5000": "-5000",
         "Neg3500": "-3500",
         "Neg2000": "-2000"
     }
@@ -61,13 +61,13 @@ def main():
     alt_order = ["EXP1", "EXP3", "NAA", "ALT1", "ALT2d", "ALT2b", "ALT2c", "ALT2a", "ALT3", "ALT4"]
     alt_order2 = ["NAA", "Alt1", "Alt2woTUCPwoVA", "Alt2woTUCPDeltaVA", "Alt2woTUCPAllVA", "Alt2wTUCPwoVA", "Alt3", "Alt4"]
     inflow_order = ["lolo", "lomed", "lohi", "medlo", "medmed", "medhi", "hilo", "himed", "hihi", "NA"]
-    scenario_order = [-6500, -10500, -3500, -2000]
+    scenario_order = [-6500, -5000, -3500, -2000]
 
     
     # Create template dataframe
     weeks_list = ["Week 1", "Week 2", "Week 3"]
-    omr_bins = [-6500, -10500, -3500, -2000]
-    omr_levels = [-2000, -3500, -10500, -6500]
+    omr_bins = [-6500, -5000, -3500, -2000]
+    omr_levels = [-2000, -3500, -5000, -6500]
     template_df = pd.DataFrame([
         {"Week": w, "OMR_Bin": omr}
         for w in weeks_list
@@ -132,7 +132,7 @@ def main():
         bins = bins.drop_duplicates()
         
         # Convert to categorical with proper ordering
-        bins['OMR_bin'] = pd.Categorical(bins['OMR_bin'], categories=[-2000, -3500, -10500, -6500], ordered=True)
+        bins['OMR_bin'] = pd.Categorical(bins['OMR_bin'], categories=[-2000, -3500, -5000, -6500], ordered=True)
         bins['FileTag'] = pd.Categorical(bins['FileTag'], categories=["Neg2000", "Neg3500", "Neg5000", "Neg6500"], ordered=True)
         bins['Sub.group'] = pd.Categorical(bins['Sub.group'], categories=inflow_order, ordered=True)
         
@@ -340,7 +340,7 @@ def main():
             filtered2['FileTag'] = filtered2['OMR_Flow'].map({
                 '-2000': 'Neg2000',
                 '-3500': 'Neg3500',
-                '-10500': 'Neg5000',
+                '-5000': 'Neg5000',
                 '-6500': 'Neg6500'
             })
 
@@ -459,7 +459,7 @@ def main():
 
         color_map = {
             -6500: "#440154",
-            -10500: "#31688e",
+            -5000: "#31688e",
             -3500: "#35b779",
             -2000: "#fde725"
         }
@@ -511,12 +511,12 @@ def main():
         # Match Plotly / R-style colors
         color_map = {
             -6500: "#2b0b3f",  # dark purple
-            -10500: "#1de9b6",  # teal
+            -5000: "#1de9b6",  # teal
             -3500: "#fbc02d",  # yellow
             -2000: "#7f0000",  # dark red
         }
 
-        omr_order = [-6500, -10500, -3500, -2000]
+        omr_order = [-6500, -5000, -3500, -2000]
 
         fig, axes = plt.subplots(
             1, 3,
@@ -625,7 +625,7 @@ def main():
         template_df.loc[row_start:row_end-1, 'Dates'] = Week_dates
         
         # Match OMR bins and assign values
-        for idx, omr_bin in enumerate([-6500, -10500, -3500, -2000]):
+        for idx, omr_bin in enumerate([-6500, -5000, -3500, -2000]):
             template_row = row_start + idx
             
             # Low data

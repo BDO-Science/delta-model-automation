@@ -385,8 +385,12 @@ for scen in scenarios:
 
 # SLS DATA
 # SLS abundance estimates used to convert PTM percentages into estimated entrained fish numbers.
-SLS_CSV = Path(r"\\US0384-PPFSS01\shared_projects\184031982\6.0 Studies and Reports\Task_02_Real_Time_Assessment\Workplan 1 - 2026 Real Time_DSM 2 and Related\SLS\SLS_abundance_estimates\2026 LFS Abundances through SLS Survey 6 (Final)_April 21st.csv")
-
+SLS_CSV = (
+    MODEL_DIR
+    / "SLS"
+    / "SLS_abundance_estimates"
+    / "2026 LFS Abundances through SLS Survey 6 (Final)_April 21st.csv"
+)
 # Selects Latest
 # Use the most recent survey date available in the SLS CSV.
 # This is not tied directly to WEEK_STR unless the CSV itself has been updated accordingly.
