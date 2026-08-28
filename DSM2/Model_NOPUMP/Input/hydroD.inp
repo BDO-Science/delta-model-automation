@@ -1,0 +1,102 @@
+
+CONFIGURATION
+input\configuration_forecastD.inp
+END
+
+
+
+SCALAR
+NAME            VALUE                                
+title           "Hydro simulation: ${DSM2MODIFIER}" 
+checkdata       false                                 
+cont_bad        false                                 
+cont_missing    true                                  
+cont_question   true                                  
+cont_unchecked  true                                  
+deltax          5000                                  
+display_intvl   1day                                                                  
+gravity         32.2                                  
+hydro_time_step 15min                                 
+levee_slope     0.33                                  
+maxiter         20                                    
+printlevel      1                                     
+theta           0.6                                   
+toleranceq      0.001                                 
+tolerancez      0.0008                                
+warn_missing    false                                  
+warn_question   true                                  
+warn_unchecked  false                                 
+run_start_date  ${START_DATE}                         
+run_end_date    ${END_DATE}                           
+run_start_time  ${START_TIME}                         
+temp_dir        c:/temp
+binary_output   false
+dss_direct      true
+flush_output    20day                              
+END
+
+
+
+IO_FILE
+MODEL TYPE    IO  INTERVAL FILE                          
+hydro hdf5    out    15min ${HYDROTIDEFILE}               #Flow data to be passed to qual and ptm 
+hydro restart out     1mon ${HYDRORSTFILE}                #Initial condition a restart is required
+hydro output  out     none ${HYDROOUTFILE}                #Echoed run status                      
+hydro echo    out     none ${DSM2OUTPUTDIR}/hydro_echo_${DSM2MODIFIER}.inp #Echoed input                           
+END
+
+
+
+PARAMETER
+${INPUTDIR}/hydro/scalar_hydro_fore_102009.inp
+END
+
+GRID
+${DSM2INPUTDIR}/common_input/channel_std_delta_grid_NAVD_20121214.inp
+#${INPUTDIR}/hydro/channel_std_delta_grid_NAVD_20121214_modi.inp
+${DSM2INPUTDIR}/common_input/gate_std_delta_grid_20141017_NAVD.inp
+#${DSM2INPUTDIR}/common_input/gate_std_delta_grid_20141017_NAVD_not.inp
+${DSM2INPUTDIR}/common_input/reservoir_std_delta_grid_NAVD_20131125.inp
+${DSM2INPUTDIR}/common_input/channel_historical_stability_revision_20090715.inp
+#${DSM2INPUTDIR}/common_input/channel_tapered_tracy_blvd_dredge_20090715.inp
+#${DSM2INPUTDIR}/common_input/channel_paradise_cut_dredge_20091222.inp
+#${INPUTDIR}/hydro/gate_closure_drought_study_DB2S.inp
+#${INPUTDIR}/hydro/gate_closure_drought_study_DB2S-ts.inp
+END
+
+INITIAL_CONDITION
+${INPUTDIR}/hydro/channel_ic_std_delta_grid_NAVD_20121214.inp
+${INPUTDIR}/hydro/reservoir_ic_std_delta_grid_NAVD_20131125.inp
+END
+
+HYDRO_TIME_SERIES
+${INPUTDIR}/hydro/boundary_flow_delta_realtime_20090715.inp
+${INPUTDIR}/hydro/source_flow_delta_realtime_20090715.inp
+${DSM2INPUTDIR}/common_input/boundary_stage_delta_historical_20131204_NAVD.inp
+${DSM2INPUTDIR}/common_input/source_flow_dicu_historical_20090715.inp
+#${DSM2INPUTDIR}/common_input/source_flow_jones_hydro_20090806.inp
+#${DSM2INPUTDIR}/common_input/paradise_cut_transfer_20091222.inp
+#${INPUTDIR}/input_gate_temp_bar_20100610.inp
+#wwtp and ag drainage
+${INPUTDIR}/hydro/hydro_wwtp_ag.inp
+END
+
+OPERATION
+${INPUTDIR}/hydro/oprule_forecast_gate_20110418.inp
+${INPUTDIR}/hydro/oprule_fore_temp_barriers_20110418.inp
+${INPUTDIR}/hydro/oprule_boundary_flow.inp
+#${INPUTDIR}/hydro/oprule_droughtstudy_DB2S.inp
+#${INPUTDIR}/hydro/oprule_droughtstudy_DB2S-ts.inp
+END
+
+OUTPUT_TIME_SERIES
+${DSM2INPUTDIR}/common_input/output_channel_std_hydro_rki_20090715.inp
+${DSM2INPUTDIR}/common_input/output_channel_std_hydro_named_20090715.inp
+${DSM2INPUTDIR}/common_input/output_reservoir_std_hydro_named_20090715.inp
+${DSM2INPUTDIR}/common_input/output_channel_std_hydro_boundary_20090715.inp
+${INPUTDIR}/hydro/output_weekly_hydro_named_20091028.inp
+${INPUTDIR}/hydro/output_weekly_hydro_stage_20091202.inp
+#for CVP BDO WIIN
+${INPUTDIR}/hydro/output_weekly_hydro_WIIN_20180108.inp
+END
+

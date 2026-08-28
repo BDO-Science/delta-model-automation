@@ -1,0 +1,39 @@
+
+
+#Operating rules to swich to forecast boundary and source condition from historical boundary conditions
+
+
+
+
+OPERATING_RULE
+NAME                      ACTION                                                                TRIGGER                                       
+calaveras_boundary_flow	  "SET ext_flow(name= calaveras) TO ts(name=calaveras_fore)"		"DATE >= ${FORE_START_DATE}"
+cosumnes_boundary_flow	  "SET ext_flow(name= cosumnes) TO ts(name=cosumnes_fore)"		"DATE >= ${FORE_START_DATE}"
+#moke_boundary_flow	  "SET ext_flow(name= moke) TO ts(name=moke_fore)"			"DATE >= ${FORE_START_DATE}"
+north_bay_boundary_flow	  "SET ext_flow(name=north_bay) TO -ts(name=north_bay_fore)"		"DATE >= ${FORE_START_DATE}"
+sac_boundary_flow      	  "SET ext_flow(name= sac) TO ts(name=sac_fore)" 			"DATE >= ${FORE_START_DATE}"    
+vernalis_boundary_flow    "SET ext_flow(name=vernalis) TO  ts(name=vernalis_fore)" 		"DATE >= ${FORE_START_DATE}"
+yolo_boundary_flow	  "SET ext_flow(name=yolo) TO  ts(name=yolo_fore)"		        "DATE >= ${FORE_START_DATE}"
+cvp_source_flow 	  "SET ext_flow(name=cvp) TO  -ts(name=cvp_fore)"			"DATE >= ${START_DATE}"
+swp_source_flow	          "SET ext_flow(name=swp) TO  -ts(name=swp_fore)"			"DATE >= ${START_DATE}"
+ccc_source_flow	          "SET ext_flow(name=ccc) TO -ts(name=ccc_fore)"			"DATE >= ${FORE_START_DATE}"
+cccoldr_source_flow	  "SET ext_flow(name=cccoldr) TO -ts(name=cccoldr_fore)"		"DATE >= ${FORE_START_DATE}"
+cccmidr_source_flow	  "SET ext_flow(name=cccmidr) TO -ts(name=cccmidr_fore)"		"DATE >= ${FORE_START_DATE}"
+END
+
+
+OPRULE_TIME_SERIES
+NAME       	FILLIN FILE             PATH                                                     
+calaveras_fore  last   ${FORECASTINPUT} /FORE+CHAN/RCAL009/FLOW//1DAY/${RUNID}/
+cosumnes_fore   last   ${FORECASTINPUT} /FORE+CHAN/RCSM075/FLOW//1DAY/${RUNID}/
+#moke_fore       last   ${FORECASTINPUT} /FORE+CHAN/RMKL070/FLOW//1DAY/${RUNID}/
+north_bay_fore  last   ${FORECASTINPUT} /FORE+CHAN/SLBAR002/FLOW-EXPORT//1DAY/${RUNID}/
+sac_fore    	last   ${FORECASTINPUT} /FORE+CHAN/RSAC155/FLOW//1DAY/${RUNID}/
+vernalis_fore   last   ${FORECASTINPUT} /FORE+CHAN/RSAN112/FLOW//1DAY/${RUNID}/
+yolo_fore       last   ${FORECASTINPUT} /FORE+CHAN/BYOLO040/FLOW//1DAY/${RUNID}/
+cvp_fore        last   ${FORECASTINPUT} /FORE+CHAN/CHDMC004/FLOW-EXPORT//1DAY/${RUNID}/
+swp_fore        last   ${FORECASTINPUT} /FORE+CHAN/CHSWP003/FLOW-EXPORT//1DAY/${RUNID}/
+ccc_fore        last   ${FORECASTINPUT} /FORE+CHAN/CHCCC006/FLOW-DIVERSION//1DAY/${RUNID}/
+cccoldr_fore    last   ${FORECASTINPUT} /FORE+CHAN/ROLD034/FLOW-EXPORT//1DAY/${RUNID}/
+cccmidr_fore    last   ${FORECASTINPUT} /FORE+CHAN/CHVCT001/FLOW-EXPORT//1DAY/${RUNID}/
+END

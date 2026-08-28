@@ -1,0 +1,8 @@
+open "Output\20260512\PTM\np\20260512-21C_NPptm_465.dss"
+export pathname="/PTM/465/PAST_CHIPPS/01JAN1900/IR-YEAR/20260512-21C/" file="dss_output\PAST_CHIPPS.csv"
+export pathname="/PTM/465/EXPORT_CVP/01JAN1900/IR-YEAR/20260512-21C/" file="dss_output\EXPORT_CVP.csv"
+export pathname="/PTM/465/EXPORT_SWP/01JAN1900/IR-YEAR/20260512-21C/" file="dss_output\EXPORT_SWP.csv"
+export pathname="/PTM/465/DIVERSION_AG/01JAN1900/IR-YEAR/20260512-21C/" file="dss_output\DIVERSION_AG.csv"
+export pathname="/PTM/465/FRANKS/01JAN1900/IR-YEAR/20260512-21C/" file="dss_output\FRANKS.csv"
+export pathname="/PTM/465/WHOLE/01JAN1900/IR-YEAR/20260512-21C/" file="dss_output\WHOLE.csv"
+exit

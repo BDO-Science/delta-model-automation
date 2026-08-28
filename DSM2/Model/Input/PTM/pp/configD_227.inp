@@ -1,0 +1,26 @@
+# Description
+# Historical study
+# 202208
+ENVVAR
+NAME                     VALUE
+WEEK					 20260804
+DSM2MODIFIER             ${WEEK}-21D               #Study name used for DSM2 output
+INSERT_NODE				227							#Chipps Island
+PTM_START_DATE           11Jul2026
+END_DATE                 25Aug2026
+END_TIME                 0000
+TEMPDIR                  N/A
+#Input envvars
+STUDYDIR                 ./././
+TSINPUTDIR               N/A
+#Output
+DSM2OUTPUTDIR            ${STUDYDIR}/Output/${WEEK}/PTM/pp
+DSM2SHAREDDIR            ${STUDYDIR}/Output/${WEEK}
+OUTPUTFILE               N/A
+#Hydro
+HYDROTIDEFILE            ${DSM2SHAREDDIR}/hydro/${DSM2MODIFIER}.h5
+#PTM
+PTMOUTFILE               ${DSM2OUTPUTDIR}/${DSM2MODIFIER}_PPptm_${INSERT_NODE}.pof
+#PTMOUTPUTFILE            ${DSM2OUTPUTDIR}/${DSM2MODIFIER}_PPptm_${INSERT_NODE}.txt
+PTMOUTPUTFILE            ${DSM2OUTPUTDIR}/${DSM2MODIFIER}_PPptm_${INSERT_NODE}.dss
+END
