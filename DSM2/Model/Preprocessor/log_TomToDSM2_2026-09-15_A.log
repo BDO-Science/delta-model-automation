@@ -1,0 +1,172 @@
+INFO - user key input: convert 
+ set to: ..\DataExternal\20260623\06_22_OMRI -5000.csv
+INFO - user key input: forecast 
+ set to: ..\Input\timeseries\forecast.dss
+INFO - user key input: dicu 
+ set to: ..\DataExternal\20260623\dicu.dss
+INFO - user key input: forecast_start 
+ set to: 2026-06-23 00:00:00
+INFO - user key input: forecast_end 
+ set to: 2026-07-14 00:00:00
+INFO - user key input: scenario_id 
+ set to: A
+INFO - mapping dictionary key: CCF 
+ set to: {'B': 'CHWST000', 'C': 'FLOW-ALLOTMENT'}
+INFO - mapping dictionary key: TPP 
+ set to: {'B': 'CHDMC004', 'C': 'FLOW-EXPORT'}
+INFO - mapping dictionary key: VNS 
+ set to: {'B': 'RSAN112', 'C': 'FLOW'}
+INFO - mapping dictionary key: FPT 
+ set to: {'B': 'RSAC155', 'C': 'FLOW'}
+INFO - mapping dictionary key: CAL 
+ set to: {'B': 'RCAL009', 'C': 'FLOW'}
+INFO - mapping dictionary key: MOKE 
+ set to: {'B': 'RMKL070', 'C': 'FLOW'}
+INFO - mapping dictionary key: COS 
+ set to: {'B': 'RCSM075', 'C': 'FLOW'}
+INFO - mapping dictionary key: SACWEIR 
+ set to: {'B': 'BYOLO040', 'C': 'FLOW'}
+INFO - mapping dictionary key: FREWEIR 
+ set to: {'B': 'BYOLO040', 'C': 'FLOW'}
+INFO -                     CCF          TPP   VNS    FPT  ...  MOKE  COS  SACWEIR  FREWEIR
+DATE                                               ...                             
+2026-06-23  4100.857287   900.151286  1356  15753  ...   200   75        0        0
+2026-06-24  3200.706001  1800.302572  1789  15972  ...   200   75        0        0
+2026-06-25  3400.907716  1800.302572  1930  16100  ...   200   75        0        0
+2026-06-26  3500.756430  1800.302572  1966  16210  ...   200   75        0        0
+2026-06-27  3500.756430  1800.302572  1800  16222  ...   200   75        0        0
+2026-06-28  3400.907716  1800.302572  1400  16150  ...   200   75        0        0
+2026-06-29  3200.706001  1800.302572  1250  16079  ...   200   75        0        0
+2026-06-30  3100.857287  1800.302572  1250  16022  ...   200   75        0        0
+2026-07-01  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-02  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-03  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-04  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-05  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-06  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-07  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-08  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-09  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-10  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-11  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-12  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-13  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+2026-07-14  3100.857287  1800.302572  1250  15979  ...   200   75        0        0
+
+[22 rows x 9 columns]
+INFO - Retrieving selector_B=BBID, selector_C=DIV-FLOW from 
+ ..\DataExternal\20260623\dicu.dss
+INFO - Success: single record isolated for BBID,DIV-FLOW
+INFO -          /DICU-HIST+RSVR/BBID/DIV-FLOW/01JAN1920 - 01JAN2020/1MON/DWR-BDO/
+1921-10                                           8.090000                
+1921-11                                           0.000000                
+1921-12                                           0.000000                
+1922-01                                           0.000000                
+1922-02                                           0.000000                
+...                                                    ...                
+2026-05                                          74.360001                
+2026-06                                          90.620003                
+2026-07                                         102.260002                
+2026-08                                          78.050003                
+2026-09                                          40.619999                
+
+[1260 rows x 1 columns]
+INFO - BBID selection: start_month = 06, end_month = 07
+WARNING - Taking month from --forecast_end argument for retrieving the DICU BBID constant
+INFO - DICU BBID constant from month: 07
+INFO - bbid_constant = 102.26000213623047
+INFO -                     CCF        BANKS
+DATE                                
+2026-06-23  4100.857287  3998.597285
+2026-06-24  3200.706001  3098.445999
+2026-06-25  3400.907716  3298.647713
+2026-06-26  3500.756430  3398.496428
+2026-06-27  3500.756430  3398.496428
+2026-06-28  3400.907716  3298.647713
+2026-06-29  3200.706001  3098.445999
+2026-06-30  3100.857287  2998.597285
+2026-07-01  3100.857287  2998.597285
+2026-07-02  3100.857287  2998.597285
+2026-07-03  3100.857287  2998.597285
+2026-07-04  3100.857287  2998.597285
+2026-07-05  3100.857287  2998.597285
+2026-07-06  3100.857287  2998.597285
+2026-07-07  3100.857287  2998.597285
+2026-07-08  3100.857287  2998.597285
+2026-07-09  3100.857287  2998.597285
+2026-07-10  3100.857287  2998.597285
+2026-07-11  3100.857287  2998.597285
+2026-07-12  3100.857287  2998.597285
+2026-07-13  3100.857287  2998.597285
+2026-07-14  3100.857287  2998.597285
+INFO -                     CCF          TPP   VNS  ...  SACWEIR  FREWEIR        BANKS
+DATE                                        ...                               
+2026-06-23  4100.857287   900.151286  1356  ...        0        0  3998.597285
+2026-06-24  3200.706001  1800.302572  1789  ...        0        0  3098.445999
+2026-06-25  3400.907716  1800.302572  1930  ...        0        0  3298.647713
+2026-06-26  3500.756430  1800.302572  1966  ...        0        0  3398.496428
+2026-06-27  3500.756430  1800.302572  1800  ...        0        0  3398.496428
+2026-06-28  3400.907716  1800.302572  1400  ...        0        0  3298.647713
+2026-06-29  3200.706001  1800.302572  1250  ...        0        0  3098.445999
+2026-06-30  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-01  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-02  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-03  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-04  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-05  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-06  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-07  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-08  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-09  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-10  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-11  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-12  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-13  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+2026-07-14  3100.857287  1800.302572  1250  ...        0        0  2998.597285
+
+[22 rows x 10 columns]
+INFO - Current ini_dict is:
+INFO - {'convert': '..\\DataExternal\\20260623\\06_22_OMRI -5000.csv', 'forecast': '..\\Input\\timeseries\\forecast.dss', 'dicu': '..\\DataExternal\\20260623\\dicu.dss', 'forecast_start': Timestamp('2026-06-23 00:00:00'), 'forecast_end': Timestamp('2026-07-14 00:00:00'), 'scenario_id': 'A'}
+INFO - Current mapping_dict is:
+INFO - {'CCF': {'B': 'CHWST000', 'C': 'FLOW-ALLOTMENT'}, 'TPP': {'B': 'CHDMC004', 'C': 'FLOW-EXPORT'}, 'VNS': {'B': 'RSAN112', 'C': 'FLOW'}, 'FPT': {'B': 'RSAC155', 'C': 'FLOW'}, 'CAL': {'B': 'RCAL009', 'C': 'FLOW'}, 'MOKE': {'B': 'RMKL070', 'C': 'FLOW'}, 'COS': {'B': 'RCSM075', 'C': 'FLOW'}, 'SACWEIR': {'B': 'BYOLO040', 'C': 'FLOW'}, 'FREWEIR': {'B': 'BYOLO040', 'C': 'FLOW'}, 'BANKS': {'B': 'CHSWP003', 'C': 'FLOW-EXPORT'}}
+INFO - Working on: CCF
+INFO - Found CCF as {'B': 'CHWST000', 'C': 'FLOW-ALLOTMENT'} in mapping_dict
+INFO - Wrote dss record to forecast.dss: 
+ /FORE+CHAN/CHWST000/FLOW-ALLOTMENT/01JAN2026 - 01JAN2026/1DAY/DSM2-20260623-21A/
+INFO - Working on: TPP
+INFO - Found TPP as {'B': 'CHDMC004', 'C': 'FLOW-EXPORT'} in mapping_dict
+INFO - Wrote dss record to forecast.dss: 
+ /FORE+CHAN/CHDMC004/FLOW-EXPORT/01JAN2026 - 01JAN2026/1DAY/DSM2-20260623-21A/
+INFO - Working on: VNS
+INFO - Found VNS as {'B': 'RSAN112', 'C': 'FLOW'} in mapping_dict
+INFO - Wrote dss record to forecast.dss: 
+ /FORE+CHAN/RSAN112/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260623-21A/
+INFO - Working on: FPT
+INFO - Found FPT as {'B': 'RSAC155', 'C': 'FLOW'} in mapping_dict
+INFO - Wrote dss record to forecast.dss: 
+ /FORE+CHAN/RSAC155/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260623-21A/
+INFO - Working on: CAL
+INFO - Found CAL as {'B': 'RCAL009', 'C': 'FLOW'} in mapping_dict
+INFO - Wrote dss record to forecast.dss: 
+ /FORE+CHAN/RCAL009/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260623-21A/
+INFO - Working on: MOKE
+INFO - Found MOKE as {'B': 'RMKL070', 'C': 'FLOW'} in mapping_dict
+INFO - Wrote dss record to forecast.dss: 
+ /FORE+CHAN/RMKL070/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260623-21A/
+INFO - Working on: COS
+INFO - Found COS as {'B': 'RCSM075', 'C': 'FLOW'} in mapping_dict
+INFO - Wrote dss record to forecast.dss: 
+ /FORE+CHAN/RCSM075/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260623-21A/
+INFO - Working on: SACWEIR
+INFO - Found SACWEIR as {'B': 'BYOLO040', 'C': 'FLOW'} in mapping_dict
+INFO - Wrote yolo record to forecast.dss: 
+ /FORE+CHAN/BYOLO040/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260623-21A/
+INFO - Working on: FREWEIR
+INFO - Found FREWEIR as {'B': 'BYOLO040', 'C': 'FLOW'} in mapping_dict
+INFO - Wrote yolo record to forecast.dss: 
+ /FORE+CHAN/BYOLO040/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260623-21A/
+INFO - Working on: BANKS
+INFO - Found BANKS as {'B': 'CHSWP003', 'C': 'FLOW-EXPORT'} in mapping_dict
+INFO - Wrote dss record to forecast.dss: 
+ /FORE+CHAN/CHSWP003/FLOW-EXPORT/01JAN2026 - 01JAN2026/1DAY/DSM2-20260623-21A/
+INFO - Runtime: 0:00:02.394015 seconds

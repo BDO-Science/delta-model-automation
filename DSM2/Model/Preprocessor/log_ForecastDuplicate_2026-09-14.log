@@ -1,0 +1,98 @@
+INFO - You have chosen to have this tool duplicate the rest of the records in the forecast.dss file that was not duplicated by the preprocessor.
+INFO - Using the forecast.dss file: ..\Input\timeseries\forecast.dss
+INFO -       T          A         B  ...                  F        E                      D
+0   T15  FORE+CHAN  BYOLO040  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+1   T15  FORE+CHAN  CHCCC006  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+2   T15  FORE+CHAN  CHDMC004  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+3   T15  FORE+CHAN  CHSWP003  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+4   T15  FORE+CHAN  CHVCT001  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+5   T15  FORE+CHAN  CHWST000  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+6   T15  FORE+CHAN  CHWST000  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+7   T15  FORE+CHAN   RCAL009  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+8   T15  FORE+CHAN   RCSM075  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+9   T15  FORE+CHAN   RMKL070  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+10  T15  FORE+CHAN   ROLD034  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+11  T15  FORE+CHAN   RSAC155  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+12  T15  FORE+CHAN   RSAN112  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+13  T15  FORE+CHAN  SLBAR002  ...  DSM2-20260317-21A     1DAY  01JAN2026 - 01JAN2026
+14  T15  FORE+GATE  CHWST000  ...  DSM2-20260317-21A  IR-YEAR  01JAN2026 - 01JAN2026
+
+[15 rows x 7 columns]
+INFO - /FORE+CHAN/BYOLO040/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/CHCCC006/FLOW-DIVERSION/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/CHDMC004/FLOW-EXPORT/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/CHSWP003/FLOW-EXPORT/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/CHVCT001/FLOW-EXPORT/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/CHWST000/FLOW-ALLOTMENT/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/CHWST000/FLOW-MAX/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/RCAL009/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/RCSM075/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/RMKL070/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/ROLD034/FLOW-EXPORT/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/RSAC155/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/RSAN112/FLOW/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+CHAN/SLBAR002/FLOW-EXPORT/01JAN2026 - 01JAN2026/1DAY/DSM2-20260317-21A/
+INFO - /FORE+GATE/CHWST000/POS/01JAN2026 - 01JAN2026/IR-YEAR/DSM2-20260317-21A/
+INFO - ['DSM2-20260317-21A']
+INFO - Groupby loop working on ('BYOLO040', 'FLOW')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('CHCCC006', 'FLOW-DIVERSION')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('CHDMC004', 'FLOW-EXPORT')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('CHSWP003', 'FLOW-EXPORT')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('CHVCT001', 'FLOW-EXPORT')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('CHWST000', 'FLOW-ALLOTMENT')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('CHWST000', 'FLOW-MAX')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('CHWST000', 'POS')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('RCAL009', 'FLOW')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('RCSM075', 'FLOW')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('RMKL070', 'FLOW')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('ROLD034', 'FLOW-EXPORT')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('RSAC155', 'FLOW')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('RSAN112', 'FLOW')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - Groupby loop working on ('SLBAR002', 'FLOW-EXPORT')
+INFO - Found scenarios: ['DSM2-20260317-21A']
+INFO - Compare scenarios: True
+INFO - Groupby Scenarios vs Compare Scenarios: []
+INFO - ***Beginning Writing Sequence for Duplication***
+INFO - Runtime: 0:00:01.640446 seconds

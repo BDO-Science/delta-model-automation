@@ -84,18 +84,35 @@ call :logEcho Skipping or completed Section 1
 rem =========================================================
 rem 2. Preprocessor
 rem =========================================================
+set "RUN_D=0"
+
 call :AskRun "Section 2 - Preprocessor"
 if errorlevel 1 goto skip2
 
 call :logEcho Running Preprocessor workflow
 
 cd Preprocessor
-set BASE=..\DataExternal\%NEWEST%
+set "BASE=..\DataExternal\%NEWEST%"
 
 call :RunOMRI "-5000" A
 call :RunOMRI "-3500" B
 call :RunOMRI "-2000" C
-call :RunOMRI "-6500" D
+
+set "D_FILE="
+
+for %%F in ("%BASE%\*_OMRI *.csv") do (
+    if exist "%%F" (
+        echo %%~nxF | findstr /E /C:"_OMRI -5000.csv" /C:"_OMRI -3500.csv" /C:"_OMRI -2000.csv" >nul
+        if errorlevel 1 set "D_FILE=%%F"
+    )
+)
+
+if defined D_FILE (
+    set "RUN_D=1"
+    call :RunOMRIFile "!D_FILE!" D
+) else (
+    call :logEcho No Scenario D OMRI file found
+)
 
 python ForecastDuplicate_STN.py --forecast "Y" -f ..\Input\timeseries\forecast.dss
 
@@ -115,7 +132,11 @@ call :logEcho Running hydro binaries
 .\bin\hydro .\Input\hydroA.inp || exit /b 1
 .\bin\hydro .\Input\hydroB.inp
 .\bin\hydro .\Input\hydroC.inp
+if "!RUN_D!"=="1" (
 .\bin\hydro .\Input\hydroD.inp
+) else (
+    call :logEcho Skipping Scenario D hydro
+)
 
 :skip3
 call :logEcho Skipping or completed Section 3
@@ -185,7 +206,11 @@ pushd "..\Model_NOPUMP" || (
 
 .\bin\hydro ".\Input\hydroB.inp"
 .\bin\hydro ".\Input\hydroC.inp"
+if "!RUN_D!"=="1" (
 .\bin\hydro ".\Input\hydroD.inp"
+) else (
+    call :logEcho Skipping Scenario D NoPumping hydro
+)
 
 popd
 
@@ -279,7 +304,7 @@ rem =========================================================
 rem 14. LFS Plots
 rem =========================================================
 call :AskRun "Section 14 - LFS Plots"
-if errorlevel 1 goto skip13
+if errorlevel 1 goto skip14
 pushd "..\Model" || (
     echo ERROR: Could not change to Model folder
     exit /b 1
@@ -368,6 +393,27 @@ for %%F in ("%BASE%\*_OMRI %SUFFIX%.csv") do (
 call :logEcho WARNING: No OMRI file found for suffix %SUFFIX%
 exit /b
 
+:RunOMRIFile
+set "OMRI_FILE=%~1"
+set "SD=%~2"
+
+if not exist "%OMRI_FILE%" (
+    call :logEcho ERROR: OMRI file not found: %OMRI_FILE%
+    exit /b 1
+)
+
+call :logEcho Running %~nx1  (Scenario %SD%)
+
+python CSVToDSM2_pyhecdss.py ^
+    -c "%OMRI_FILE%" ^
+    -f "..\Input\timeseries\forecast.dss" ^
+    -d "%BASE%\dicu.dss" ^
+    -fs %FORE_ISO% ^
+    -fe %END_ISO% ^
+    -sd %SD%
+
+exit /b
+
 :RunPTMNP
 rem -----------------------
 rem NP PTM runs
@@ -388,11 +434,14 @@ call "%PTM%" ".\Input\PTM\np\ptmC_469.inp"
 call "%PTM%" ".\Input\PTM\np\ptmC_465.inp"
 call "%PTM%" ".\Input\PTM\np\ptmC_99.inp"
 
+if "!RUN_D!"=="1" (
 call "%PTM%" ".\Input\PTM\np\ptmD_350.inp"
 call "%PTM%" ".\Input\PTM\np\ptmD_469.inp"
 call "%PTM%" ".\Input\PTM\np\ptmD_465.inp"
 call "%PTM%" ".\Input\PTM\np\ptmD_99.inp"
-
+) else (
+    call :logEcho Skipping Scenario D NP PTM runs
+)
 exit /b
 
 :RunPTMPP
@@ -515,7 +564,7 @@ call "%PTM%" ".\Input\PTM\pp\ptmC_293.inp"
 call "%PTM%" ".\Input\PTM\pp\ptmC_304.inp"
 call "%PTM%" ".\Input\PTM\pp\ptmC_351.inp"
 call "%PTM%" ".\Input\PTM\pp\ptmC_365.inp"
-
+if "!RUN_D!"=="1" (
 call "%PTM%" ".\Input\PTM\pp\ptmD_352.inp"
 call "%PTM%" ".\Input\PTM\pp\ptmD_361.inp"
 call "%PTM%" ".\Input\PTM\pp\ptmD_367.inp"
@@ -554,6 +603,9 @@ call "%PTM%" ".\Input\PTM\pp\ptmD_293.inp"
 call "%PTM%" ".\Input\PTM\pp\ptmD_304.inp"
 call "%PTM%" ".\Input\PTM\pp\ptmD_351.inp"
 call "%PTM%" ".\Input\PTM\pp\ptmD_365.inp"
+) else (
+    call :logEcho Skipping Scenario D PP PTM runs
+)
 exit /b
 
 :RunPTMSP
@@ -568,8 +620,11 @@ if errorlevel 1 (
 )
 call "%PTM%" ".\Input\PTM\sp\ptmB_350.inp"
 call "%PTM%" ".\Input\PTM\sp\ptmC_350.inp"
+if "!RUN_D!"=="1" (
 call "%PTM%" ".\Input\PTM\sp\ptmD_350.inp"
-
+) else (
+    call :logEcho Skipping Scenario D SP PTM runs
+)
 
 rem (Repeat similar for B, C, D as in NP and PP)
 exit /b

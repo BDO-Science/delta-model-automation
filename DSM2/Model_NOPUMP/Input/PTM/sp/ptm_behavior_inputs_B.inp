@@ -14,7 +14,7 @@ Use_New_Random_Seed: No
 End_Random_Sequence_Inputs
 
 Travel_Time_Output
-Output_Path: .\output\20260616\PTM\sp\travel_time_in_min_B.csv
+Output_Path: .\output\20260623\PTM\sp\travel_time_in_min_B.csv
 # if you don't want to output any travel time, leave it blank
 #Output_Path:
 # Node has to be upnode, and distance in feet is from upnode.
@@ -36,102 +36,102 @@ NodeID	ChannelID/ReservoirName/Obj2objName   Distance       Station_Name
 332     412                                   0         Sacramento
 #330     410                                   0         Sacramento
 Release_Date	Release_Time	Particle_Number	Release_Style
-06/16/2026	1:00	100	Random
-06/16/2026	1:15	100	Random
-06/16/2026	1:30	100	Random
-06/16/2026	1:45	100	Random
-06/16/2026	2:00	100	Random
-06/16/2026	2:15	100	Random
-06/16/2026	2:30	100	Random
-06/16/2026	2:45	100	Random
-06/16/2026	3:00	100	Random
-06/16/2026	3:15	100	Random
-06/16/2026	3:30	100	Random
-06/16/2026	3:45	100	Random
-06/16/2026	4:00	100	Random
-06/16/2026	4:15	100	Random
-06/16/2026	4:30	100	Random
-06/16/2026	4:45	100	Random
-06/16/2026	5:00	100	Random
-06/16/2026	5:15	100	Random
-06/16/2026	5:30	100	Random
-06/16/2026	5:45	100	Random
-06/16/2026	6:00	100	Random
-06/16/2026	6:15	100	Random
-06/16/2026	6:30	100	Random
-06/16/2026	6:45	100	Random
-06/16/2026	7:00	100	Random
-06/16/2026	7:15	100	Random
-06/16/2026	7:30	100	Random
-06/16/2026	7:45	100	Random
-06/16/2026	8:00	100	Random
-06/16/2026	8:15	100	Random
-06/16/2026	8:30	100	Random
-06/16/2026	8:45	100	Random
-06/16/2026	9:00	100	Random
-06/16/2026	9:15	100	Random
-06/16/2026	9:30	100	Random
-06/16/2026	9:45	100	Random
-06/16/2026	10:00	100	Random
-06/16/2026	10:15	100	Random
-06/16/2026	10:30	100	Random
-06/16/2026	10:45	100	Random
-06/16/2026	11:00	100	Random
-06/16/2026	11:15	100	Random
-06/16/2026	11:30	100	Random
-06/16/2026	11:45	100	Random
-06/16/2026	12:00	100	Random
-06/16/2026	12:15	100	Random
-06/16/2026	12:30	100	Random
-06/16/2026	12:45	100	Random
-06/16/2026	13:00	100	Random
-06/16/2026	13:15	100	Random
-06/16/2026	13:30	100	Random
-06/16/2026	13:45	100	Random
-06/16/2026	14:00	100	Random
-06/16/2026	14:15	100	Random
-06/16/2026	14:30	100	Random
-06/16/2026	14:45	100	Random
-06/16/2026	15:00	100	Random
-06/16/2026	15:15	100	Random
-06/16/2026	15:30	100	Random
-06/16/2026	15:45	100	Random
-06/16/2026	16:00	100	Random
-06/16/2026	16:15	100	Random
-06/16/2026	16:30	100	Random
-06/16/2026	16:45	100	Random
-06/16/2026	17:00	100	Random
-06/16/2026	17:15	100	Random
-06/16/2026	17:30	100	Random
-06/16/2026	17:45	100	Random
-06/16/2026	18:00	100	Random
-06/16/2026	18:15	100	Random
-06/16/2026	18:30	100	Random
-06/16/2026	18:45	100	Random
-06/16/2026	19:00	100	Random
-06/16/2026	19:15	100	Random
-06/16/2026	19:30	100	Random
-06/16/2026	19:45	100	Random
-06/16/2026	20:00	100	Random
-06/16/2026	20:15	100	Random
-06/16/2026	20:30	100	Random
-06/16/2026	20:45	100	Random
-06/16/2026	21:00	100	Random
-06/16/2026	21:15	100	Random
-06/16/2026	21:30	100	Random
-06/16/2026	21:45	100	Random
-06/16/2026	22:00	100	Random
-06/16/2026	22:15	100	Random
-06/16/2026	22:30	100	Random
-06/16/2026	22:45	100	Random
-06/16/2026	23:00	100	Random
-06/16/2026	23:15	100	Random
-06/16/2026	23:30	100	Random
-06/16/2026	23:45	100	Random
-06/16/2026	24:00	100	Random
-06/16/2026	24:15	100	Random
-06/16/2026	24:30	100	Random
-06/16/2026	24:45	100	Random
+06/23/2026	1:00	100	Random
+06/23/2026	1:15	100	Random
+06/23/2026	1:30	100	Random
+06/23/2026	1:45	100	Random
+06/23/2026	2:00	100	Random
+06/23/2026	2:15	100	Random
+06/23/2026	2:30	100	Random
+06/23/2026	2:45	100	Random
+06/23/2026	3:00	100	Random
+06/23/2026	3:15	100	Random
+06/23/2026	3:30	100	Random
+06/23/2026	3:45	100	Random
+06/23/2026	4:00	100	Random
+06/23/2026	4:15	100	Random
+06/23/2026	4:30	100	Random
+06/23/2026	4:45	100	Random
+06/23/2026	5:00	100	Random
+06/23/2026	5:15	100	Random
+06/23/2026	5:30	100	Random
+06/23/2026	5:45	100	Random
+06/23/2026	6:00	100	Random
+06/23/2026	6:15	100	Random
+06/23/2026	6:30	100	Random
+06/23/2026	6:45	100	Random
+06/23/2026	7:00	100	Random
+06/23/2026	7:15	100	Random
+06/23/2026	7:30	100	Random
+06/23/2026	7:45	100	Random
+06/23/2026	8:00	100	Random
+06/23/2026	8:15	100	Random
+06/23/2026	8:30	100	Random
+06/23/2026	8:45	100	Random
+06/23/2026	9:00	100	Random
+06/23/2026	9:15	100	Random
+06/23/2026	9:30	100	Random
+06/23/2026	9:45	100	Random
+06/23/2026	10:00	100	Random
+06/23/2026	10:15	100	Random
+06/23/2026	10:30	100	Random
+06/23/2026	10:45	100	Random
+06/23/2026	11:00	100	Random
+06/23/2026	11:15	100	Random
+06/23/2026	11:30	100	Random
+06/23/2026	11:45	100	Random
+06/23/2026	12:00	100	Random
+06/23/2026	12:15	100	Random
+06/23/2026	12:30	100	Random
+06/23/2026	12:45	100	Random
+06/23/2026	13:00	100	Random
+06/23/2026	13:15	100	Random
+06/23/2026	13:30	100	Random
+06/23/2026	13:45	100	Random
+06/23/2026	14:00	100	Random
+06/23/2026	14:15	100	Random
+06/23/2026	14:30	100	Random
+06/23/2026	14:45	100	Random
+06/23/2026	15:00	100	Random
+06/23/2026	15:15	100	Random
+06/23/2026	15:30	100	Random
+06/23/2026	15:45	100	Random
+06/23/2026	16:00	100	Random
+06/23/2026	16:15	100	Random
+06/23/2026	16:30	100	Random
+06/23/2026	16:45	100	Random
+06/23/2026	17:00	100	Random
+06/23/2026	17:15	100	Random
+06/23/2026	17:30	100	Random
+06/23/2026	17:45	100	Random
+06/23/2026	18:00	100	Random
+06/23/2026	18:15	100	Random
+06/23/2026	18:30	100	Random
+06/23/2026	18:45	100	Random
+06/23/2026	19:00	100	Random
+06/23/2026	19:15	100	Random
+06/23/2026	19:30	100	Random
+06/23/2026	19:45	100	Random
+06/23/2026	20:00	100	Random
+06/23/2026	20:15	100	Random
+06/23/2026	20:30	100	Random
+06/23/2026	20:45	100	Random
+06/23/2026	21:00	100	Random
+06/23/2026	21:15	100	Random
+06/23/2026	21:30	100	Random
+06/23/2026	21:45	100	Random
+06/23/2026	22:00	100	Random
+06/23/2026	22:15	100	Random
+06/23/2026	22:30	100	Random
+06/23/2026	22:45	100	Random
+06/23/2026	23:00	100	Random
+06/23/2026	23:15	100	Random
+06/23/2026	23:30	100	Random
+06/23/2026	23:45	100	Random
+06/23/2026	24:00	100	Random
+06/23/2026	24:15	100	Random
+06/23/2026	24:30	100	Random
+06/23/2026	24:45	100	Random
 End_Group_1
 End_Fish_Release_Inputs
  
@@ -217,7 +217,7 @@ End_Route_Inputs
 
 Survival_Inputs
 Survival_Parameters
-Output_Path: .\output\20260616\PTM\sp\survival_B.csv
+Output_Path: .\output\20260623\PTM\sp\survival_B.csv
 Number_of_Survival_Calculation_Group:10
 # group 0 in Russ's report from Sacramento to Freeport
 Group_1
@@ -315,7 +315,7 @@ Lambda			Omega			X
 End_Group_10
 End_Survival_Parameters
 Survival_Output
-Simulation_Start_Date: 20May2026
+Simulation_Start_Date: 27May2026
 Simulation_Scenario: historical
 Particle_Flux
 Name            From_Survival_Calculation_Group      To_Survival_Calculation_Group
