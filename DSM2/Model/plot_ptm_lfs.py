@@ -106,8 +106,8 @@ SUBREGION_TO_NODE = {
 
 # GROUPED TABLE 
 GROUPS = {
-    "Western Delta": ["Carquinez Strait","Upper Napa River","Lower Napa River","East San Pablo Bay","West San Pablo Bay","Mid San Pablo Bay"],
-    "Suisun Marsh": ["West Suisun Bay","East Suisun Bay","Grizzly Bay","Montezuma Slough","Honker Bay"],
+    "Western Delta": ["West Suisun Bay","Carquinez Strait","Upper Napa River","Lower Napa River","East San Pablo Bay","West San Pablo Bay","Mid San Pablo Bay"],
+    "Suisun Marsh": ["East Suisun Bay","Grizzly Bay","Montezuma Slough","Honker Bay"],
     "Sacramento/North Delta": ["Lower Sacramento River Ship Channel","Sacramento River near Ryde","Cache Slough and Liberty Island","Upper Sacramento River"],
     "Lower San Joaquin": ["San Joaquin River at Prisoners Pt","San Joaquin River at Twitchell Island","Lower San Joaquin River"],
     "Lower Sacramento": ["Lower Sacramento River","Sacramento River near Rio Vista"],
