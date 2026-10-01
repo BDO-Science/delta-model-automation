@@ -280,22 +280,18 @@ rem =========================================================
 rem 13. PTM Plots
 rem =========================================================
 call :AskRun "Section 13 - PTM Plots"
+
+call :logEcho ======================================
+call :logEcho Running PTM plotting script
+call :logEcho ======================================
+
 if errorlevel 1 goto skip13
 pushd "..\Model" || (
     echo ERROR: Could not change to Model folder
     exit /b 1
 )
 
-call :logEcho ======================================
-call :logEcho Running PTM plotting script
-call :logEcho ======================================
-
-python plot_ptm_particles.py %NEWEST%
-if errorlevel 1 (
-    call :logEcho ERROR: plot_ptm_particles.py failed!
-    pause
-    exit /b 1
-)
+python plot_ptm_particles.py %NEWEST% || exit /b 1
 
 :skip13
 call :logEcho Skipping or completed Section 13
@@ -304,21 +300,18 @@ rem =========================================================
 rem 14. LFS Plots
 rem =========================================================
 call :AskRun "Section 14 - LFS Plots"
+
+call :logEcho ======================================
+call :logEcho Running LFS plotting script
+call :logEcho ======================================
+
 if errorlevel 1 goto skip14
 pushd "..\Model" || (
     echo ERROR: Could not change to Model folder
     exit /b 1
 )
-call :logEcho ======================================
-call :logEcho Running LFS plotting script
-call :logEcho ======================================
 
-python plot_ptm_lfs.py %NEWEST%
-if errorlevel 1 (
-    call :logEcho ERROR: plot_ptm_lfs.py failed!
-    pause
-    exit /b 1
-)
+python plot_ptm_lfs.py %NEWEST% || exit /b 1
 
 :skip14
 call :logEcho Skipping or completed Section 14

@@ -36,10 +36,10 @@ weeks = {
     "Week3": INJECTION_DATE + pd.Timedelta(days=20, hours=23, minutes=45),
 }
 
-# TEMPLATE NODES
+'''# REGION NODES
 # Nodes included in detailed node-level plots, organized by plotting/reporting region.
 # data_all may contain additional nodes, but only nodes listed here are included in detailed plots.
-TEMPLATE_NODES = {
+REGION_NODES = {
     "Sacramento/North Delta": [293, 350, 323, 304],
     "Eastern Delta": [249],
     "Lower San Joaquin": [41, 34, 46],
@@ -48,7 +48,87 @@ TEMPLATE_NODES = {
     "Western Delta" : [359],
     #"Suisun Marsh" : [227, 329, 359, 365, 420],
     "Suisun Marsh" : [227, 329, 365, 420]
+}'''
+# SLS DATA
+# SLS abundance estimates used to convert PTM percentages into estimated entrained fish numbers.
+SLS_CSV = (
+    MODEL_DIR
+    / "SLS"
+    / "SLS_abundance_estimates"
+    / "2026 LFS Abundances through SLS Survey 6 (Final)_April 21st.csv"
+)
+# Selects Latest
+# Use the most recent survey date available in the SLS CSV.
+# This is not tied directly to WEEK_STR unless the CSV itself has been updated accordingly.
+sls_df = pd.read_csv(SLS_CSV)
+sls_df["survDate"] = pd.to_datetime(sls_df["survDate"])
+latest_date = sls_df["survDate"].max()
+sls_latest = sls_df[sls_df["survDate"] == latest_date]
+SLS_ABUND = dict(zip(sls_latest["SubRegion"], sls_latest["Subregion_Abund"]))
+
+# COLUMN ORDER
+COLUMNS = [
+    "West Suisun Bay","East Suisun Bay","Grizzly Bay","Montezuma Slough","Honker Bay",
+    "Carquinez Strait","Upper Napa River","Lower Napa River",
+    "East San Pablo Bay","West San Pablo Bay","Mid San Pablo Bay",
+    "Lower Sacramento River Ship Channel","Sacramento River near Ryde",
+    "Cache Slough and Liberty Island","Upper Sacramento River",
+    "San Joaquin River at Prisoners Pt","San Joaquin River at Twitchell Island",
+    "Lower San Joaquin River","Lower Sacramento River",
+    "Sacramento River near Rio Vista",
+    "San Joaquin River near Stockton","Old River","Middle River",
+    "Victoria Canal","Holland Cut","Franks Tract",
+    "North and South Forks Mokelumne River"
+]
+
+# NODE MAP
+# Map each SLS subregion to the DSM2 node whose PTM result is applied to that subregion.
+SUBREGION_TO_NODE = {
+    "West Suisun Bay":359,"East Suisun Bay":329,"Grizzly Bay":365,
+    "Montezuma Slough":420,"Honker Bay":227,"Carquinez Strait":359,
+    "Upper Napa River":359,"Lower Napa River":359,
+    "East San Pablo Bay":359,"West San Pablo Bay":359,"Mid San Pablo Bay":359,
+    "Lower Sacramento River Ship Channel":350,
+    "Sacramento River near Ryde":293,
+    "Cache Slough and Liberty Island":323,
+    "Upper Sacramento River":304,
+    "San Joaquin River at Prisoners Pt":34,
+    "San Joaquin River at Twitchell Island":41,
+    "Lower San Joaquin River":46,
+    "Lower Sacramento River":353,
+    "Sacramento River near Rio Vista":351,
+    "San Joaquin River near Stockton":29,
+    "Old River":86,"Middle River":145,
+    "Victoria Canal":75,"Holland Cut":99,
+    "Franks Tract":225,
+    "North and South Forks Mokelumne River":249
 }
+
+# GROUPED TABLE 
+GROUPS = {
+    "Western Delta": ["Carquinez Strait","Upper Napa River","Lower Napa River","East San Pablo Bay","West San Pablo Bay","Mid San Pablo Bay"],
+    "Suisun Marsh": ["West Suisun Bay","East Suisun Bay","Grizzly Bay","Montezuma Slough","Honker Bay"],
+    "Sacramento/North Delta": ["Lower Sacramento River Ship Channel","Sacramento River near Ryde","Cache Slough and Liberty Island","Upper Sacramento River"],
+    "Lower San Joaquin": ["San Joaquin River at Prisoners Pt","San Joaquin River at Twitchell Island","Lower San Joaquin River"],
+    "Lower Sacramento": ["Lower Sacramento River","Sacramento River near Rio Vista"],
+    "South Delta": ["San Joaquin River near Stockton","Old River","Middle River","Victoria Canal","Holland Cut","Franks Tract"],
+    "Eastern Delta": ["North and South Forks Mokelumne River"]
+}
+
+# Build REGION_NODES automatically from GROUPS and SUBREGION_TO_NODE
+REGION_NODES = {}
+
+for region, cols in GROUPS.items():
+
+    nodes = []
+
+    for col in cols:
+        node = SUBREGION_TO_NODE[col]
+
+        if node not in nodes:
+            nodes.append(node)
+
+    REGION_NODES[region] = nodes
 
 # COLORS
 # Region colors used consistently for both PNG and HTML plots.
@@ -63,7 +143,6 @@ REGION_COLORS = {
     "Suisun Marsh" : "#F79646",
 }
 
-# LINESTYLES
 # LINESTYLES
 # Node-specific line styles used to distinguish nodes within each region.
 # Tuple styles are custom Matplotlib dash patterns and are simplified in the HTML output.
@@ -232,7 +311,7 @@ def save_lfs_html(
 
 # LOAD DATA
 # data_all stores all successfully loaded node/scenario DSS time series.
-# data_plot stores only the subset of nodes included in TEMPLATE_NODES for detailed plotting.
+# data_plot stores only the subset of nodes included in REGION_NODES for detailed plotting.
 data_all = {}
 data_plot = {}
 
@@ -264,8 +343,8 @@ for dss_path in sorted(PTM_DIR.glob("*.dss")):
     data_all[(node, scen)] = df
 
     # Store only template nodes for detailed node-level plotting.
-    # Nodes not listed in TEMPLATE_NODES remain available in data_all for table calculations.
-    if any(node in nodes for nodes in TEMPLATE_NODES.values()):
+    # Nodes not listed in REGION_NODES remain available in data_all for table calculations.
+    if any(node in nodes for nodes in REGION_NODES.values()):
         data_plot[(node, scen)] = df
 
 # Build scenario labels only from scenarios that were actually loaded from DSS files.
@@ -290,8 +369,8 @@ for scen in scenarios:
         if s != scen:
             continue
 
-        # Identify the plotting region for this node based on TEMPLATE_NODES.
-        region = next((r for r, nodes in TEMPLATE_NODES.items() if node in nodes), None)
+        # Identify the plotting region for this node based on REGION_NODES.
+        region = next((r for r, nodes in REGION_NODES.items() if node in nodes), None)
         color = REGION_COLORS[region]
         ls = NODE_LINESTYLES[node]
 
@@ -342,10 +421,10 @@ for scen in scenarios:
         f"Particles Injected {INJECTION_DATE.strftime('%m/%d/%Y')}."
     )
 
-    # Build a fixed legend from TEMPLATE_NODES so plot legends remain consistent across scenarios.
+    # Build a fixed legend from REGION_NODES so plot legends remain consistent across scenarios.
     # This legend may include nodes even if data for that node/scenario was not available.
     legend_handles = []
-    for region, nodes in TEMPLATE_NODES.items():
+    for region, nodes in REGION_NODES.items():
         for node in nodes:
             handle = Line2D([0], [0], color=REGION_COLORS[region], lw=2)
             ls = NODE_LINESTYLES[node]
@@ -383,61 +462,6 @@ for scen in scenarios:
 
     plt.close(fig)
 
-# SLS DATA
-# SLS abundance estimates used to convert PTM percentages into estimated entrained fish numbers.
-SLS_CSV = (
-    MODEL_DIR
-    / "SLS"
-    / "SLS_abundance_estimates"
-    / "2026 LFS Abundances through SLS Survey 6 (Final)_April 21st.csv"
-)
-# Selects Latest
-# Use the most recent survey date available in the SLS CSV.
-# This is not tied directly to WEEK_STR unless the CSV itself has been updated accordingly.
-sls_df = pd.read_csv(SLS_CSV)
-sls_df["survDate"] = pd.to_datetime(sls_df["survDate"])
-latest_date = sls_df["survDate"].max()
-sls_latest = sls_df[sls_df["survDate"] == latest_date]
-SLS_ABUND = dict(zip(sls_latest["SubRegion"], sls_latest["Subregion_Abund"]))
-
-# COLUMN ORDER
-COLUMNS = [
-    "West Suisun Bay","East Suisun Bay","Grizzly Bay","Montezuma Slough","Honker Bay",
-    "Carquinez Strait","Upper Napa River","Lower Napa River",
-    "East San Pablo Bay","West San Pablo Bay","Mid San Pablo Bay",
-    "Lower Sacramento River Ship Channel","Sacramento River near Ryde",
-    "Cache Slough and Liberty Island","Upper Sacramento River",
-    "San Joaquin River at Prisoners Pt","San Joaquin River at Twitchell Island",
-    "Lower San Joaquin River","Lower Sacramento River",
-    "Sacramento River near Rio Vista",
-    "San Joaquin River near Stockton","Old River","Middle River",
-    "Victoria Canal","Holland Cut","Franks Tract",
-    "North and South Forks Mokelumne River"
-]
-
-# NODE MAP
-# Map each SLS subregion to the DSM2 node whose PTM result is applied to that subregion.
-SUBREGION_TO_NODE = {
-    "West Suisun Bay":359,"East Suisun Bay":329,"Grizzly Bay":365,
-    "Montezuma Slough":420,"Honker Bay":227,"Carquinez Strait":359,
-    "Upper Napa River":359,"Lower Napa River":359,
-    "East San Pablo Bay":359,"West San Pablo Bay":359,"Mid San Pablo Bay":359,
-    "Lower Sacramento River Ship Channel":350,
-    "Sacramento River near Ryde":293,
-    "Cache Slough and Liberty Island":323,
-    "Upper Sacramento River":304,
-    "San Joaquin River at Prisoners Pt":34,
-    "San Joaquin River at Twitchell Island":41,
-    "Lower San Joaquin River":46,
-    "Lower Sacramento River":353,
-    "Sacramento River near Rio Vista":351,
-    "San Joaquin River near Stockton":29,
-    "Old River":86,"Middle River":145,
-    "Victoria Canal":75,"Holland Cut":99,
-    "Franks Tract":225,
-    "North and South Forks Mokelumne River":249
-}
-
 # Builds Full Summary Table
 
 ptm_lookup = {(node, scen): df["EXPORT_TOTAL"] for (node, scen), df in data_all.items()}
@@ -473,48 +497,67 @@ for wk, timestamp in weeks.items():
         row = {"Metric": f"PTM (%) {omr}"}
         ptm_vals[scen] = {}
 
+        weighted_numerator = 0.0
+        weighted_denominator = 0.0
+
         for col in COLUMNS:
             node = SUBREGION_TO_NODE[col]
             series = ptm_lookup.get((node, scen), None)
 
-            # Critical timestamp check: this requires an exact match to the 15-minute DSS timestamp.
-            # No interpolation or nearest-time lookup is performed.
-            val = float(series.loc[timestamp]) if (series is not None and timestamp in series.index) else 0.0
+            val = (
+                float(series.loc[timestamp])
+                if (series is not None and timestamp in series.index)
+                else 0.0
+            )
+
             row[col] = round(val, 1)
             ptm_vals[scen][col] = val
-            row["Total"] = round(sum(ptm_vals[scen].values()), 1)
+
+            abundance = SLS_ABUND.get(col, 0)
+
+            weighted_numerator += abundance * val
+            weighted_denominator += abundance
+
+        row["Total"] = (
+            round(weighted_numerator / weighted_denominator, 1)
+            if weighted_denominator > 0
+            else 0.0
+        )
+
         rows.append(row)
 
-    # Convert PTM percentage to estimated entrained fish count using:
-    # entrained number = SLS abundance * PTM percent / 100.
+    # Convert PTM percentage to estimated entrained fish count 
     for scen, omr in available_scenarios.items():
-        row = {"Metric": f"Entrained (#) {omr}"}
-        total_ent = 0
+        row = {"Metric": f"PTM (%) {omr}"}
 
-        for col in COLUMNS:
-            abundance = SLS_ABUND.get(col, 0)
-            entrained = abundance * ptm_vals[scen][col] / 100.0
-            row[col] = round(entrained, 1)
-            total_ent += entrained
+        weighted_numerator = 0.0
+        weighted_denominator = 0.0
 
-        row["Total"] = round(total_ent, 0)
+        for group, cols in GROUPS.items():
+
+            # Keep current group PTM calculation
+            vals = [ptm_vals[scen][c] for c in cols]
+            row[group] = round(sum(vals) / len(vals), 1)
+
+            # Calculate overall abundance-weighted PTM
+            for col in cols:
+                abundance = SLS_ABUND.get(col, 0)
+
+                weighted_numerator += abundance * ptm_vals[scen][col]
+                weighted_denominator += abundance
+
+        row["Total"] = (
+            round(weighted_numerator / weighted_denominator, 1)
+            if weighted_denominator > 0
+            else 0.0
+        )
+
         rows.append(row)
 
     df_out = pd.DataFrame(rows)
     df_out.to_csv(FIG_DIR / f"LFS_Summary_{wk}_{WEEK_STR}.csv", index=False)
 
     print(f"Saved table: {wk}")
-
-# GROUPED TABLE 
-GROUPS = {
-    "Western Delta": ["Carquinez Strait","Upper Napa River","Lower Napa River","East San Pablo Bay","West San Pablo Bay","Mid San Pablo Bay"],
-    "Suisun Marsh": ["West Suisun Bay","East Suisun Bay","Grizzly Bay","Montezuma Slough","Honker Bay"],
-    "Sacramento/North Delta": ["Lower Sacramento River Ship Channel","Sacramento River near Ryde","Cache Slough and Liberty Island","Upper Sacramento River"],
-    "Lower San Joaquin": ["San Joaquin River at Prisoners Pt","San Joaquin River at Twitchell Island","Lower San Joaquin River"],
-    "Lower Sacramento": ["Lower Sacramento River","Sacramento River near Rio Vista"],
-    "South Delta": ["San Joaquin River near Stockton","Old River","Middle River","Victoria Canal","Holland Cut","Franks Tract"],
-    "Eastern Delta": ["North and South Forks Mokelumne River"]
-}
 
 def build_grouped_from_existing():
     
@@ -534,6 +577,17 @@ def build_grouped_from_existing():
 
         rows = []
 
+        # --- DSM2 Node Mapping Row ---
+        node_row = {"Metric": "DSM2 Nodes"}
+
+        for region, nodes in REGION_NODES.items():
+            node_row[region] = ",".join(str(n) for n in nodes)
+
+        node_row["Total"] = ""
+        node_row["Total (%)"] = ""
+
+        rows.append(node_row)
+
         # --- Abundance ---
         # Grouped abundance is calculated as the sum of SLS abundance across subregions in each group.
         abundance_row = {"Metric": "LFS Abundance (Grouped)"}
@@ -543,6 +597,8 @@ def build_grouped_from_existing():
             abundance_row[group] = sum(SLS_ABUND.get(c, 0) for c in cols)
 
         abundance_row["Total"] = sum(abundance_row[g] for g in GROUPS)
+        grouped_total_abundance = abundance_row["Total"]
+        abundance_row["Total (%)"] = ""
         rows.append(abundance_row)
 
         # --- PTM ---
@@ -556,6 +612,7 @@ def build_grouped_from_existing():
                 row[group] = round(sum(vals) / len(vals), 1)
 
             row["Total"] = round(sum(row[g] for g in GROUPS), 1)
+            row["Total (%)"] = ""
             rows.append(row)
 
         # --- Entrained ---
@@ -573,6 +630,15 @@ def build_grouped_from_existing():
                 total_ent += total
 
             row["Total"] = round(total_ent, 0)
+
+            if grouped_total_abundance > 0:
+                row["Total (%)"] = round(
+                    total_ent / grouped_total_abundance * 100,
+                    2
+                )
+            else:
+                row["Total (%)"] = 0
+
             rows.append(row)
 
         df_group = pd.DataFrame(rows)
