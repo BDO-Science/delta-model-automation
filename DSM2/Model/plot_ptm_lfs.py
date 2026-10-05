@@ -46,8 +46,7 @@ REGION_NODES = {
     "Lower Sacramento": [351, 353],
     "South Delta": [29, 99, 75, 86, 225, 145],
     "Western Delta" : [359],
-    #"Suisun Marsh" : [227, 329, 359, 365, 420],
-    "Suisun Marsh" : [227, 329, 365, 420]
+    "Suisun Marsh" : [227, 329, 359, 365, 420],
 }'''
 # SLS DATA
 # SLS abundance estimates used to convert PTM percentages into estimated entrained fish numbers.
@@ -106,14 +105,25 @@ SUBREGION_TO_NODE = {
 
 # GROUPED TABLE 
 GROUPS = {
-    "Western Delta": ["West Suisun Bay","Carquinez Strait","Upper Napa River","Lower Napa River","East San Pablo Bay","West San Pablo Bay","Mid San Pablo Bay"],
-    "Suisun Marsh": ["East Suisun Bay","Grizzly Bay","Montezuma Slough","Honker Bay"],
+    "Western Delta": ["Carquinez Strait","Upper Napa River","Lower Napa River","East San Pablo Bay","West San Pablo Bay","Mid San Pablo Bay"],
+    "Suisun Marsh": ["West Suisun Bay","East Suisun Bay","Grizzly Bay","Montezuma Slough","Honker Bay"],
     "Sacramento/North Delta": ["Lower Sacramento River Ship Channel","Sacramento River near Ryde","Cache Slough and Liberty Island","Upper Sacramento River"],
     "Lower San Joaquin": ["San Joaquin River at Prisoners Pt","San Joaquin River at Twitchell Island","Lower San Joaquin River"],
     "Lower Sacramento": ["Lower Sacramento River","Sacramento River near Rio Vista"],
     "South Delta": ["San Joaquin River near Stockton","Old River","Middle River","Victoria Canal","Holland Cut","Franks Tract"],
     "Eastern Delta": ["North and South Forks Mokelumne River"]
 }
+
+# helper function(s)
+def grouped_ptm(cols, ptm_dict):
+    #Calculate grouped PTM using simple arithmetic mean of all subregions in the group.
+
+    vals = [
+        ptm_dict[col]
+        for col in cols
+    ]
+
+    return sum(vals) / len(vals) if vals else 0.0
 
 # Build REGION_NODES automatically from GROUPS and SUBREGION_TO_NODE
 REGION_NODES = {}
@@ -348,10 +358,15 @@ for dss_path in sorted(PTM_DIR.glob("*.dss")):
         data_plot[(node, scen)] = df
 
 # Build scenario labels only from scenarios that were actually loaded from DSS files.
-available_scenarios = {
-    scen: SCENARIO_OMR.get(scen, scen)
-    for scen in sorted(set(s for (_, s) in data_all.keys()))
-}
+available_scenarios = dict(
+    sorted(
+        {
+            scen: SCENARIO_OMR.get(scen, scen)
+            for _, scen in data_all.keys()
+        }.items(),
+        key=lambda item: int(item[1].replace(",", ""))
+    )
+)
 
 # PLOT
 scenarios = sorted(set(s for (_, s) in data_plot.keys()))
@@ -526,31 +541,24 @@ for wk, timestamp in weeks.items():
 
         rows.append(row)
 
-    # Convert PTM percentage to estimated entrained fish count 
+    # Entrained fish counts
     for scen, omr in available_scenarios.items():
-        row = {"Metric": f"PTM (%) {omr}"}
 
-        weighted_numerator = 0.0
-        weighted_denominator = 0.0
+        row = {"Metric": f"Entrained (#) {omr}"}
 
-        for group, cols in GROUPS.items():
+        total_entrained = 0
 
-            # Keep current group PTM calculation
-            vals = [ptm_vals[scen][c] for c in cols]
-            row[group] = round(sum(vals) / len(vals), 1)
+        for col in COLUMNS:
 
-            # Calculate overall abundance-weighted PTM
-            for col in cols:
-                abundance = SLS_ABUND.get(col, 0)
+            abundance = SLS_ABUND.get(col, 0)
 
-                weighted_numerator += abundance * ptm_vals[scen][col]
-                weighted_denominator += abundance
+            entrained = abundance * ptm_vals[scen][col] / 100.0
 
-        row["Total"] = (
-            round(weighted_numerator / weighted_denominator, 1)
-            if weighted_denominator > 0
-            else 0.0
-        )
+            row[col] = round(entrained, 1)
+
+            total_entrained += entrained
+
+        row["Total"] = round(total_entrained, 0)
 
         rows.append(row)
 
@@ -608,8 +616,10 @@ def build_grouped_from_existing():
             for group, cols in GROUPS.items():
                 # Grouped PTM percentage is calculated as a simple average across subregions in the group.
                 # This is not abundance-weighted.
-                vals = [ptm_vals[scen][c] for c in cols]
-                row[group] = round(sum(vals) / len(vals), 1)
+                row[group] = round(
+                    grouped_ptm(cols, ptm_vals[scen]),
+                    1
+                )
 
             row["Total"] = round(sum(row[g] for g in GROUPS), 1)
             row["Total (%)"] = ""
