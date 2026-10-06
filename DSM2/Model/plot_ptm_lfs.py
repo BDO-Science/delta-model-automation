@@ -489,7 +489,7 @@ for wk, timestamp in weeks.items():
     node_row = {"Metric": "DSM2 Node"}
     for col in COLUMNS:
         node_row[col] = SUBREGION_TO_NODE[col]
-    node_row["Total"] = ""
+    node_row["Total"] = None
     rows.append(node_row)
 
     total_abundance = 0
@@ -591,8 +591,8 @@ def build_grouped_from_existing():
         for region, nodes in REGION_NODES.items():
             node_row[region] = ",".join(str(n) for n in nodes)
 
-        node_row["Total"] = ""
-        node_row["Total (%)"] = ""
+        node_row["Total"] = None
+        node_row["Total (%)"] = None
 
         rows.append(node_row)
 
@@ -606,7 +606,7 @@ def build_grouped_from_existing():
 
         abundance_row["Total"] = sum(abundance_row[g] for g in GROUPS)
         grouped_total_abundance = abundance_row["Total"]
-        abundance_row["Total (%)"] = ""
+        abundance_row["Total (%)"] = None
         rows.append(abundance_row)
 
         # --- PTM ---
@@ -621,8 +621,8 @@ def build_grouped_from_existing():
                     1
                 )
 
-            row["Total"] = round(sum(row[g] for g in GROUPS), 1)
-            row["Total (%)"] = ""
+            row["Total"] = None
+            row["Total (%)"] = None
             rows.append(row)
 
         # --- Entrained ---
