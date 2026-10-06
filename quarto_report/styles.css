@@ -1,0 +1,311 @@
+/* Table captions from Quarto / kable */
+caption,
+table caption,
+.quarto-float-caption,
+.quarto-table-caption,
+.figure-caption,
+figcaption {
+caption-side: top !important;
+text-align: center !important;
+font-size: 20px !important;
+font-weight: 700 !important;
+color: grey !important;
+margin-bottom: 10px !important;
+}
+
+/* Table font size */
+table {
+font-size: 16px !important;
+}
+
+/* Notes and keys */
+.notes,
+.key {
+font-size: 16px !important;
+}
+
+body {
+color: #000000;
+}
+
+* Horizontally scrollable tables */
+.table-scroll {
+display: block;
+width: 100%;
+max-width: 100%;
+overflow-x: auto;
+overflow-y: hidden;
+margin: 0 auto 1rem auto;
+padding-bottom: 8px;
+-webkit-overflow-scrolling: touch;
+}
+
+/* Prevent wide tables from being compressed */
+.table-scroll table {
+width: max-content !important;
+min-width: 100%;
+margin-left: auto !important;
+margin-right: auto !important;
+white-space: nowrap;
+}
+
+/* Allow table headings to wrap */
+.table-scroll th {
+white-space: normal;
+vertical-align: middle !important;
+}
+
+/* Keep table values centered */
+.table-scroll th,
+.table-scroll td {
+text-align: center !important;
+}
+
+
+.notes {
+font-size: 16px !important;
+line-height: 1.4;
+margin-top: 6px;
+margin-bottom: 8px;
+}
+
+.notes p {
+margin-top: 4px;
+margin-bottom: 4px;
+}
+
+.key {
+font-size: 16px !important;
+line-height: 1.35;
+margin-top: 4px;
+}
+
+
+/* Horizontally scrollable tables */
+.table-scroll {
+display: block;
+width: 100%;
+max-width: 100%;
+overflow-x: auto;
+overflow-y: hidden;
+margin: 0 auto 1rem auto;
+padding-bottom: 8px;
+-webkit-overflow-scrolling: touch;
+}
+
+.table-scroll table {
+width: max-content !important;
+min-width: 100%;
+margin-left: auto !important;
+margin-right: auto !important;
+white-space: nowrap;
+}
+
+.table-scroll th {
+white-space: normal;
+vertical-align: middle !important;
+}
+
+.table-scroll th,
+.table-scroll td {
+text-align: center !important;
+}
+
+
+/* Horizontally scrollable tables */
+.table-scroll {
+display: block;
+width: 100%;
+max-width: 100%;
+overflow-x: auto;
+overflow-y: hidden;
+margin: 0 auto 1rem auto;
+padding-bottom: 8px;
+-webkit-overflow-scrolling: touch;
+}
+
+.table-scroll table {
+width: max-content !important;
+min-width: 100%;
+margin-left: auto !important;
+margin-right: auto !important;
+white-space: nowrap;
+}
+
+.table-scroll th {
+white-space: normal;
+vertical-align: middle !important;
+}
+
+.table-scroll th,
+.table-scroll td {
+text-align: center !important;
+}
+
+/* ========================================================
+Interactive HTML figures
+======================================================== */
+
+/* Standard responsive interactive figures */
+.interactive-responsive-wrapper {
+display: block;
+width: 100%;
+max-width: 100%;
+margin: 0 auto;
+overflow: hidden;
+}
+
+.interactive-responsive-iframe {
+display: block;
+width: 100%;
+max-width: 100%;
+border: 1px solid #d9d9d9;
+border-radius: 4px;
+background: #ffffff;
+}
+
+
+/* Scaled interactive figures
+Used for proportional channel-length plots.
+
+The iframe is given a larger internal width so that the
+subplot titles have sufficient space. It is then scaled
+down to fit inside the report without a scrollbar.
+
+
+
+/* Keep Quarto-generated captions centered and consistent */
+.quarto-float-caption,
+.figure-caption,
+figcaption {
+text-align: center !important;
+font-size: 20px !important;
+font-weight: 700 !important;
+color: #000000 !important;
+margin-top: 10px !important;
+margin-bottom: 18px !important;
+}
+
+
+
+
+
+
+
+/* Scrollable container for wide interactive figures */
+.interactive-wide-scroll {
+display: block;
+width: 100%;
+max-width: 100%;
+overflow-x: auto;
+overflow-y: hidden;
+padding-bottom: 10px;
+-webkit-overflow-scrolling: touch;
+}
+
+
+
+/* Responsive interactive HTML figures */
+.interactive-responsive-wrapper {
+display: block;
+width: 100%;
+max-width: 100%;
+margin: 0 auto;
+padding: 0;
+overflow: hidden !important;
+}
+
+.interactive-responsive-iframe {
+display: block;
+width: 100% !important;
+max-width: 100% !important;
+border: 1px solid #d9d9d9;
+border-radius: 4px;
+background: #ffffff;
+overflow: hidden !important;
+}
+
+/* Consistent Quarto figure captions */
+.quarto-float-caption,
+.figure-caption,
+figcaption {
+text-align: center !important;
+font-size: 20px !important;
+font-weight: 700 !important;
+color: #000000 !important;
+margin-top: 10px !important;
+margin-bottom: 18px !important;
+}
+
+
+/* Responsive interactive HTML figures */
+.interactive-responsive-wrapper {
+display: block;
+width: 100%;
+max-width: 100%;
+margin: 0 auto;
+padding: 0;
+overflow: hidden !important;
+}
+
+.interactive-responsive-iframe {
+display: block;
+width: 100% !important;
+max-width: 100% !important;
+border: 1px solid #d9d9d9;
+border-radius: 4px;
+background: #ffffff;
+overflow: hidden !important;
+}
+
+/* Quarto figure captions */
+.quarto-float-caption,
+.figure-caption,
+figcaption {
+text-align: center !important;
+font-size: 20px !important;
+font-weight: 700 !important;
+color: #000000 !important;
+margin-top: 10px !important;
+margin-bottom: 18px !important;
+}
+
+
+/* Wide dated Longfin Smelt maps scaled to report width */
+.dated-map-scale-wrapper {
+display: block;
+position: relative;
+width: 100%;
+max-width: 100%;
+min-width: 0;
+height: auto;
+margin: 0 auto;
+padding: 0;
+overflow: hidden !important;
+box-sizing: border-box;
+}
+
+.dated-map-scale-iframe {
+display: block;
+position: absolute;
+top: 0;
+left: 0;
+width: 1400px;
+height: 900px;
+margin: 0;
+padding: 0;
+border: 1px solid #d9d9d9;
+border-radius: 4px;
+background: #ffffff;
+overflow: hidden !important;
+transform-origin: top left;
+box-sizing: border-box;
+}
+
+/* Caption spacing beneath scaled maps */
+.dated-map-scale-wrapper + p,
+.dated-map-scale-wrapper + .quarto-float-caption {
+margin-top: 10px !important;
+}
+
+

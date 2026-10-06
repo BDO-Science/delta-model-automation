@@ -1,0 +1,9 @@
+# Weekly report settings
+# Use YYYYMMDD format.
+# Example: 20260526 selects the matching date-only folders under ../DSM2/
+
+results_date: "20260616"
+
+# Leave results_date blank to use the latest available DSM2 run date
+# Leave date_published blank to use the render date
+date_published: ""
