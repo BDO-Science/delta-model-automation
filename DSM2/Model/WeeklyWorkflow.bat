@@ -297,6 +297,28 @@ python plot_ptm_particles.py %NEWEST% || exit /b 1
 call :logEcho Skipping or completed Section 13
 
 rem =========================================================
+rem STOP BEFORE LFS PRODUCTS
+rem =========================================================
+echo.
+echo ======================================
+echo Workflow paused before LFS products.
+echo.
+echo Verify that SLS survey data are available.
+echo.
+echo Press:
+echo   Y = Continue to LFS and Entrainment
+echo   N = Stop workflow here
+echo ======================================
+
+choice /c YN /n
+
+if errorlevel 2 (
+    echo Workflow stopped before Section 14.
+    pause
+    exit /b 0
+)
+
+rem =========================================================
 rem 14. LFS Plots
 rem =========================================================
 call :AskRun "Section 14 - LFS Plots"
@@ -315,6 +337,26 @@ python plot_ptm_lfs.py %NEWEST% || exit /b 1
 
 :skip14
 call :logEcho Skipping or completed Section 14
+
+rem =========================================================
+rem 15. Entrainment Plots
+rem =========================================================
+call :AskRun "Section 15 - Entrainment Plots"
+
+call :logEcho ======================================
+call :logEcho Running Entrainment plotting script
+call :logEcho ======================================
+
+if errorlevel 1 goto skip15
+pushd "..\Model" || (
+    echo ERROR: Could not change to Model folder
+    exit /b 1
+)
+
+python entrainment_map.py %NEWEST% || exit /b 1
+
+:skip15
+call :logEcho Skipping or completed Section 15
 
 echo DONE!
 pause

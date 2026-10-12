@@ -36,21 +36,9 @@ weeks = {
     "Week3": INJECTION_DATE + pd.Timedelta(days=20, hours=23, minutes=45),
 }
 
-'''# REGION NODES
-# Nodes included in detailed node-level plots, organized by plotting/reporting region.
-# data_all may contain additional nodes, but only nodes listed here are included in detailed plots.
-REGION_NODES = {
-    "Sacramento/North Delta": [293, 350, 323, 304],
-    "Eastern Delta": [249],
-    "Lower San Joaquin": [41, 34, 46],
-    "Lower Sacramento": [351, 353],
-    "South Delta": [29, 99, 75, 86, 225, 145],
-    "Western Delta" : [359],
-    "Suisun Marsh" : [227, 329, 359, 365, 420],
-}'''
 # SLS DATA
 # SLS abundance estimates used to convert PTM percentages into estimated entrained fish numbers.
-# SLS DATA
+
 # Determine the water year from the injection date.
 # October through December belong to the following water year.
 # Examples:
@@ -165,22 +153,6 @@ SLS_ABUND = dict(
 )
 
 print(f"Latest survey date used: {latest_date.strftime('%Y-%m-%d')}")
-'''
-SLS_CSV = (
-    MODEL_DIR
-    / "SLS
-    / "SLS_abundance_estimates"
-    / "2026 LFS Abundances through SLS Survey 6 (Final)_April 21st.csv"
-)
-# Selects Latest
-# Use the most recent survey date available in the SLS CSV.
-# This is not tied directly to WEEK_STR unless the CSV itself has been updated accordingly.
-sls_df = pd.read_csv(SLS_CSV)
-sls_df["survDate"] = pd.to_datetime(sls_df["survDate"])
-latest_date = sls_df["survDate"].max()
-sls_latest = sls_df[sls_df["survDate"] == latest_date]
-SLS_ABUND = dict(zip(sls_latest["SubRegion"], sls_latest["Subregion_Abund"]))
-'''
 
 # COLUMN ORDER
 COLUMNS = [
