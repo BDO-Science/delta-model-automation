@@ -1,0 +1,100 @@
+survDate,WY,Source,Survey,SubRegion,Region,Subregion_Abund,Regional_Abundance
+2025-12-29T08:00:00Z,2026,SLS,1,West San Pablo Bay,Western Delta,0,1746759
+2025-12-29T08:00:00Z,2026,SLS,1,Mid San Pablo Bay,Western Delta,0,1746759
+2025-12-29T08:00:00Z,2026,SLS,1,East San Pablo Bay,Western Delta,279500,1746759
+2025-12-29T08:00:00Z,2026,SLS,1,Carquinez Strait,Western Delta,1196667,1746759
+2025-12-29T08:00:00Z,2026,SLS,1,Lower Napa River,Western Delta,270370,1746759
+2025-12-29T08:00:00Z,2026,SLS,1,Upper Napa River,Western Delta,222,1746759
+2025-12-29T08:00:00Z,2026,SLS,1,West Suisun Bay,Suisun,3543556,4729556
+2025-12-29T08:00:00Z,2026,SLS,1,East Suisun Bay,Suisun,928333,4729556
+2025-12-29T08:00:00Z,2026,SLS,1,Honker Bay,Suisun,79667,4729556
+2025-12-29T08:00:00Z,2026,SLS,1,Grizzly Bay,Suisun,178000,4729556
+2025-12-29T08:00:00Z,2026,SLS,1,Montezuma Slough,Suisun,0,4729556
+2025-12-29T08:00:00Z,2026,SLS,1,Lower Sacramento River,Lower Sacramento,290000,331500
+2025-12-29T08:00:00Z,2026,SLS,1,Lower San Joaquin River,Lower San Joaquin,560370,560370
+2025-12-29T08:00:00Z,2026,SLS,1,Sacramento River near Rio Vista,Lower Sacramento,41500,331500
+2025-12-29T08:00:00Z,2026,SLS,1,Sacramento River near Ryde,Sacramento/ North Delta,0,0
+2025-12-29T08:00:00Z,2026,SLS,1,Cache Slough and Liberty Island,Sacramento/ North Delta,0,0
+2025-12-29T08:00:00Z,2026,SLS,1,Lower Sacramento River Ship Channel,Sacramento/ North Delta,0,0
+2025-12-29T08:00:00Z,2026,SLS,1,San Joaquin River at Twitchell Island,Lower San Joaquin,0,560370
+2025-12-29T08:00:00Z,2026,SLS,1,San Joaquin River at Prisoners Pt,Lower San Joaquin,0,560370
+2025-12-29T08:00:00Z,2026,SLS,1,NA,NA,0,0
+2025-12-29T08:00:00Z,2026,SLS,1,Holland Cut,South Delta,0,0
+2025-12-29T08:00:00Z,2026,SLS,1,San Joaquin River near Stockton,South Delta,0,0
+2025-12-29T08:00:00Z,2026,SLS,1,Middle River,South Delta,0,0
+2025-12-29T08:00:00Z,2026,SLS,1,Old River,South Delta,0,0
+2025-12-29T08:00:00Z,2026,SLS,1,North and South Forks Mokelumne River,Eastern Delta,0,0
+2026-01-12T08:00:00Z,2026,SLS,2,San Joaquin River at Prisoners Pt,Lower San Joaquin,0,424556
+2026-01-12T08:00:00Z,2026,SLS,2,NA,NA,0,0
+2026-01-12T08:00:00Z,2026,SLS,2,Holland Cut,South Delta,0,0
+2026-01-12T08:00:00Z,2026,SLS,2,San Joaquin River near Stockton,South Delta,0,0
+2026-01-12T08:00:00Z,2026,SLS,2,Middle River,South Delta,0,0
+2026-01-12T08:00:00Z,2026,SLS,2,Old River,South Delta,0,0
+2026-01-12T08:00:00Z,2026,SLS,2,Victoria Canal,South Delta,0,0
+2026-01-12T08:00:00Z,2026,SLS,2,North and South Forks Mokelumne River,Eastern Delta,0,0
+2026-01-12T08:00:00Z,2026,SLS,2,West San Pablo Bay,Western Delta,348444,19350833
+2026-01-12T08:00:00Z,2026,SLS,2,Mid San Pablo Bay,Western Delta,1583667,19350833
+2026-01-12T08:00:00Z,2026,SLS,2,East San Pablo Bay,Western Delta,1211167,19350833
+2026-01-12T08:00:00Z,2026,SLS,2,Carquinez Strait,Western Delta,15437000,19350833
+2026-01-12T08:00:00Z,2026,SLS,2,Lower Napa River,Western Delta,770556,19350833
+2026-01-12T08:00:00Z,2026,SLS,2,West Suisun Bay,Suisun,8858889,10004000
+2026-01-12T08:00:00Z,2026,SLS,2,East Suisun Bay,Suisun,433222,10004000
+2026-01-12T08:00:00Z,2026,SLS,2,Honker Bay,Suisun,318667,10004000
+2026-01-12T08:00:00Z,2026,SLS,2,Grizzly Bay,Suisun,356000,10004000
+2026-01-12T08:00:00Z,2026,SLS,2,Montezuma Slough,Suisun,37222,10004000
+2026-01-12T08:00:00Z,2026,SLS,2,Lower Sacramento River,Lower Sacramento,290000,290000
+2026-01-12T08:00:00Z,2026,SLS,2,Lower San Joaquin River,Lower San Joaquin,336222,424556
+2026-01-12T08:00:00Z,2026,SLS,2,Sacramento River near Rio Vista,Lower Sacramento,0,290000
+2026-01-12T08:00:00Z,2026,SLS,2,Sacramento River near Ryde,Sacramento/ North Delta,0,0
+2026-01-12T08:00:00Z,2026,SLS,2,Cache Slough and Liberty Island,Sacramento/ North Delta,0,0
+2026-01-12T08:00:00Z,2026,SLS,2,Lower Sacramento River Ship Channel,Sacramento/ North Delta,0,0
+2026-01-12T08:00:00Z,2026,SLS,2,San Joaquin River at Twitchell Island,Lower San Joaquin,88333,424556
+2026-01-26T08:00:00Z,2026,SLS,3,West San Pablo Bay,Western Delta,0,8379778
+2026-01-26T08:00:00Z,2026,SLS,3,Mid San Pablo Bay,Western Delta,527889,8379778
+2026-01-26T08:00:00Z,2026,SLS,3,East San Pablo Bay,Western Delta,372667,8379778
+2026-01-26T08:00:00Z,2026,SLS,3,Lower Napa River,Western Delta,1135556,8379778
+2026-01-26T08:00:00Z,2026,SLS,3,Upper Napa River,Western Delta,121000,8379778
+2026-01-26T08:00:00Z,2026,SLS,3,Carquinez Strait,Western Delta,6222667,8379778
+2026-01-26T08:00:00Z,2026,SLS,3,West Suisun Bay,Suisun,9588444,23832926
+2026-01-26T08:00:00Z,2026,SLS,3,NA,NA,0,0
+2026-01-26T08:00:00Z,2026,SLS,3,East Suisun Bay,Suisun,5508111,23832926
+2026-01-26T08:00:00Z,2026,SLS,3,Honker Bay,Suisun,2549333,23832926
+2026-01-26T08:00:00Z,2026,SLS,3,Grizzly Bay,Suisun,4450000,23832926
+2026-01-26T08:00:00Z,2026,SLS,3,Montezuma Slough,Suisun,1737037,23832926
+2026-01-26T08:00:00Z,2026,SLS,3,Lower Sacramento River,Lower Sacramento,4736667,5068667
+2026-01-26T08:00:00Z,2026,SLS,3,Lower San Joaquin River,Lower San Joaquin,2129407,2616019
+2026-01-26T08:00:00Z,2026,SLS,3,Sacramento River near Rio Vista,Lower Sacramento,332000,5068667
+2026-01-26T08:00:00Z,2026,SLS,3,Sacramento River near Ryde,Sacramento/ North Delta,0,91333
+2026-01-26T08:00:00Z,2026,SLS,3,Cache Slough and Liberty Island,Sacramento/ North Delta,0,91333
+2026-01-26T08:00:00Z,2026,SLS,3,Lower Sacramento River Ship Channel,Sacramento/ North Delta,91333,91333
+2026-01-26T08:00:00Z,2026,SLS,3,San Joaquin River at Twitchell Island,Lower San Joaquin,397500,2616019
+2026-01-26T08:00:00Z,2026,SLS,3,San Joaquin River at Prisoners Pt,Lower San Joaquin,89111,2616019
+2026-01-26T08:00:00Z,2026,SLS,3,Franks Tract,South Delta,390000,390000
+2026-01-26T08:00:00Z,2026,SLS,3,Holland Cut,South Delta,0,390000
+2026-01-26T08:00:00Z,2026,SLS,3,San Joaquin River near Stockton,South Delta,0,390000
+2026-01-26T08:00:00Z,2026,SLS,3,Middle River,South Delta,0,390000
+2026-01-26T08:00:00Z,2026,SLS,3,Old River,South Delta,0,390000
+2026-01-26T08:00:00Z,2026,SLS,3,Victoria Canal,South Delta,0,390000
+2026-01-26T08:00:00Z,2026,SLS,3,North and South Forks Mokelumne River,Eastern Delta,0,0
+2026-02-09T08:00:00Z,2026,SLS,4,West San Pablo Bay,Western Delta,0,619333
+2026-02-09T08:00:00Z,2026,SLS,4,Mid San Pablo Bay,Western Delta,0,619333
+2026-02-09T08:00:00Z,2026,SLS,4,Carquinez Strait,Western Delta,0,619333
+2026-02-09T08:00:00Z,2026,SLS,4,Lower Napa River,Western Delta,567778,619333
+2026-02-09T08:00:00Z,2026,SLS,4,Upper Napa River,Western Delta,51556,619333
+2026-02-09T08:00:00Z,2026,SLS,4,Honker Bay,Suisun,7090333,7611444
+2026-02-09T08:00:00Z,2026,SLS,4,Montezuma Slough,Suisun,521111,7611444
+2026-02-09T08:00:00Z,2026,SLS,4,Lower San Joaquin River,Lower San Joaquin,1344889,2361889
+2026-02-09T08:00:00Z,2026,SLS,4,Lower Sacramento River,Lower Sacramento,3141667,5673167
+2026-02-09T08:00:00Z,2026,SLS,4,Sacramento River near Rio Vista,Lower Sacramento,2531500,5673167
+2026-02-09T08:00:00Z,2026,SLS,4,Sacramento River near Ryde,Sacramento/ North Delta,0,216667
+2026-02-09T08:00:00Z,2026,SLS,4,Cache Slough and Liberty Island,Sacramento/ North Delta,125333,216667
+2026-02-09T08:00:00Z,2026,SLS,4,Lower Sacramento River Ship Channel,Sacramento/ North Delta,91333,216667
+2026-02-09T08:00:00Z,2026,SLS,4,San Joaquin River at Twitchell Island,Lower San Joaquin,883333,2361889
+2026-02-09T08:00:00Z,2026,SLS,4,San Joaquin River at Prisoners Pt,Lower San Joaquin,133667,2361889
+2026-02-09T08:00:00Z,2026,SLS,4,Franks Tract,South Delta,234000,307000
+2026-02-09T08:00:00Z,2026,SLS,4,Holland Cut,South Delta,0,307000
+2026-02-09T08:00:00Z,2026,SLS,4,San Joaquin River near Stockton,South Delta,0,307000
+2026-02-09T08:00:00Z,2026,SLS,4,Middle River,South Delta,73000,307000
+2026-02-09T08:00:00Z,2026,SLS,4,Old River,South Delta,0,307000
+2026-02-09T08:00:00Z,2026,SLS,4,Victoria Canal,South Delta,0,307000
+2026-02-09T08:00:00Z,2026,SLS,4,North and South Forks Mokelumne River,Eastern Delta,0,0

@@ -50,9 +50,125 @@ REGION_NODES = {
 }'''
 # SLS DATA
 # SLS abundance estimates used to convert PTM percentages into estimated entrained fish numbers.
+# SLS DATA
+# Determine the water year from the injection date.
+# October through December belong to the following water year.
+# Examples:
+#   20260930 -> WY 2026
+#   20261001 -> WY 2027
+WATER_YEAR = (
+    INJECTION_DATE.year + 1
+    if INJECTION_DATE.month >= 10
+    else INJECTION_DATE.year
+)
+
+# Survey CSV files are stored in:
+# <model directory>/SLS/<water year>/
+SLS_DIR = MODEL_DIR.parent / "SLS" / str(WATER_YEAR)
+
+if not SLS_DIR.is_dir():
+    raise FileNotFoundError(
+        f"SLS water-year folder does not exist: {SLS_DIR}"
+    )
+
+# Columns required by the remainder of this script.
+REQUIRED_SLS_COLUMNS = {
+    "survDate",
+    "SubRegion",
+    "Subregion_Abund",
+}
+
+# Find candidate CSV files, excluding processing summaries.
+# Sort newest to oldest using the file modified timestamp.
+sls_candidates = sorted(
+    (
+        csv_path
+        for csv_path in SLS_DIR.glob("*.csv")
+        if "processing_summary" not in csv_path.name.lower()
+    ),
+    key=lambda csv_path: csv_path.stat().st_mtime,
+    reverse=True,
+)
+
+if not sls_candidates:
+    raise FileNotFoundError(
+        f"No eligible SLS CSV files were found in {SLS_DIR}. "
+        "Files containing 'processing_summary' are excluded."
+    )
+
+# Starting with the most recently modified CSV, select the first file
+# containing the columns expected by this script. This also protects
+# against selecting unrelated CSV files in the water-year folder.
+SLS_CSV = None
+sls_df = None
+rejected_files = []
+
+for csv_path in sls_candidates:
+    try:
+        candidate_df = pd.read_csv(csv_path)
+    except Exception as exc:
+        rejected_files.append(
+            f"{csv_path.name}: could not be read ({exc})"
+        )
+        continue
+
+    missing_columns = REQUIRED_SLS_COLUMNS - set(candidate_df.columns)
+
+    if missing_columns:
+        rejected_files.append(
+            f"{csv_path.name}: missing columns "
+            f"{sorted(missing_columns)}"
+        )
+        continue
+
+    SLS_CSV = csv_path
+    sls_df = candidate_df
+    break
+
+if SLS_CSV is None:
+    rejection_details = "\n".join(
+        f"  - {message}" for message in rejected_files
+    )
+
+    raise RuntimeError(
+        f"No valid SLS abundance CSV was found in {SLS_DIR}.\n"
+        f"A valid file must contain these columns: "
+        f"{sorted(REQUIRED_SLS_COLUMNS)}\n"
+        f"Files checked:\n{rejection_details}"
+    )
+
+print(f"Injection date: {INJECTION_DATE.strftime('%Y-%m-%d')}")
+print(f"Water year: {WATER_YEAR}")
+print(f"Selected SLS CSV: {SLS_CSV}")
+
+# Use the most recent survey date contained in the selected SLS CSV.
+sls_df["survDate"] = pd.to_datetime(
+    sls_df["survDate"],
+    errors="coerce"
+)
+
+if sls_df["survDate"].isna().all():
+    raise ValueError(
+        f"No valid survey dates were found in: {SLS_CSV}"
+    )
+
+latest_date = sls_df["survDate"].max()
+sls_latest = sls_df.loc[
+    sls_df["survDate"] == latest_date
+].copy()
+
+SLS_ABUND = dict(
+    zip(
+        sls_latest["SubRegion"],
+        sls_latest["Subregion_Abund"],
+    )
+)
+
+print(f"Latest survey date used: {latest_date.strftime('%Y-%m-%d')}")
+'''
 SLS_CSV = (
     MODEL_DIR
-    / "SLS"
+    / "SLS
     / "SLS_abundance_estimates"
     / "2026 LFS Abundances through SLS Survey 6 (Final)_April 21st.csv"
 )
@@ -64,6 +180,7 @@ sls_df["survDate"] = pd.to_datetime(sls_df["survDate"])
 latest_date = sls_df["survDate"].max()
 sls_latest = sls_df[sls_df["survDate"] == latest_date]
 SLS_ABUND = dict(zip(sls_latest["SubRegion"], sls_latest["Subregion_Abund"]))
+'''
 
 # COLUMN ORDER
 COLUMNS = [
