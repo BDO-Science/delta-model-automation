@@ -79,5 +79,4 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
-/DSM2/Model/Output
-/DSM2/Model_NOPUMP/Output
+
