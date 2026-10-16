@@ -46,6 +46,8 @@ Recommended OS: Windows. Recommended Python distribution: Miniconda.
    conda env create -f environment.yml --solver=libmamba
    conda activate ops_dsm2
    conda install -c conda-forge -c cadwr-dms pyhecdss
+   conda install -c conda-forge numpy h5py
+   conda install -c conda-forge geojsoncontour 
    ```
 3. Place the current week's forecast data (from CVO/Reclamation) into `Model/DataExternal/YYYYMMDD/`.
 4. Run the weekly pipeline from `/Model`:
