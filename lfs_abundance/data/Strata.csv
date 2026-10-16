@@ -1,0 +1,36 @@
+SubRegion,Region,volume_0to15,volume_15tomax,total_volume,Stratum
+South SF Bay,West,1858400000,7300000,1865700000,NA
+Central SF Bay,West,2428200000,768200000,3196500000,NA
+West San Pablo Bay,West,313600000,18800000,332500000,NA
+Mid San Pablo Bay,West,475100000,200000,475300000,NA
+East San Pablo Bay,West,167700000,1600000,169300000,Western Delta
+Carquinez Strait,West,215400000,52800000,268100000,Western Delta
+Lower Napa River,West,36500000,0,36500000,Western Delta
+Upper Napa River,West,600000,0,600000,Western Delta
+West Suisun Bay,Central Delta,187600000,1100000,188700000,Suisun Bay
+East Suisun Bay,Central Delta,111400000,1100000,112700000,Suisun Bay
+Honker Bay,Central Delta,71700000,1800000,73500000,Suisun Bay
+Grizzly Bay,Central Delta,80100000,0,80100000,Suisun Marsh
+Montezuma Slough,Central Delta,33500000.000000004,0,33500000.000000004,Suisun Marsh
+Suisun Marsh,Central Delta,17200000,0,17200000,Suisun Marsh
+Lower San Joaquin River,Confluence,151300000,1600000,152100000,Lower San Joaquin
+Lower Sacramento River,Confluence,217500000,7000000,224500000,Lower Sacramento
+San Joaquin River at Twitchell Island,Lower SJR,79500000,1900000,81600000,Lower San Joaquin
+San Joaquin River at Prisoners Pt,Lower SJR,80200000,500000,80800000,Lower San Joaquin
+Franks Tract,Lower SJR,70200000,0,70200000,Southern Delta
+Sacramento River near Rio Vista,Sacramento/ North Delta,74700000,300000,75000000,Lower Sacramento
+Cache Slough and Liberty Island,Sacramento/ North Delta,56400000,200000,47400000,Cache Slough/Liberty Island
+Lower Sacramento River Ship Channel,Sacramento/ North Delta,41100000,1000000,42200000,Sac Deep Water Shipping Channel
+Upper Sac River DWSC,Sacramento/ North Delta,32000000,0,31899999.999999996,NA
+Upper Sacramento River,Sacramento/ North Delta,61500000,0,61500000,Upper Sacramento
+Sacramento River near Ryde,Sacramento/ North Delta,18400000,0,18400000,Upper Sacramento
+Holland Cut,South Delta,29500000,0,29600000,Southern Delta
+Old River,South Delta,14300000,0,14300000,Southern Delta
+Middle River,South Delta,65699999.99999999,100000,65800000,Southern Delta
+Victoria Canal,South Delta,10700000,0,10700000,Southern Delta
+San Joaquin River near Stockton,East,42500000,0,42500000,Southern Delta
+North and South Forks Mokelumne River,East,53400000,0,53400000,Eastern Delta
+Grant Line Canal/Old R,South Delta,9400000,0,9400000,NA
+Rock Slough/Discovery Bay,South Delta,4500000,0,4500000,NA
+Upper San Joaquin River,East,4500000,0,4500000,Southern Delta
+Disappointment Slough,East,18200000,0,18200000,Eastern Delta

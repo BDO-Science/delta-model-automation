@@ -1,0 +1,73 @@
+model {
+# 
+# Inputs:
+#   nYears            Total number of years
+#   nSample           Total number of samples in a year
+#   iyear[nSample]    Year INdex (1:nYears) corresponding to each sample
+#   logsal[nSample]   Log Salinity from each sample
+#   logsal2[nSample]  Log Salinity^2 from each sample
+#   
+#   Add after testing this part:
+#   nStations         Number of stations
+#   iStation[samp]     Station converted to sequential numbers within each year
+#   volume[station]   volume of habitat represented by station
+# 
+# Priors
+#   For annual relationships of mean abundance to log (e) salinity
+
+for (i in 1:nSurv)
+{
+    a[i]   ~  dnorm(0, 0.001)         # CHANGED 2022-01-03 to reduce influence
+    b[i]   ~  dnorm(0, 0.01)I(0,)
+    b2[i]  ~  dnorm(0, 0.01)I(,0)     # b2 should be negative
+    sec[i] ~  dnorm(0, 0.01)I(,0)    
+ }
+   
+  alpha    ~  dunif(0.01, 10) 
+  r        <- 1.0/alpha
+
+# Likelihoods: predict mean catch per trawl from log sample salinity and year
+
+  for (samp in 1:nSample)  
+    {
+    log(Predict[samp])       <- a[isurv[samp]]                   + 
+                                b  [isurv[samp]] * logsal[samp]  + 
+			        b2 [isurv[samp]] * logsal2[samp] +
+                                sec[isurv[samp]] * secchi[samp]  
+    log(p[samp])             <- - log (1 + alpha * Predict[samp])
+    catch[samp ]             ~  dnegbin (p[samp], r)
+    resid[samp]              <- catch[samp] - Predict[samp] 
+    }  
+
+# Predict for each of 28 stations sampled on 68 surveys.
+# First predict the population density (as catch per trawl meanPred)
+# Then calculate population size for each station on each survey
+# by multiplying the catch per trawl by the ratio of station volume to sample volume.
+
+ for (j in 1:nsampNew)
+      	{ 
+          log(predictNew[j])   <-     a  [survNew[j]]                 + 
+			              b  [survNew[j]] * logsalNew [j] + 
+			              b2 [survNew[j]] * logsalNew2[j] +
+			              sec[survNew[j]] * secchiNew [j]
+   	  log(pPred[j])        <- -log (1 + alpha * predictNew[j])
+    	  meanPred[j ]         ~  dnegbin (pPred[j], r)
+	  predDensity[j]       <- predictNew[j] / sampleVol[j]
+	  staPopSize[j]        <- predDensity[j] * staVolume[j] 
+      	}
+# Population size, mean population size in export region, mean (number) & proportional daily loss by survey
+ for (kSurv in 1:nSurv)
+	{
+  	  survPopSize[kSurv]   <- sum(staPopSize  [survStart[kSurv]:survEnd[kSurv] ] )
+  	  exportPop[kSurv]     <- mean(predDensity [deltaStart[kSurv]:survEnd[kSurv] ] )
+  	  dailyLoss[kSurv]     <- exportPop[kSurv] * expm3d[kSurv] 
+ 	  dailyPLoss[kSurv]    <- dailyLoss[kSurv] / survPopSize[kSurv]	  
+ 	}	
+ # Mean population size, mean (number) and proportional daily loss by year
+for (iYear in 1:nYear)
+	{
+  	  mnPopSize[iYear]     <- mean(survPopSize [yrStart[iYear]:yrEnd[iYear] ] )
+  	  mnDailyLoss[iYear]   <- mean(dailyLoss  [yrStart[iYear]:yrEnd[iYear] ] )
+  	  mnDailyPLoss[iYear]  <- mean(dailyPLoss [yrStart[iYear]:yrEnd[iYear] ] )
+	}
+ } 

@@ -1,0 +1,277 @@
+# electivityJags Quick calculation of electivity, no averaging
+# wdensity      Density plots for selected parameters
+# wcorr         Correlations between iterations for pairs of variables
+# wAutoCorr     Makes plots showing autocorrelations of variables
+# wFirstLast    Makes plots comparing first and last ends of chains
+
+# Output is in panels:
+# wdensity      One panel per variable, arranged in compact rows and columns
+# wcorr         One panel per pair of variables, generally nested pairs (group and sample within group) 
+# wAutoCorr     Three panels in a column, one per chain
+# wFirstLast    Three square panels, one per chain
+
+# All functions work on matrices produced by JAGS after MCMC simulation.
+# JAGS produces a list with 24 items; this uses the first called "sims.list", 
+#    which contains each parameter selected for output, plus Deviance.
+# THese functions should work on any combination of output from the same JAGS run
+
+
+#################################################################
+
+	electivityJags <- function(sumAvail, sumEaten=NULL, Navail=NULL, Neaten=NULL, ni = 2000, 
+	                           parameters= "elect", simsList=F)
+{
+  # Function to run a quick set of electivities in Jags
+  # Inputs are vectors of the four components OR sumAvail=data frame with those components
+  # ni is the number of iterations before thinning (increased if < burn-in)
+  # Output is either the calculated electivity with nominal electivity 
+  # or a list including that and the sims.list
+ 
+  if (is.data.frame(sumAvail))
+      { data <- as.list(sumAvail) }
+  else {
+     data <- list(sumAvail=sumAvail, sumEaten=sumEaten, Navail=Navail, Neaten= Neaten)
+  }
+  ndata <- unlist(lapply(data, length))
+  if (any(ndata!=ndata[1]))
+  {
+    stop("Unequal lengths of inputs")
+  }
+  datadf      	<- as.data.frame(data)
+  data$Ntotal 	<- ndata[1]
+  peaten      	<- data$Neaten / data$sumEaten
+  pavail  	<- data$Navail / data$sumAvail
+  prod1 	<- peaten * (1-pavail)
+  prod2 	<- pavail * (1-peaten)
+  electNom 	<- prod1/(prod1 + prod2)
+
+  nt <- 10           # Thinning ratio
+  nb <- 1000      # Length of burn-in after thinning ?
+  nc <- 3         # Number of chains (replicate series of MCMC iterations)
+  ni <- ifelse(ni > nb, ni, ni + nb)      # If length of run short, add to burn-in
+  inits <- NULL
+
+  out <- jags(data, 
+              inits, 
+              parameters, 
+              "C:/1Current/RJags/Elect2020/CopiesGoodFiles/ElectivityQuickCalc 2020-10-03-Jags.txt",
+              n.chains = nc, 
+              n.thin = nt, 
+              n.iter = ni,
+              n.burnin = nb)
+
+  Summary <- data.frame(getJags(out), electNom = electNom)
+  
+  if (simsList)
+  {
+    list(Summary = Summary, data=data,       sims.list=out$sims.list[[1]] )
+  } else {
+    Summary }
+  
+}
+
+
+# electivityJags(select(y[1:3,],sumAvail:Neaten))
+
+
+
+#################################################################
+
+wdensity <- function(y, selectCols=1:2, xLab="Value", Nchains=3, 
+                     ttl = "Density from MCMC",  subttl="",
+                     ncols=ceiling(length(selectCols)/3), stripLab="right")
+{
+  # Inputs
+  #    y            Data frame containing data to be plotted. This is extracted from the 
+  #                   output list from JAGS, "sims.list", with selectCols variables and columns.
+  #    selectCols       columns to include; each gets a separate plot 
+  #    xLab         Axis labels for x (y is always "Density")
+  #    ttl          Title for plot
+  #    Nchains      Number of MCMC chains
+  #    ncols        Number of columns of plots (default is to have )
+  #    stripLab     Put strip label on right or top or none
+  
+  require(dplyr)
+  Niter <- nrow(y)/Nchains
+  yy <- data.frame(y[,selectCols])
+  xLim <- data.frame(Variable=rep(names(yy), 2), 
+                     y=rep(0, length(selectCols)*2),
+                     Chain = rep(1,length(selectCols)*2 ),
+                     xfudge = c(floor(100*apply(yy,2,min))/100,
+                                ceiling(100*apply(yy,2,max))/100 ) )
+  
+  yy <- data.frame(Chain=rep(1:Nchains, each=Niter), yy)
+  yy <- melt(yy, id.vars=1, variable.name="Variable", value.name="Iteration")
+  
+  ggplot(yy, aes(x=Iteration, colour = as.factor(Chain), 
+                 fill = as.factor(Chain))) +
+    geom_density(alpha = 0.1, show.legend=F) + 
+    geom_point(data= xLim, aes(x=xfudge,y=y), size=0, color="white") +
+    facet_wrap(~Variable  , ncol=ncols, strip.position = stripLab, scales="free") +
+    scale_x_continuous(xLab, n.breaks=4) +
+    ylab("Density") +
+    scale_fill_manual(name = "Chain", values=c("blue","red","green4")) + 
+    scale_color_manual(name = "Chain",values=c("blue","red","green")) +
+    ggtitle(ttl, subtitle= paste(subttl, Niter, "per chain")) +
+    theme(legend.position="none",
+          strip.background = element_rect(color="black", fill=NA),
+          strip.text.y = element_text(size=rel(1), angle=90),
+          plot.background = element_rect(fill = NA, linetype=0),
+          panel.background = element_rect(fill = NA, linetype=1 ),
+          panel.border = element_rect(colour = "black", fill=NA, size=0.5)) 
+} # End function
+
+#################################################################
+
+wcorr <- function(y, colx=1, coly=2, xLab="X", yLab="Y",NtoPlot=200, Nchains=3, 
+                  ttl = paste("Correlations between chains:", NtoPlot, "per chain"),
+                  subttl = "",
+                  ncols=round(length(colx)/3), stripLab="right")
+{
+  # Makes plots showing correlations between iterations for pairs of variables in MCMC output
+  # Inputs
+  #    y            Data frame containing data to be plotted. This is extracted from the 
+  #                   output list from JAGS, "sims.list", with selected variables and columns.
+  #    colx, coly   Column numbers for the y variables
+  #    xLab, yLab   Axis labels for x and y
+  #    ttl          Title for plot
+  #    NtoPlot      Max number of points to plot from each chain; set > nrow(y) for all
+  #    Nchains      Number of MCMC chains
+  #    ncols        Number of columns of plots 
+  #    stripLab     Put strip label on right or top 
+  
+  require(dplyr)
+  if (length(colx) !=length(coly)) stop("Idiot! colx and coly must be same length\n")
+  Niter <- nrow(y)/Nchains
+  NtoPlot <- min(NtoPlot, Niter)
+  chainNo <- rep(1:3, each=Niter)
+  nmx <- names(y) [colx]
+  nmy <- names(y) [coly]
+  yPairs <- NULL
+  for (i in 1:length(colx)) 
+  {
+    yi <- data.frame(chainNo, y[,c(colx[i], coly[i])])
+    names(yi) <- c("Chain","x","y")
+    yi$label <- paste(nmx[i], nmy[i], sep="-")
+    if (NtoPlot < Niter)
+    {
+      toadd <- rep(((1:Nchains)-1)*Niter)
+      samp <- sort(sample(1:Niter, NtoPlot))
+      samp <- rep(samp, Nchains) + rep(toadd, each=length(samp))
+      yi <- yi[rep(sort(sample(1:Niter, NtoPlot)), each=Nchains),]
+    }  
+    yPairs <- rbind(yPairs, yi)
+  }
+  ggplot(yPairs, aes(x=x, y=y)) +
+    geom_point(aes(colour = as.factor(Chain)), size=2, alpha=0.2, show.legend=F) + 
+    facet_wrap(~label  , ncol=ncols, strip.position = stripLab, scales="free") +
+    xlab(xLab) +
+    ylab(yLab) +
+    scale_color_manual(name = "Chain",values=c("blue","red","green")) +
+    ggtitle(paste(ttl,  NtoPlot, "per chain"), subtitle=subttl) +
+    theme(aspect.ratio=1, 
+          strip.background = element_rect(color="black", fill=NA),
+          strip.text.y = element_text(size=rel(1), angle=90),
+          plot.background = element_rect(fill = NA, linetype=0),
+          panel.background = element_rect(fill = NA, linetype=1 ),
+          panel.border = element_rect(colour = "black", fill=NA, size=0.5)) 
+}
+
+
+
+
+# yyy <- data.frame(g=out$sims.list$electG, s=out$sims.list$electS)
+# wcorr(yyy,colx=c(1,1,2,2,3,3), coly=4:9, xLab="Group", yLab="Sample in Group",
+#      NtoPlot=100, ttl="Test wcorr: dummy data from Test4NestPostProcess")
+# wdensity(yyy, select = 1:6)
+
+
+
+#################################################################
+
+wAutoCorr <- function(y, lagmax=20,  Nchains=3,  stripLab="right",
+                      ttl = "Autocorrelations each chain, all variables",
+                      subttl = ""    ) 
+{
+  # Makes plots showing autocorrelations of variables in MCMC output
+  # Inputs
+  #    y            Data frame containing data to be plotted. This is extracted from the 
+  #                   output list from JAGS, "sims.list", with selected variables and columns.
+  #    ttl          Title for plot (default usually OK)
+  #    subttl       Subtitle (fill in; default is none)
+  #    Nchains      Number of MCMC chains
+  #    stripLab     Put strip label on right (default) or top 
+  
+  require(dplyr)
+  Niter       <- nrow(y)/Nchains
+  Nvars       <- ncol(y)
+  yy          <- array(as.matrix(y), dim= c(Niter, Nchains, Nvars)) # iterations, chains,0 vars
+  sim.ac      <- apply(yy, 2:3, function(v) acf(v, lag.max=lagmax, plot=F)$acf)
+  dim(sim.ac) <- c((lagmax+1)* Nchains, Nvars) # lags, chains, variables in y
+  sim.acdf    <- data.frame(Chain=rep(1:Nchains, each=(lagmax+1)),
+                            Lag=rep(0:lagmax, Nchains), sim.ac)
+  simMelt      <- melt(sim.acdf, id.vars=c("Chain","Lag"), value.name="Autocorrelation",
+                       variable.name="Variable")
+  yLim         <- round(range(simMelt$Autocorrelation[simMelt$Lag > 0]), 2)
+  
+  ggplot(simMelt, aes(Lag, Autocorrelation)) +
+    geom_line(aes(color=factor(Variable)), show.legend=F, na.rm=T) +
+    facet_wrap(~Chain, ncol=1, strip.position = "right") +
+    scale_y_continuous("Autocorrelation", limits=yLim, n.breaks=3) +
+    scale_color_manual(values=wimPalettes(ncolors=Nvars)) +
+    ggtitle(ttl, subtitle=subttl) +
+    theme(strip.background = element_rect(color="black", fill=NA),
+          strip.text.y = element_text(size=rel(1), angle=90),
+          plot.background = element_rect(fill = NA, linetype=1),
+          panel.background = element_rect(fill = NA, linetype=1 ),
+          panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+          panel.grid.major = element_line(color="gray90", size=0.2),
+    )
+}
+
+
+#################################################################
+
+
+wFirstLast <- function(y, pctPlot=10,  Nchains=3,  stripLab="right",
+                       ttl = "Compare first and last part of each chain",
+                       subttl = ""    ) 
+{
+  # Makes plots comparing first and last ends of chains of MCMC output
+  # Inputs
+  #    y            Data frame containing data to be plotted. This is extracted from the 
+  #                   output list from JAGS, "sims.list", with selected variables and columns.
+  #    pctPlot      Percent from each end to plot (at most 50%)
+  #    ttl          Title for plot (default usually OK)
+  #    subttl       Subtitle (fill in; default is none)
+  #    Nchains      Number of MCMC chains
+  #    stripLab     Put strip label on right (default) or top 
+  
+  yy          <- y
+  Niter       <- nrow(yy)/Nchains
+  Nvars       <- ncol(yy)
+  yy          <- array(as.matrix(y), dim= c(Niter, Nchains, Nvars)) # iterations, chains,0 vars 
+  Nvals       <- round(Niter * pctPlot / 100)
+  sims1       <- apply(yy[1:Nvals,,], 2:3, mean)  # Mean of first pctPlot %
+  sims2       <- apply(yy[dim(yy)[1] + 1 - (1:Nvals),,], 2:3, mean) # LastpctPlot %
+  sims12      <- data.frame(Chain=rep(1:Nchains, Nvars), Var=rep(1:Nvars,each=Nchains ))
+  sims12      <- data.frame(sims12, Chain10=as.vector(sims1), Chain90=as.vector(sims2))
+  
+  ggplot(sims12, aes(Chain10, Chain90)) +
+    geom_abline(slope=1, intercept=0) +
+    geom_smooth(method="lm", color="red", lwd=1) +
+    geom_point(aes(color=factor(Var)), show.legend=F, size=3, alpha=0.3) +
+    facet_wrap(~Chain, ncol=2, strip.position = "right") +
+    scale_x_continuous(paste0("First ", pctPlot, "%")) +                   # took out , limits=0:1
+    scale_y_continuous(paste0("Last ", pctPlot, "%")) +                    # took out , limits=0:1
+    scale_color_manual(values=wimPalettes(ncolors=Nvars)) +
+    ggtitle(ttl, subtitle=subttl) +
+    coord_fixed(ratio=1) +
+    theme (aspect.ratio=1,
+           strip.background = element_rect(color="black", fill=NA),
+           strip.text.y = element_text(size=rel(1), angle=90),
+           plot.background = element_rect(fill = NA, linetype=1),
+           panel.background = element_rect(fill = NA, linetype=1 ),
+           panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+           panel.grid.major = element_line(color="gray90", size=0.2)) 
+}
