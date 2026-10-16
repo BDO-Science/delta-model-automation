@@ -1,0 +1,17 @@
+getJags <- function (out)
+{
+  # 2020=09-09 Takes list produced by Jags 
+  # and produces data frame of parameter estimates
+  # First column is parameter name (not including subscripts)
+  # Other columns include stats and Rhat and n.eff (convergence indicators)
+  y              <- data.frame(out$summary)
+  y              <- y[,c("mean","sd","X2.5.","X50.", "X97.5.", "Rhat","n.eff")]
+  names (y)[3:5] <- c("CL2.5","med","CL97.5")
+  vars           <- row.names(y)
+  iv             <- regexpr("\\[", vars)
+  params         <- ifelse(iv<=0, vars, substring(vars, 1, iv-1))
+  tempstring     <- ifelse(iv==0, "0", substring(vars,iv+1, nchar(vars)-1 ))
+  ind            <- as.numeric(tempstring)
+  y              <- data.frame(par=params,ind=ind, y)
+  y
+}
