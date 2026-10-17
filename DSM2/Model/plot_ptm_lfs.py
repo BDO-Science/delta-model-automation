@@ -37,26 +37,22 @@ weeks = {
 }
 
 # SLS DATA
-# SLS abundance estimates used to convert PTM percentages into estimated entrained fish numbers.
+# SLS abundance estimates used to convert PTM percentages into
+# estimated entrained fish numbers.
+#
+# The command-line injection date identifies the weekly SLS folder.
+#
+# Example:
+#   python plot_ptm_lfs.py 20260616
+#
+# uses:
+#   <model directory>/SLS/20260616/
 
-# Determine the water year from the injection date.
-# October through December belong to the following water year.
-# Examples:
-#   20260930 -> WY 2026
-#   20261001 -> WY 2027
-WATER_YEAR = (
-    INJECTION_DATE.year + 1
-    if INJECTION_DATE.month >= 10
-    else INJECTION_DATE.year
-)
-
-# Survey CSV files are stored in:
-# <model directory>/SLS/<water year>/
-SLS_DIR = MODEL_DIR.parent / "SLS" / str(WATER_YEAR)
+SLS_DIR = MODEL_DIR.parent / "SLS" / WEEK_STR
 
 if not SLS_DIR.is_dir():
     raise FileNotFoundError(
-        f"SLS water-year folder does not exist: {SLS_DIR}"
+        f"SLS folder does not exist for {WEEK_STR}: {SLS_DIR}"
     )
 
 # Columns required by the remainder of this script.
@@ -66,34 +62,33 @@ REQUIRED_SLS_COLUMNS = {
     "Subregion_Abund",
 }
 
-# Find candidate CSV files, excluding processing summaries.
-# Sort newest to oldest using the file modified timestamp.
-sls_candidates = sorted(
-    (
-        csv_path
-        for csv_path in SLS_DIR.glob("*.csv")
-        if "processing_summary" not in csv_path.name.lower()
-    ),
-    key=lambda csv_path: csv_path.stat().st_mtime,
-    reverse=True,
-)
+# Find CSV files in this specific week's SLS folder.
+# Processing-summary files are not SLS abundance inputs.
+#
+# IMPORTANT:
+# File modification time is intentionally NOT used.
+# WEEK_STR determines which folder contains the applicable survey.
+sls_candidates = [
+    csv_path
+    for csv_path in SLS_DIR.glob("*.csv")
+    if "processing_summary" not in csv_path.name.lower()
+]
 
 if not sls_candidates:
     raise FileNotFoundError(
-        f"No eligible SLS CSV files were found in {SLS_DIR}. "
+        f"No eligible SLS survey CSV files were found in {SLS_DIR}. "
         "Files containing 'processing_summary' are excluded."
     )
 
-# Starting with the most recently modified CSV, select the first file
-# containing the columns expected by this script. This also protects
-# against selecting unrelated CSV files in the water-year folder.
-SLS_CSV = None
-sls_df = None
+# Check the eligible files and identify the survey CSV from its
+# required contents rather than its file modification timestamp.
+valid_sls_files = []
 rejected_files = []
 
 for csv_path in sls_candidates:
     try:
         candidate_df = pd.read_csv(csv_path)
+
     except Exception as exc:
         rejected_files.append(
             f"{csv_path.name}: could not be read ({exc})"
@@ -109,13 +104,14 @@ for csv_path in sls_candidates:
         )
         continue
 
-    SLS_CSV = csv_path
-    sls_df = candidate_df
-    break
+    valid_sls_files.append((csv_path, candidate_df))
 
-if SLS_CSV is None:
+
+# No valid survey file found.
+if not valid_sls_files:
     rejection_details = "\n".join(
-        f"  - {message}" for message in rejected_files
+        f"  - {message}"
+        for message in rejected_files
     )
 
     raise RuntimeError(
@@ -125,8 +121,28 @@ if SLS_CSV is None:
         f"Files checked:\n{rejection_details}"
     )
 
+
+# There should be exactly one valid abundance survey CSV in the
+# weekly folder. If there is more than one, stop rather than
+# arbitrarily selecting a file.
+if len(valid_sls_files) > 1:
+    valid_names = "\n".join(
+        f"  - {csv_path.name}"
+        for csv_path, _ in valid_sls_files
+    )
+
+    raise RuntimeError(
+        f"Multiple valid SLS abundance CSV files were found in {SLS_DIR}.\n"
+        "Expected exactly one survey abundance CSV.\n"
+        f"Valid files found:\n{valid_names}"
+    )
+
+
+# Exactly one valid survey CSV was found.
+SLS_CSV, sls_df = valid_sls_files[0]
+
 print(f"Injection date: {INJECTION_DATE.strftime('%Y-%m-%d')}")
-print(f"Water year: {WATER_YEAR}")
+print(f"SLS folder: {SLS_DIR}")
 print(f"Selected SLS CSV: {SLS_CSV}")
 
 # Use the most recent survey date contained in the selected SLS CSV.
@@ -141,6 +157,7 @@ if sls_df["survDate"].isna().all():
     )
 
 latest_date = sls_df["survDate"].max()
+
 sls_latest = sls_df.loc[
     sls_df["survDate"] == latest_date
 ].copy()

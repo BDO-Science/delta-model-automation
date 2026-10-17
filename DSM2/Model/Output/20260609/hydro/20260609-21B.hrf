@@ -1,0 +1,2305 @@
+Hydro Version v8.4.1          
+The following data corresponds to   29JUN2026 2400
+
+
+         521 /Channels
+           1 /Channel
+           4 /Locations
+           0.000       10.4422014         1102.501 /Distance, WSElev, Q
+        6500.000        9.2542697         1102.242 /Distance, WSElev, Q
+       13000.000        8.2027095         1101.448 /Distance, WSElev, Q
+       19500.000        7.4800455         1100.603 /Distance, WSElev, Q
+           2 /Channel
+           3 /Locations
+           0.000        7.4800455         1100.603 /Distance, WSElev, Q
+        7000.000        6.6587749         1101.747 /Distance, WSElev, Q
+       14000.000        6.5031731         1105.604 /Distance, WSElev, Q
+           3 /Channel
+           3 /Locations
+           0.000        6.5031731         1081.694 /Distance, WSElev, Q
+        6500.000        6.0283816         1090.131 /Distance, WSElev, Q
+       13000.000        5.1485170         1112.719 /Distance, WSElev, Q
+           4 /Channel
+           3 /Locations
+           0.000        5.1485170         1162.719 /Distance, WSElev, Q
+        7025.000        4.9356906         1210.056 /Distance, WSElev, Q
+       14050.000        4.8331829         1261.475 /Distance, WSElev, Q
+           5 /Channel
+           3 /Locations
+           0.000        4.8331829         1246.995 /Distance, WSElev, Q
+        6175.000        4.7864816         1304.949 /Distance, WSElev, Q
+       12350.000        4.7081509         1368.093 /Distance, WSElev, Q
+           6 /Channel
+           2 /Locations
+           0.000        4.7081509         1373.653 /Distance, WSElev, Q
+        9878.000        4.5591097         1465.857 /Distance, WSElev, Q
+           7 /Channel
+           2 /Locations
+           0.000        4.5591097         1451.787 /Distance, WSElev, Q
+        8796.000        4.5219113         1523.971 /Distance, WSElev, Q
+           8 /Channel
+           3 /Locations
+           0.000        4.5219113         1192.111 /Distance, WSElev, Q
+        5812.500        4.4271329         1221.840 /Distance, WSElev, Q
+       11625.000        4.3198571         1240.061 /Distance, WSElev, Q
+           9 /Channel
+           3 /Locations
+           0.000        4.3198571         1225.171 /Distance, WSElev, Q
+        5248.500        4.2383192         1229.853 /Distance, WSElev, Q
+       10497.000        4.1770593         1220.683 /Distance, WSElev, Q
+          10 /Channel
+           2 /Locations
+           0.000        4.1770593         1201.603 /Distance, WSElev, Q
+        9400.000        4.1239740         1142.170 /Distance, WSElev, Q
+          11 /Channel
+           3 /Locations
+           0.000        4.1239740         1119.600 /Distance, WSElev, Q
+        6374.000        4.1031866         1037.430 /Distance, WSElev, Q
+       12748.000        4.1033015          931.838 /Distance, WSElev, Q
+          12 /Channel
+           2 /Locations
+           0.000        4.1033015          916.698 /Distance, WSElev, Q
+        8214.000        4.1303669          710.620 /Distance, WSElev, Q
+          13 /Channel
+           2 /Locations
+           0.000        4.1303669          690.570 /Distance, WSElev, Q
+        7706.000        4.1709907          390.081 /Distance, WSElev, Q
+          14 /Channel
+           2 /Locations
+           0.000        4.1709907          381.961 /Distance, WSElev, Q
+        5339.000        4.2041022          126.493 /Distance, WSElev, Q
+          15 /Channel
+           2 /Locations
+           0.000        4.2041022          174.433 /Distance, WSElev, Q
+        5388.000        4.2425983         -101.243 /Distance, WSElev, Q
+          16 /Channel
+           2 /Locations
+           0.000        4.2425983         -243.364 /Distance, WSElev, Q
+        5384.000        4.2768524         -489.280 /Distance, WSElev, Q
+          17 /Channel
+           3 /Locations
+           0.000       11.6368152         1200.000 /Distance, WSElev, Q
+        6575.000       10.9499441         1200.109 /Distance, WSElev, Q
+       13150.000       10.4422014         1200.171 /Distance, WSElev, Q
+          18 /Channel
+           2 /Locations
+           0.000        4.2768524        -1451.888 /Distance, WSElev, Q
+        3765.000        4.2856667        -1882.930 /Distance, WSElev, Q
+          19 /Channel
+           2 /Locations
+           0.000        4.2856667        -1884.150 /Distance, WSElev, Q
+        3666.000        4.2937523        -2384.337 /Distance, WSElev, Q
+          20 /Channel
+           2 /Locations
+           0.000        4.2937523        -2385.337 /Distance, WSElev, Q
+        4107.000        4.3035530        -2946.492 /Distance, WSElev, Q
+          21 /Channel
+           2 /Locations
+           0.000        4.3035530        -3335.810 /Distance, WSElev, Q
+        5947.000        4.3247718        -4067.050 /Distance, WSElev, Q
+          22 /Channel
+           2 /Locations
+           0.000        4.3247718        -4084.280 /Distance, WSElev, Q
+        6803.000        4.3541513        -4782.034 /Distance, WSElev, Q
+          23 /Channel
+           2 /Locations
+           0.000        4.3541513        -4774.184 /Distance, WSElev, Q
+        3425.000        4.3695979        -5128.393 /Distance, WSElev, Q
+          24 /Channel
+           2 /Locations
+           0.000        4.3695979        -5898.627 /Distance, WSElev, Q
+        7742.000        4.3963657        -7152.744 /Distance, WSElev, Q
+          25 /Channel
+           2 /Locations
+           0.000        4.3963657        -7155.754 /Distance, WSElev, Q
+        3317.000        4.4096911        -7611.038 /Distance, WSElev, Q
+          26 /Channel
+           2 /Locations
+           0.000        4.4096911         -884.121 /Distance, WSElev, Q
+        4000.000        4.4247802        -1034.434 /Distance, WSElev, Q
+          27 /Channel
+           2 /Locations
+           0.000        4.4265461         1975.417 /Distance, WSElev, Q
+        4700.000        4.4096911         1689.542 /Distance, WSElev, Q
+          28 /Channel
+           2 /Locations
+           0.000        4.4247802        -1034.434 /Distance, WSElev, Q
+        5000.000        4.4385279        -1325.923 /Distance, WSElev, Q
+          29 /Channel
+           2 /Locations
+           0.000        4.4385279         2355.654 /Distance, WSElev, Q
+        3800.000        4.4265461         1975.417 /Distance, WSElev, Q
+          30 /Channel
+           2 /Locations
+           0.000        4.4096911        -7048.008 /Distance, WSElev, Q
+        7358.000        4.4385279        -7939.327 /Distance, WSElev, Q
+          31 /Channel
+           2 /Locations
+           0.000        4.4385279       -11633.713 /Distance, WSElev, Q
+        6525.000        4.4762570       -12458.813 /Distance, WSElev, Q
+          32 /Channel
+           2 /Locations
+           0.000        4.4762570        -3588.088 /Distance, WSElev, Q
+        6098.000        4.4978453        -4058.239 /Distance, WSElev, Q
+          33 /Channel
+           2 /Locations
+           0.000        4.4978453         1140.779 /Distance, WSElev, Q
+        2397.000        4.5003385          661.608 /Distance, WSElev, Q
+          34 /Channel
+           2 /Locations
+           0.000        4.4762570        -8060.425 /Distance, WSElev, Q
+        5988.000        4.5003385        -8711.962 /Distance, WSElev, Q
+          35 /Channel
+           2 /Locations
+           0.000        4.4978453        -4896.279 /Distance, WSElev, Q
+        7239.000        4.5342197        -5680.206 /Distance, WSElev, Q
+          36 /Channel
+           2 /Locations
+           0.000        4.5003385       -14992.985 /Distance, WSElev, Q
+        5532.000        4.5342197       -15597.846 /Distance, WSElev, Q
+          37 /Channel
+           2 /Locations
+           0.000        4.5342197       -18151.454 /Distance, WSElev, Q
+        5291.000        4.5725388       -18817.310 /Distance, WSElev, Q
+          38 /Channel
+           2 /Locations
+           0.000        4.5725388       -17261.136 /Distance, WSElev, Q
+        4791.000        4.6145739       -17691.685 /Distance, WSElev, Q
+          39 /Channel
+           2 /Locations
+           0.000        4.6145739       -17680.029 /Distance, WSElev, Q
+        4316.000        4.6264050       -18562.525 /Distance, WSElev, Q
+          40 /Channel
+           2 /Locations
+           0.000        4.6264050       -18562.525 /Distance, WSElev, Q
+        5753.000        4.6469731       -19706.547 /Distance, WSElev, Q
+          41 /Channel
+           2 /Locations
+           0.000        4.6145739       -20772.098 /Distance, WSElev, Q
+        6359.000        4.6469731       -21414.027 /Distance, WSElev, Q
+          42 /Channel
+           2 /Locations
+           0.000        4.6469731       -41120.574 /Distance, WSElev, Q
+        8762.000        4.6965120       -43585.504 /Distance, WSElev, Q
+          43 /Channel
+           2 /Locations
+           0.000        4.6965120       -50361.640 /Distance, WSElev, Q
+        2492.000        4.7124375       -51339.835 /Distance, WSElev, Q
+          44 /Channel
+           2 /Locations
+           0.000        4.7124375       -63975.460 /Distance, WSElev, Q
+        3619.000        4.7367226       -65154.361 /Distance, WSElev, Q
+          45 /Channel
+           3 /Locations
+           0.000        4.7367226       -76436.628 /Distance, WSElev, Q
+        6210.500        4.8001771       -78902.717 /Distance, WSElev, Q
+       12421.000        4.8641762       -81060.906 /Distance, WSElev, Q
+          46 /Channel
+           3 /Locations
+           0.000        4.8641762       -81081.026 /Distance, WSElev, Q
+        5890.000        4.9193913       -83032.951 /Distance, WSElev, Q
+       11780.000        4.9612516       -84842.457 /Distance, WSElev, Q
+          47 /Channel
+           3 /Locations
+           0.000        4.9612516       -82777.466 /Distance, WSElev, Q
+        7124.000        5.0163088       -84931.869 /Distance, WSElev, Q
+       14248.000        5.0899854       -86635.690 /Distance, WSElev, Q
+          48 /Channel
+           2 /Locations
+           0.000        5.0899854       -66353.747 /Distance, WSElev, Q
+        9015.000        5.2055949       -69000.622 /Distance, WSElev, Q
+          49 /Channel
+           3 /Locations
+           0.000        5.2995175      -115639.943 /Distance, WSElev, Q
+        6474.000        5.3779268      -118846.872 /Distance, WSElev, Q
+       12948.000        5.4788829      -121842.368 /Distance, WSElev, Q
+          50 /Channel
+           2 /Locations
+           0.000        5.4788829      -141211.047 /Distance, WSElev, Q
+        9721.000        5.5984587      -146408.306 /Distance, WSElev, Q
+          51 /Channel
+           3 /Locations
+           0.000        5.5984587       -72643.575 /Distance, WSElev, Q
+        5769.500        5.6623232       -74699.992 /Distance, WSElev, Q
+       11539.000        5.7211356       -76337.322 /Distance, WSElev, Q
+          52 /Channel
+           2 /Locations
+           0.000        5.7211356      -138007.052 /Distance, WSElev, Q
+        8783.000        5.8108656      -140727.861 /Distance, WSElev, Q
+          53 /Channel
+           3 /Locations
+           0.000        5.8108656       -59955.978 /Distance, WSElev, Q
+        5638.000        5.8659322       -61743.240 /Distance, WSElev, Q
+       11276.000        5.9208066       -63751.656 /Distance, WSElev, Q
+          54 /Channel
+           2 /Locations
+           0.000        4.5219113          327.050 /Distance, WSElev, Q
+        3787.000        4.5159903          346.729 /Distance, WSElev, Q
+          55 /Channel
+           2 /Locations
+           0.000        4.5159903          352.819 /Distance, WSElev, Q
+        4762.000        4.5084942          372.725 /Distance, WSElev, Q
+          56 /Channel
+           2 /Locations
+           0.000        4.5084942          368.305 /Distance, WSElev, Q
+        4214.000        4.5032150          385.562 /Distance, WSElev, Q
+          57 /Channel
+           2 /Locations
+           0.000        4.5032150          379.782 /Distance, WSElev, Q
+        4378.000        4.4998294          398.080 /Distance, WSElev, Q
+          58 /Channel
+           2 /Locations
+           0.000        4.4998294          396.240 /Distance, WSElev, Q
+        4975.000        4.4968834          414.885 /Distance, WSElev, Q
+          59 /Channel
+           2 /Locations
+           0.000        4.4968834          283.439 /Distance, WSElev, Q
+        4762.000        4.4973683          299.976 /Distance, WSElev, Q
+          60 /Channel
+           2 /Locations
+           0.000        4.4973683          295.256 /Distance, WSElev, Q
+        5875.000        4.4979042          317.569 /Distance, WSElev, Q
+          61 /Channel
+           2 /Locations
+           0.000        4.4979042          347.680 /Distance, WSElev, Q
+        6003.000        4.4959438          372.353 /Distance, WSElev, Q
+          62 /Channel
+           2 /Locations
+           0.000        4.4959438          371.773 /Distance, WSElev, Q
+        4600.000        4.4944141          399.885 /Distance, WSElev, Q
+          63 /Channel
+           2 /Locations
+           0.000        4.4944141         -204.224 /Distance, WSElev, Q
+        3010.000        4.5100895         -189.707 /Distance, WSElev, Q
+          65 /Channel
+           2 /Locations
+           0.000        4.5054438          207.209 /Distance, WSElev, Q
+        3161.000        4.4944141          216.057 /Distance, WSElev, Q
+          66 /Channel
+           2 /Locations
+           0.000        4.5054438         -131.363 /Distance, WSElev, Q
+        2075.000        4.5100895         -125.538 /Distance, WSElev, Q
+          67 /Channel
+           2 /Locations
+           0.000        4.5100895         -235.408 /Distance, WSElev, Q
+        2887.000        4.5239384         -222.709 /Distance, WSElev, Q
+          68 /Channel
+           2 /Locations
+           0.000        4.5239384         -217.666 /Distance, WSElev, Q
+        3769.000        4.5361063         -203.290 /Distance, WSElev, Q
+          69 /Channel
+           2 /Locations
+           0.000        4.5100895          -79.837 /Distance, WSElev, Q
+        7403.000        4.5361063          -59.774 /Distance, WSElev, Q
+          70 /Channel
+           2 /Locations
+           0.000        4.5361063         -266.393 /Distance, WSElev, Q
+        3985.000        4.5412452         -241.735 /Distance, WSElev, Q
+          71 /Channel
+           2 /Locations
+           0.000        4.5412452         -240.875 /Distance, WSElev, Q
+        6019.000        4.5469973         -198.824 /Distance, WSElev, Q
+          72 /Channel
+           2 /Locations
+           0.000        4.5469973         -204.904 /Distance, WSElev, Q
+        4513.000        4.5515454         -167.288 /Distance, WSElev, Q
+          73 /Channel
+           2 /Locations
+           0.000        4.5515454         -178.638 /Distance, WSElev, Q
+        4142.000        4.5548629         -142.638 /Distance, WSElev, Q
+          74 /Channel
+           2 /Locations
+           0.000        4.5548629         -198.028 /Distance, WSElev, Q
+        3904.000        4.5570652         -161.000 /Distance, WSElev, Q
+          75 /Channel
+           2 /Locations
+           0.000        4.5570652         -169.340 /Distance, WSElev, Q
+        4282.000        4.5594628         -123.740 /Distance, WSElev, Q
+          76 /Channel
+           2 /Locations
+           0.000        4.5594628         -124.740 /Distance, WSElev, Q
+        4686.000        4.5610768          -65.381 /Distance, WSElev, Q
+          77 /Channel
+           2 /Locations
+           0.000        4.5610768          -83.261 /Distance, WSElev, Q
+        7316.000        4.5626381           20.036 /Distance, WSElev, Q
+          78 /Channel
+           2 /Locations
+           0.000        4.5626381          -24.234 /Distance, WSElev, Q
+        3185.000        4.5634672           11.530 /Distance, WSElev, Q
+          79 /Channel
+           2 /Locations
+           0.000        4.5634672            9.280 /Distance, WSElev, Q
+        3457.000        4.5644104           44.826 /Distance, WSElev, Q
+          80 /Channel
+           2 /Locations
+           0.000        3.5798670           45.666 /Distance, WSElev, Q
+        5447.000        3.5851895          -44.958 /Distance, WSElev, Q
+          81 /Channel
+           2 /Locations
+           0.000        3.5851895        -3043.103 /Distance, WSElev, Q
+        3857.000        3.6222236        -3118.191 /Distance, WSElev, Q
+          82 /Channel
+           2 /Locations
+           0.000        3.6222236        -2966.490 /Distance, WSElev, Q
+        2609.000        3.6500838        -3025.576 /Distance, WSElev, Q
+          83 /Channel
+           2 /Locations
+           0.000        5.2055949      -114114.079 /Distance, WSElev, Q
+        5450.000        5.2995175      -115639.943 /Distance, WSElev, Q
+          84 /Channel
+           2 /Locations
+           0.000        3.6728793        -2634.614 /Distance, WSElev, Q
+        3377.000        3.6983252        -2719.027 /Distance, WSElev, Q
+          85 /Channel
+           2 /Locations
+           0.000        3.6983252        -2719.427 /Distance, WSElev, Q
+        3377.000        3.7248917        -2809.213 /Distance, WSElev, Q
+          86 /Channel
+           2 /Locations
+           0.000        3.7248917        -1770.482 /Distance, WSElev, Q
+        5022.000        3.7527975        -1947.505 /Distance, WSElev, Q
+          88 /Channel
+           2 /Locations
+           0.000        3.7527975        -3124.341 /Distance, WSElev, Q
+        4754.000        3.7976344        -3309.472 /Distance, WSElev, Q
+          89 /Channel
+           2 /Locations
+           0.000        3.7976344        -3309.042 /Distance, WSElev, Q
+        4544.000        3.8385913        -3500.099 /Distance, WSElev, Q
+          90 /Channel
+           2 /Locations
+           0.000        3.8385913        -3498.449 /Distance, WSElev, Q
+        3722.000        3.8761515        -3669.725 /Distance, WSElev, Q
+          91 /Channel
+           2 /Locations
+           0.000        3.8761515        -3758.277 /Distance, WSElev, Q
+        4119.000        3.9168703        -3939.580 /Distance, WSElev, Q
+          92 /Channel
+           2 /Locations
+           0.000        3.9168703        -3946.940 /Distance, WSElev, Q
+        6169.000        3.9769169        -4235.023 /Distance, WSElev, Q
+          94 /Channel
+           2 /Locations
+           0.000        3.9769169        -5511.513 /Distance, WSElev, Q
+        4034.000        4.0293998        -5833.855 /Distance, WSElev, Q
+          95 /Channel
+           2 /Locations
+           0.000        4.0293998        -5836.515 /Distance, WSElev, Q
+        3850.000        4.0730783        -6174.414 /Distance, WSElev, Q
+          96 /Channel
+           2 /Locations
+           0.000        4.0730783        -6168.494 /Distance, WSElev, Q
+        3741.000        4.1154296        -6493.760 /Distance, WSElev, Q
+          97 /Channel
+           2 /Locations
+           0.000        4.1154296        -5315.013 /Distance, WSElev, Q
+        3249.000        4.1575033        -5516.130 /Distance, WSElev, Q
+         101 /Channel
+           2 /Locations
+           0.000        4.1575033        -5516.130 /Distance, WSElev, Q
+        3950.000        4.2124450        -5738.734 /Distance, WSElev, Q
+         102 /Channel
+           2 /Locations
+           0.000        4.2124450        -5746.484 /Distance, WSElev, Q
+        3927.000        4.2661927        -5998.674 /Distance, WSElev, Q
+         104 /Channel
+           2 /Locations
+           0.000        4.2661927        -5998.674 /Distance, WSElev, Q
+        3645.000        4.3024489        -6288.636 /Distance, WSElev, Q
+         105 /Channel
+           2 /Locations
+           0.000        4.3024489        -6289.336 /Distance, WSElev, Q
+        2947.000        4.3250487        -6575.434 /Distance, WSElev, Q
+         106 /Channel
+           2 /Locations
+           0.000        4.3250487        -6585.294 /Distance, WSElev, Q
+        3819.000        4.3535779        -6959.624 /Distance, WSElev, Q
+         107 /Channel
+           2 /Locations
+           0.000        4.3535779        -3979.656 /Distance, WSElev, Q
+        4183.000        4.4144911        -4098.459 /Distance, WSElev, Q
+         108 /Channel
+           2 /Locations
+           0.000        4.3535779        -6518.866 /Distance, WSElev, Q
+        7064.000        4.4144911        -7070.759 /Distance, WSElev, Q
+         111 /Channel
+           2 /Locations
+           0.000        4.4144911       -11169.218 /Distance, WSElev, Q
+        4050.000        4.4487302       -11762.664 /Distance, WSElev, Q
+         114 /Channel
+           2 /Locations
+           0.000        4.4771870         4117.621 /Distance, WSElev, Q
+        3991.000        4.4487302         3812.269 /Distance, WSElev, Q
+         115 /Channel
+           2 /Locations
+           0.000        4.4487302        -7950.395 /Distance, WSElev, Q
+        3340.000        4.4855585        -8118.640 /Distance, WSElev, Q
+         116 /Channel
+           2 /Locations
+           0.000        4.4771870        -4145.763 /Distance, WSElev, Q
+        3298.000        4.4855585        -4347.705 /Distance, WSElev, Q
+         117 /Channel
+           2 /Locations
+           0.000        4.4855585       -12618.296 /Distance, WSElev, Q
+        8901.000        4.5991893       -13333.594 /Distance, WSElev, Q
+         118 /Channel
+           3 /Locations
+           0.000        4.5017246          547.813 /Distance, WSElev, Q
+        6015.000        4.4932502          197.315 /Distance, WSElev, Q
+       12030.000        4.4855585         -151.952 /Distance, WSElev, Q
+         119 /Channel
+           3 /Locations
+           0.000        4.5017246       -10302.188 /Distance, WSElev, Q
+        6392.500        4.5381067       -10952.319 /Distance, WSElev, Q
+       12785.000        4.5828926       -11567.229 /Distance, WSElev, Q
+         120 /Channel
+           2 /Locations
+           0.000        4.5828926        -2751.324 /Distance, WSElev, Q
+        5677.000        4.5991893        -3068.816 /Distance, WSElev, Q
+         121 /Channel
+           2 /Locations
+           0.000        4.5991893       -10777.590 /Distance, WSElev, Q
+        4792.000        4.6412576       -11307.125 /Distance, WSElev, Q
+         122 /Channel
+           2 /Locations
+           0.000        4.6412576        -8743.213 /Distance, WSElev, Q
+        6142.000        4.6789105        -9708.776 /Distance, WSElev, Q
+         123 /Channel
+           2 /Locations
+           0.000        4.5828926        -8815.905 /Distance, WSElev, Q
+        7396.000        4.6789105        -9125.781 /Distance, WSElev, Q
+         124 /Channel
+           2 /Locations
+           0.000        4.6789105        -5409.605 /Distance, WSElev, Q
+        7062.000        4.6965120        -6753.287 /Distance, WSElev, Q
+         125 /Channel
+           2 /Locations
+           0.000        4.4968834          122.966 /Distance, WSElev, Q
+        4937.000        4.3776939          130.862 /Distance, WSElev, Q
+         126 /Channel
+           2 /Locations
+           0.000        4.3776939          120.072 /Distance, WSElev, Q
+        8246.000        4.2090170          141.077 /Distance, WSElev, Q
+         127 /Channel
+           2 /Locations
+           0.000        4.2090170          128.957 /Distance, WSElev, Q
+        5267.000        4.1133807          148.368 /Distance, WSElev, Q
+         128 /Channel
+           2 /Locations
+           0.000        4.1133807          127.988 /Distance, WSElev, Q
+        8409.000        4.0021801          169.251 /Distance, WSElev, Q
+         129 /Channel
+           2 /Locations
+           0.000        4.0021801           97.151 /Distance, WSElev, Q
+        5691.000        3.9773878          127.000 /Distance, WSElev, Q
+         130 /Channel
+           2 /Locations
+           0.000        3.9773878          103.330 /Distance, WSElev, Q
+        7026.000        3.9738859          145.027 /Distance, WSElev, Q
+         131 /Channel
+           2 /Locations
+           0.000        3.9738859          134.947 /Distance, WSElev, Q
+        5640.000        3.9690316          168.683 /Distance, WSElev, Q
+         132 /Channel
+           2 /Locations
+           0.000        3.9690316          156.493 /Distance, WSElev, Q
+        5447.000        3.9673751          187.554 /Distance, WSElev, Q
+         133 /Channel
+           2 /Locations
+           0.000        3.9673751          183.834 /Distance, WSElev, Q
+        6823.000        3.9733380          228.467 /Distance, WSElev, Q
+         134 /Channel
+           2 /Locations
+           0.000        3.8265500          212.827 /Distance, WSElev, Q
+        7627.000        3.8432181           -7.384 /Distance, WSElev, Q
+         135 /Channel
+           2 /Locations
+           0.000        3.8432181        -2804.670 /Distance, WSElev, Q
+        4427.000        3.8863162        -3053.005 /Distance, WSElev, Q
+         136 /Channel
+           2 /Locations
+           0.000        3.8863162        -3076.555 /Distance, WSElev, Q
+        2266.000        3.9179591        -3196.972 /Distance, WSElev, Q
+         137 /Channel
+           2 /Locations
+           0.000        3.9179591        -3198.142 /Distance, WSElev, Q
+        3983.000        3.9655988        -3431.548 /Distance, WSElev, Q
+         138 /Channel
+           2 /Locations
+           0.000        3.9655988        -3440.368 /Distance, WSElev, Q
+        7131.000        4.0548106        -3935.382 /Distance, WSElev, Q
+         139 /Channel
+           2 /Locations
+           0.000        4.0548106        -5135.371 /Distance, WSElev, Q
+        2294.000        4.0785835        -5356.749 /Distance, WSElev, Q
+         140 /Channel
+           2 /Locations
+           0.000        4.0785835        -3029.962 /Distance, WSElev, Q
+        6283.000        4.1609932        -3252.093 /Distance, WSElev, Q
+         141 /Channel
+           2 /Locations
+           0.000        4.0785835        -2340.096 /Distance, WSElev, Q
+        3789.000        4.1103124        -2580.617 /Distance, WSElev, Q
+         142 /Channel
+           2 /Locations
+           0.000        4.1103124        -2582.567 /Distance, WSElev, Q
+        5345.000        4.1609932        -2867.243 /Distance, WSElev, Q
+         143 /Channel
+           2 /Locations
+           0.000        4.1609932        -6119.336 /Distance, WSElev, Q
+        3379.000        4.1942203        -6541.547 /Distance, WSElev, Q
+         144 /Channel
+           2 /Locations
+           0.000        4.1942203        -3708.322 /Distance, WSElev, Q
+        2708.000        4.2187942        -3828.934 /Distance, WSElev, Q
+         145 /Channel
+           2 /Locations
+           0.000        4.2148274         4858.796 /Distance, WSElev, Q
+        2818.000        4.1942203         4582.841 /Distance, WSElev, Q
+         146 /Channel
+           2 /Locations
+           0.000        4.2187942          683.477 /Distance, WSElev, Q
+        3053.000        4.2148274          554.398 /Distance, WSElev, Q
+         147 /Channel
+           2 /Locations
+           0.000        4.2148274        -4304.397 /Distance, WSElev, Q
+        3804.000        4.2546201        -4448.900 /Distance, WSElev, Q
+         148 /Channel
+           2 /Locations
+           0.000        4.2187942        -4517.441 /Distance, WSElev, Q
+        4423.000        4.2546201        -4957.655 /Distance, WSElev, Q
+         149 /Channel
+           2 /Locations
+           0.000        4.2546201        -6061.846 /Distance, WSElev, Q
+        4373.000        4.2896624        -6539.862 /Distance, WSElev, Q
+         150 /Channel
+           2 /Locations
+           0.000        4.2896624        -6677.664 /Distance, WSElev, Q
+        4354.000        4.3201842        -7027.617 /Distance, WSElev, Q
+         151 /Channel
+           2 /Locations
+           0.000        4.3201842        -7033.737 /Distance, WSElev, Q
+        4217.000        4.3456679        -7432.272 /Distance, WSElev, Q
+         152 /Channel
+           2 /Locations
+           0.000        4.3456679        -6510.311 /Distance, WSElev, Q
+        3731.000        4.3794909        -6822.192 /Distance, WSElev, Q
+         153 /Channel
+           2 /Locations
+           0.000        4.3794909        -6829.992 /Distance, WSElev, Q
+        3312.000        4.4057072        -7145.988 /Distance, WSElev, Q
+         154 /Channel
+           2 /Locations
+           0.000        4.4057072        -1766.289 /Distance, WSElev, Q
+        3980.000        4.4158568        -2182.216 /Distance, WSElev, Q
+         155 /Channel
+           2 /Locations
+           0.000        4.4158568        -1703.166 /Distance, WSElev, Q
+        2616.000        4.4280875        -1795.948 /Distance, WSElev, Q
+         156 /Channel
+           2 /Locations
+           0.000        4.4158568       -11666.211 /Distance, WSElev, Q
+        2593.000        4.4308748       -11944.065 /Distance, WSElev, Q
+         157 /Channel
+           2 /Locations
+           0.000        4.4280875        -1345.216 /Distance, WSElev, Q
+        2775.000        4.4308748        -1613.873 /Distance, WSElev, Q
+         158 /Channel
+           2 /Locations
+           0.000        4.4280875         -450.732 /Distance, WSElev, Q
+        2088.000        4.4308748         -651.955 /Distance, WSElev, Q
+         159 /Channel
+           2 /Locations
+           0.000        4.4308748       -14209.894 /Distance, WSElev, Q
+        4306.000        4.4808898       -14852.992 /Distance, WSElev, Q
+         160 /Channel
+           2 /Locations
+           0.000        4.4808898         1067.063 /Distance, WSElev, Q
+        6956.000        4.4978453          302.739 /Distance, WSElev, Q
+         161 /Channel
+           3 /Locations
+           0.000        4.4808898       -15936.345 /Distance, WSElev, Q
+        5404.000        4.5191844       -16694.500 /Distance, WSElev, Q
+       10808.000        4.5755286       -17671.018 /Distance, WSElev, Q
+         162 /Channel
+           2 /Locations
+           0.000        4.5755286         2222.966 /Distance, WSElev, Q
+        4261.000        4.5725388         1556.174 /Distance, WSElev, Q
+         163 /Channel
+           2 /Locations
+           0.000        4.5755286       -19893.985 /Distance, WSElev, Q
+        5058.000        4.6145739       -20742.062 /Distance, WSElev, Q
+         164 /Channel
+           2 /Locations
+           0.000        4.3298042        -5093.624 /Distance, WSElev, Q
+        3332.000        4.3502590        -5465.356 /Distance, WSElev, Q
+         165 /Channel
+           2 /Locations
+           0.000        4.3502590        -5463.506 /Distance, WSElev, Q
+        3743.000        4.3705292        -5813.179 /Distance, WSElev, Q
+         166 /Channel
+           2 /Locations
+           0.000        4.3705292        -4252.765 /Distance, WSElev, Q
+        3265.000        4.3917486        -4433.931 /Distance, WSElev, Q
+         167 /Channel
+           2 /Locations
+           0.000        4.3917486        -4433.781 /Distance, WSElev, Q
+        3407.000        4.4158568        -4609.094 /Distance, WSElev, Q
+         168 /Channel
+           2 /Locations
+           0.000        4.3705292        -3219.561 /Distance, WSElev, Q
+        6624.000        4.4158568        -3525.154 /Distance, WSElev, Q
+         169 /Channel
+           2 /Locations
+           0.000        4.2425983          130.231 /Distance, WSElev, Q
+        8000.000        4.2553166          -77.210 /Distance, WSElev, Q
+         170 /Channel
+           2 /Locations
+           0.000        4.2553166          -56.730 /Distance, WSElev, Q
+        6800.000        4.2707328         -390.741 /Distance, WSElev, Q
+         171 /Channel
+           2 /Locations
+           0.000        4.2707328         -404.811 /Distance, WSElev, Q
+        5300.000        4.3035530         -590.058 /Distance, WSElev, Q
+         172 /Channel
+           2 /Locations
+           0.000        4.3877481        -1586.210 /Distance, WSElev, Q
+        4805.000        4.4096911        -1999.053 /Distance, WSElev, Q
+         173 /Channel
+           2 /Locations
+           0.000        4.3625053        -1147.309 /Distance, WSElev, Q
+        5701.000        4.3877481        -1588.180 /Distance, WSElev, Q
+         174 /Channel
+           2 /Locations
+           0.000        4.3462004         -822.664 /Distance, WSElev, Q
+        4494.000        4.3625053        -1140.309 /Distance, WSElev, Q
+         175 /Channel
+           2 /Locations
+           0.000        4.3370472          775.256 /Distance, WSElev, Q
+        4956.000        4.3462004          440.627 /Distance, WSElev, Q
+         176 /Channel
+           2 /Locations
+           0.000        4.3298042         1021.408 /Distance, WSElev, Q
+        4247.000        4.3370472          769.256 /Distance, WSElev, Q
+         177 /Channel
+           2 /Locations
+           0.000        4.2905749        -3806.532 /Distance, WSElev, Q
+        4363.000        4.3298042        -4066.066 /Distance, WSElev, Q
+         178 /Channel
+           2 /Locations
+           0.000        4.2546201        -3356.179 /Distance, WSElev, Q
+        5621.000        4.2905749        -3640.281 /Distance, WSElev, Q
+         179 /Channel
+           2 /Locations
+           0.000        4.2896624          131.972 /Distance, WSElev, Q
+        3066.000        4.2905749         -161.822 /Distance, WSElev, Q
+         180 /Channel
+           2 /Locations
+           0.000        4.3292590          -10.510 /Distance, WSElev, Q
+        9770.000        4.3340738         -466.949 /Distance, WSElev, Q
+         181 /Channel
+           2 /Locations
+           0.000        4.3340738         -477.879 /Distance, WSElev, Q
+        7072.000        4.3398638         -936.691 /Distance, WSElev, Q
+         182 /Channel
+           2 /Locations
+           0.000        4.3398638         -937.111 /Distance, WSElev, Q
+        4286.000        4.3462004        -1252.771 /Distance, WSElev, Q
+         183 /Channel
+           2 /Locations
+           0.000        4.5223272          -12.226 /Distance, WSElev, Q
+        4506.000        4.5239384            8.373 /Distance, WSElev, Q
+         184 /Channel
+           2 /Locations
+           0.000        4.5214523          -54.370 /Distance, WSElev, Q
+        8869.000        4.5223272          -14.156 /Distance, WSElev, Q
+         185 /Channel
+           2 /Locations
+           0.000        4.5584640          -10.540 /Distance, WSElev, Q
+        4600.000        4.5592508           -1.824 /Distance, WSElev, Q
+         186 /Channel
+           2 /Locations
+           0.000        4.5592508           -5.884 /Distance, WSElev, Q
+        4600.000        4.5613446            0.450 /Distance, WSElev, Q
+         187 /Channel
+           2 /Locations
+           0.000        4.5613446           -5.560 /Distance, WSElev, Q
+        3200.000        4.5630701           -0.725 /Distance, WSElev, Q
+         188 /Channel
+           2 /Locations
+           0.000        4.5630701           -0.725 /Distance, WSElev, Q
+        2641.000        4.5644741            4.490 /Distance, WSElev, Q
+         189 /Channel
+           2 /Locations
+           0.000        4.5644741          -17.570 /Distance, WSElev, Q
+        2562.000        4.5657074          -11.784 /Distance, WSElev, Q
+         190 /Channel
+           2 /Locations
+           0.000        4.5657074          -15.024 /Distance, WSElev, Q
+        2315.000        4.5665839           -9.712 /Distance, WSElev, Q
+         191 /Channel
+           2 /Locations
+           0.000        4.5665839           -9.712 /Distance, WSElev, Q
+        3596.000        4.5669569           -0.051 /Distance, WSElev, Q
+         192 /Channel
+           2 /Locations
+           0.000        4.5669569           -5.471 /Distance, WSElev, Q
+        1709.000        4.5667182           -1.163 /Distance, WSElev, Q
+         193 /Channel
+           2 /Locations
+           0.000        4.5667182           -9.833 /Distance, WSElev, Q
+        1508.000        4.5665226           -5.479 /Distance, WSElev, Q
+         194 /Channel
+           2 /Locations
+           0.000        4.5665226           -5.479 /Distance, WSElev, Q
+        1946.000        4.5668006            0.000 /Distance, WSElev, Q
+         195 /Channel
+           2 /Locations
+           0.000        4.5106775            0.000 /Distance, WSElev, Q
+        3045.000        4.5103939            6.631 /Distance, WSElev, Q
+         196 /Channel
+           2 /Locations
+           0.000        4.5103939          -15.649 /Distance, WSElev, Q
+        8526.000        4.5074139            3.851 /Distance, WSElev, Q
+         197 /Channel
+           2 /Locations
+           0.000        4.5074139          -25.119 /Distance, WSElev, Q
+        7205.000        4.5050394           -1.377 /Distance, WSElev, Q
+         198 /Channel
+           2 /Locations
+           0.000        4.5050394           -9.277 /Distance, WSElev, Q
+        7231.000        4.5008536            8.788 /Distance, WSElev, Q
+         199 /Channel
+           2 /Locations
+           0.000        4.5008536           13.108 /Distance, WSElev, Q
+        6662.000        4.4979042           34.591 /Distance, WSElev, Q
+         201 /Channel
+           2 /Locations
+           0.000        4.5033572            0.000 /Distance, WSElev, Q
+        7630.000        4.5037761           21.123 /Distance, WSElev, Q
+         202 /Channel
+           2 /Locations
+           0.000        4.5037761           15.673 /Distance, WSElev, Q
+        7019.000        4.5044290           42.229 /Distance, WSElev, Q
+         203 /Channel
+           2 /Locations
+           0.000        4.5044290           43.939 /Distance, WSElev, Q
+        6789.000        4.5054438           73.336 /Distance, WSElev, Q
+         204 /Channel
+           2 /Locations
+           0.000        4.4881729           -7.300 /Distance, WSElev, Q
+        7297.000        4.4888722           28.897 /Distance, WSElev, Q
+         205 /Channel
+           2 /Locations
+           0.000        4.4944141          819.436 /Distance, WSElev, Q
+        4630.000        4.4888722          854.133 /Distance, WSElev, Q
+         206 /Channel
+           2 /Locations
+           0.000        4.4888722          880.651 /Distance, WSElev, Q
+        5533.000        4.4856100          913.049 /Distance, WSElev, Q
+         207 /Channel
+           2 /Locations
+           0.000        3.5441651          897.389 /Distance, WSElev, Q
+        2534.000        3.5426000          865.248 /Distance, WSElev, Q
+         208 /Channel
+           2 /Locations
+           0.000        3.5426000          865.698 /Distance, WSElev, Q
+        4235.000        3.5435817          805.508 /Distance, WSElev, Q
+         209 /Channel
+           2 /Locations
+           0.000        3.5435817          800.358 /Distance, WSElev, Q
+        3553.000        3.5478390          739.156 /Distance, WSElev, Q
+         210 /Channel
+           2 /Locations
+           0.000        3.5478390          729.386 /Distance, WSElev, Q
+        3636.000        3.5555418          652.642 /Distance, WSElev, Q
+         211 /Channel
+           2 /Locations
+           0.000        3.5555418          645.472 /Distance, WSElev, Q
+        4032.000        3.5676164          544.063 /Distance, WSElev, Q
+         212 /Channel
+           2 /Locations
+           0.000        3.5676164          529.663 /Distance, WSElev, Q
+        6906.000        3.5966635          329.396 /Distance, WSElev, Q
+         213 /Channel
+           2 /Locations
+           0.000        3.5966635          328.416 /Distance, WSElev, Q
+        4893.000        3.6222236          169.641 /Distance, WSElev, Q
+         214 /Channel
+           2 /Locations
+           0.000        3.5525774        -2927.952 /Distance, WSElev, Q
+        4500.000        3.5851895        -2988.825 /Distance, WSElev, Q
+         215 /Channel
+           3 /Locations
+           0.000        5.4512470        -6984.433 /Distance, WSElev, Q
+        6475.500        5.4597543       -10705.050 /Distance, WSElev, Q
+       12951.000        5.4723281       -14769.488 /Distance, WSElev, Q
+         216 /Channel
+           2 /Locations
+           0.000        3.5119755        -2795.764 /Distance, WSElev, Q
+        8000.000        3.5525774        -2914.292 /Distance, WSElev, Q
+         217 /Channel
+           2 /Locations
+           0.000        3.6500838         -465.653 /Distance, WSElev, Q
+        4240.000        3.6647694         -546.645 /Distance, WSElev, Q
+         218 /Channel
+           2 /Locations
+           0.000        3.6647694         -550.735 /Distance, WSElev, Q
+        4301.000        3.6846121         -638.874 /Distance, WSElev, Q
+         219 /Channel
+           2 /Locations
+           0.000        3.6846121         -218.605 /Distance, WSElev, Q
+        2136.000        3.6896001         -253.915 /Distance, WSElev, Q
+         220 /Channel
+           2 /Locations
+           0.000        3.6896001         -253.915 /Distance, WSElev, Q
+        2926.000        3.6985613         -303.205 /Distance, WSElev, Q
+         221 /Channel
+           2 /Locations
+           0.000        3.6846121         -422.988 /Distance, WSElev, Q
+        2456.000        3.6985613         -451.106 /Distance, WSElev, Q
+         222 /Channel
+           2 /Locations
+           0.000        3.6985613         -261.997 /Distance, WSElev, Q
+        2745.000        3.7076486         -309.232 /Distance, WSElev, Q
+         223 /Channel
+           2 /Locations
+           0.000        3.7076486         -309.232 /Distance, WSElev, Q
+        2602.000        3.7183511         -354.955 /Distance, WSElev, Q
+         224 /Channel
+           2 /Locations
+           0.000        3.6985613         -492.314 /Distance, WSElev, Q
+        2793.000        3.7183511         -525.583 /Distance, WSElev, Q
+         225 /Channel
+           2 /Locations
+           0.000        3.7183511         -887.597 /Distance, WSElev, Q
+        2722.000        3.7337000         -976.535 /Distance, WSElev, Q
+         226 /Channel
+           2 /Locations
+           0.000        3.8432181         2777.966 /Distance, WSElev, Q
+        4153.000        3.8190541         2539.624 /Distance, WSElev, Q
+         227 /Channel
+           2 /Locations
+           0.000        3.8190541         2531.774 /Distance, WSElev, Q
+        4789.000        3.7929267         2227.810 /Distance, WSElev, Q
+         228 /Channel
+           2 /Locations
+           0.000        3.7929267         2223.060 /Distance, WSElev, Q
+        3218.000        3.7760393         2018.891 /Distance, WSElev, Q
+         229 /Channel
+           2 /Locations
+           0.000        3.7760393         2016.411 /Distance, WSElev, Q
+        3048.000        3.7598699         1844.879 /Distance, WSElev, Q
+         230 /Channel
+           2 /Locations
+           0.000        3.7598699         1834.429 /Distance, WSElev, Q
+        5712.000        3.7337000         1565.175 /Distance, WSElev, Q
+         231 /Channel
+           2 /Locations
+           0.000        3.7337000          579.579 /Distance, WSElev, Q
+        4313.000        3.7248917          454.466 /Distance, WSElev, Q
+         232 /Channel
+           2 /Locations
+           0.000        3.6500838        -2560.243 /Distance, WSElev, Q
+        3088.000        3.6728793        -2634.214 /Distance, WSElev, Q
+         233 /Channel
+           2 /Locations
+           0.000        4.0548106         1192.399 /Distance, WSElev, Q
+        4028.000        4.0142879          927.455 /Distance, WSElev, Q
+         234 /Channel
+           2 /Locations
+           0.000        4.0142879          921.925 /Distance, WSElev, Q
+        4922.000        3.9910760          624.743 /Distance, WSElev, Q
+         235 /Channel
+           2 /Locations
+           0.000        3.9910760          624.353 /Distance, WSElev, Q
+        3920.000        3.9769169          404.615 /Distance, WSElev, Q
+         236 /Channel
+           2 /Locations
+           0.000        3.9769169         1673.616 /Distance, WSElev, Q
+        3609.000        3.9444748         1465.928 /Distance, WSElev, Q
+         237 /Channel
+           2 /Locations
+           0.000        3.9444748         1463.018 /Distance, WSElev, Q
+        4263.000        3.9191913         1166.491 /Distance, WSElev, Q
+         238 /Channel
+           2 /Locations
+           0.000        3.9191913         -293.599 /Distance, WSElev, Q
+        5724.000        3.9047195         -591.913 /Distance, WSElev, Q
+         239 /Channel
+           2 /Locations
+           0.000        3.9047195        -1720.104 /Distance, WSElev, Q
+        3820.000        3.9654017        -1834.497 /Distance, WSElev, Q
+         240 /Channel
+           2 /Locations
+           0.000        3.9654017        -1851.127 /Distance, WSElev, Q
+        3571.000        4.0769490        -1947.422 /Distance, WSElev, Q
+         241 /Channel
+           2 /Locations
+           0.000        4.0769490        -1950.742 /Distance, WSElev, Q
+        5416.000        4.2870775        -2070.171 /Distance, WSElev, Q
+         242 /Channel
+           2 /Locations
+           0.000        4.2870775        -2085.971 /Distance, WSElev, Q
+        4661.000        4.3159542        -2303.372 /Distance, WSElev, Q
+         243 /Channel
+           2 /Locations
+           0.000        4.3159542        -2304.292 /Distance, WSElev, Q
+        5093.000        4.3322060        -2575.290 /Distance, WSElev, Q
+         244 /Channel
+           2 /Locations
+           0.000        4.3322060        -3263.543 /Distance, WSElev, Q
+        4803.000        4.3535779        -3540.558 /Distance, WSElev, Q
+         245 /Channel
+           2 /Locations
+           0.000        4.3320770         -452.201 /Distance, WSElev, Q
+        4331.000        4.3322060         -682.583 /Distance, WSElev, Q
+         246 /Channel
+           2 /Locations
+           0.000        4.3320876         -174.441 /Distance, WSElev, Q
+        4948.000        4.3320770         -452.331 /Distance, WSElev, Q
+         247 /Channel
+           2 /Locations
+           0.000        4.3319195          -31.768 /Distance, WSElev, Q
+        5009.000        4.3320876         -150.441 /Distance, WSElev, Q
+         248 /Channel
+           2 /Locations
+           0.000        4.4057072        -8179.406 /Distance, WSElev, Q
+        3449.000        4.4378477        -8400.311 /Distance, WSElev, Q
+         249 /Channel
+           2 /Locations
+           0.000        4.4378477        -8400.311 /Distance, WSElev, Q
+        6333.000        4.4933352        -9104.129 /Distance, WSElev, Q
+         250 /Channel
+           2 /Locations
+           0.000        4.4933352          485.255 /Distance, WSElev, Q
+        6303.000        4.4771870          -20.263 /Distance, WSElev, Q
+         251 /Channel
+           2 /Locations
+           0.000        4.4933352        -9589.384 /Distance, WSElev, Q
+        2612.000        4.5017246        -9754.685 /Distance, WSElev, Q
+         252 /Channel
+           2 /Locations
+           0.000        3.7196790          -17.000 /Distance, WSElev, Q
+        4298.000        3.7213525         -125.880 /Distance, WSElev, Q
+         253 /Channel
+           2 /Locations
+           0.000        3.7213525         -126.670 /Distance, WSElev, Q
+        4723.000        3.7257403         -251.536 /Distance, WSElev, Q
+         254 /Channel
+           2 /Locations
+           0.000        3.7257403         -256.426 /Distance, WSElev, Q
+        5177.000        3.7330601         -397.693 /Distance, WSElev, Q
+         255 /Channel
+           2 /Locations
+           0.000        3.7330601          706.587 /Distance, WSElev, Q
+        3227.000        3.7248917          586.074 /Distance, WSElev, Q
+         257 /Channel
+           2 /Locations
+           0.000        3.7330601        -1109.080 /Distance, WSElev, Q
+        2723.000        3.7527975        -1170.016 /Distance, WSElev, Q
+         258 /Channel
+           2 /Locations
+           0.000        4.1942203         1771.006 /Distance, WSElev, Q
+        4295.000        4.1472319         1406.797 /Distance, WSElev, Q
+         259 /Channel
+           2 /Locations
+           0.000        4.1472319         1404.847 /Distance, WSElev, Q
+        3086.000        4.1154296         1176.587 /Distance, WSElev, Q
+         260 /Channel
+           2 /Locations
+           0.000        5.4723281       -14769.488 /Distance, WSElev, Q
+        2146.000        5.4788829       -16111.238 /Distance, WSElev, Q
+         261 /Channel
+           2 /Locations
+           0.000        4.8335625            0.000 /Distance, WSElev, Q
+        7394.000        4.8326931         -300.605 /Distance, WSElev, Q
+         262 /Channel
+           2 /Locations
+           0.000        4.8326931          827.108 /Distance, WSElev, Q
+        5717.000        4.8015041          657.859 /Distance, WSElev, Q
+         263 /Channel
+           2 /Locations
+           0.000        4.8326931        -1137.603 /Distance, WSElev, Q
+        4293.000        4.8484552        -1255.465 /Distance, WSElev, Q
+         264 /Channel
+           2 /Locations
+           0.000        4.5991893        -5624.820 /Distance, WSElev, Q
+        9400.000        4.7137014        -6256.139 /Distance, WSElev, Q
+         265 /Channel
+           2 /Locations
+           0.000        4.7137014        -6908.460 /Distance, WSElev, Q
+        4265.000        4.8015041        -7206.321 /Distance, WSElev, Q
+         266 /Channel
+           2 /Locations
+           0.000        4.8015041        -1750.551 /Distance, WSElev, Q
+        4850.000        4.8484552        -1949.531 /Distance, WSElev, Q
+         267 /Channel
+           2 /Locations
+           0.000        4.8015041        -4797.910 /Distance, WSElev, Q
+        4496.000        4.8484552        -5009.600 /Distance, WSElev, Q
+         268 /Channel
+           2 /Locations
+           0.000        4.7137014        -2104.405 /Distance, WSElev, Q
+        5552.000        4.7862774        -2315.854 /Distance, WSElev, Q
+         269 /Channel
+           4 /Locations
+           0.000        4.7862774        -6567.509 /Distance, WSElev, Q
+        5687.667        4.8747663        -6789.705 /Distance, WSElev, Q
+       11375.333        4.9451700        -7032.712 /Distance, WSElev, Q
+       17063.000        4.9955350        -7270.401 /Distance, WSElev, Q
+         270 /Channel
+           2 /Locations
+           0.000        4.9955350       -10366.585 /Distance, WSElev, Q
+        3908.000        5.0561975       -10518.155 /Distance, WSElev, Q
+         271 /Channel
+           3 /Locations
+           0.000        4.9511815          -88.143 /Distance, WSElev, Q
+        6487.500        4.9579956         -340.198 /Distance, WSElev, Q
+       12975.000        4.9631514         -607.563 /Distance, WSElev, Q
+         272 /Channel
+           3 /Locations
+           0.000        4.9631514         -607.563 /Distance, WSElev, Q
+        7001.000        4.9701258         -839.313 /Distance, WSElev, Q
+       14002.000        4.9955350        -1045.441 /Distance, WSElev, Q
+         273 /Channel
+           2 /Locations
+           0.000        4.8484552        -8214.597 /Distance, WSElev, Q
+        4983.000        4.9511815        -8406.197 /Distance, WSElev, Q
+         274 /Channel
+           3 /Locations
+           0.000        4.9511815        -8326.283 /Distance, WSElev, Q
+        6470.000        5.1934501        -8709.987 /Distance, WSElev, Q
+       12940.000        5.4512470        -9021.990 /Distance, WSElev, Q
+         275 /Channel
+           4 /Locations
+           0.000        5.4512470        -2058.066 /Distance, WSElev, Q
+        6136.333        5.4624204        -2358.943 /Distance, WSElev, Q
+       12272.667        5.4723369        -2704.798 /Distance, WSElev, Q
+       18409.000        5.4788829        -3215.331 /Distance, WSElev, Q
+         276 /Channel
+           2 /Locations
+           0.000        4.6789105       -15802.890 /Distance, WSElev, Q
+        6850.000        4.7721712       -16390.982 /Distance, WSElev, Q
+         277 /Channel
+           3 /Locations
+           0.000        4.7721712       -22410.891 /Distance, WSElev, Q
+        5052.500        4.8797429       -22975.432 /Distance, WSElev, Q
+       10105.000        4.9637841       -23515.428 /Distance, WSElev, Q
+         278 /Channel
+           2 /Locations
+           0.000        4.9637841       -30132.930 /Distance, WSElev, Q
+        5854.000        5.0561975       -30799.751 /Distance, WSElev, Q
+         279 /Channel
+           2 /Locations
+           0.000        5.0561975       -44098.798 /Distance, WSElev, Q
+        8937.000        5.2055949       -45103.916 /Distance, WSElev, Q
+         280 /Channel
+           3 /Locations
+           0.000        4.9612516        -2066.370 /Distance, WSElev, Q
+        5682.000        5.0070005        -2460.799 /Distance, WSElev, Q
+       11364.000        5.0561975        -2736.262 /Distance, WSElev, Q
+         281 /Channel
+           2 /Locations
+           0.000        5.7627500        16344.168 /Distance, WSElev, Q
+        3300.000        5.7500284        15241.726 /Distance, WSElev, Q
+         282 /Channel
+           2 /Locations
+           0.000        5.7500284        15519.808 /Distance, WSElev, Q
+        3300.000        5.7242545        14403.504 /Distance, WSElev, Q
+         283 /Channel
+           2 /Locations
+           0.000        5.7242545         6840.824 /Distance, WSElev, Q
+        7500.000        5.5984587         6501.012 /Distance, WSElev, Q
+         284 /Channel
+           2 /Locations
+           0.000        5.5984587       -67263.719 /Distance, WSElev, Q
+        6063.000        5.6676686       -68164.801 /Distance, WSElev, Q
+         285 /Channel
+           2 /Locations
+           0.000        5.8222654         8151.797 /Distance, WSElev, Q
+        4500.000        5.8108656         7279.617 /Distance, WSElev, Q
+         286 /Channel
+           2 /Locations
+           0.000        5.8421899        14313.341 /Distance, WSElev, Q
+        5374.000        5.8222654        13090.987 /Distance, WSElev, Q
+         287 /Channel
+           2 /Locations
+           0.000        5.8108656       -73520.506 /Distance, WSElev, Q
+        6123.000        5.8177136       -74630.753 /Distance, WSElev, Q
+         288 /Channel
+           3 /Locations
+           0.000        5.8177136       -59082.471 /Distance, WSElev, Q
+        5161.500        5.8942958       -59642.989 /Distance, WSElev, Q
+       10323.000        5.9878739       -60266.607 /Distance, WSElev, Q
+         289 /Channel
+           2 /Locations
+           0.000        5.8177136       -15548.282 /Distance, WSElev, Q
+        7760.000        5.9308794       -16070.141 /Distance, WSElev, Q
+         290 /Channel
+           2 /Locations
+           0.000        5.9208066      -235555.776 /Distance, WSElev, Q
+        6226.000        5.9500052      -238054.707 /Distance, WSElev, Q
+         291 /Channel
+           2 /Locations
+           0.000        5.9500052      -248465.584 /Distance, WSElev, Q
+        4657.000        5.9878739      -250554.845 /Distance, WSElev, Q
+         292 /Channel
+           2 /Locations
+           0.000        5.9308794        10980.357 /Distance, WSElev, Q
+        3912.000        5.9208066        10060.972 /Distance, WSElev, Q
+         293 /Channel
+           2 /Locations
+           0.000        5.9500052        10410.877 /Distance, WSElev, Q
+        2758.000        5.9308794        10102.545 /Distance, WSElev, Q
+         294 /Channel
+           2 /Locations
+           0.000        5.9308794       -16947.953 /Distance, WSElev, Q
+        4836.000        5.9878739       -17975.263 /Distance, WSElev, Q
+         295 /Channel
+           2 /Locations
+           0.000        5.7504505        -4912.222 /Distance, WSElev, Q
+        2300.000        5.8222654        -4939.189 /Distance, WSElev, Q
+         296 /Channel
+           2 /Locations
+           0.000        5.7492667         -884.005 /Distance, WSElev, Q
+        3000.000        5.7504505         -957.262 /Distance, WSElev, Q
+         297 /Channel
+           2 /Locations
+           0.000        5.7500284         -278.082 /Distance, WSElev, Q
+        5030.000        5.7492667        -3708.458 /Distance, WSElev, Q
+         299 /Channel
+           2 /Locations
+           0.000        5.7242545         7562.680 /Distance, WSElev, Q
+        5322.000        5.6676686         7299.037 /Distance, WSElev, Q
+         300 /Channel
+           2 /Locations
+           0.000        5.6676686       -60865.764 /Distance, WSElev, Q
+        4759.000        5.7211356       -61630.270 /Distance, WSElev, Q
+         301 /Channel
+           2 /Locations
+           0.000        5.7492667        -2824.453 /Distance, WSElev, Q
+        3000.000        5.7504505        -3954.960 /Distance, WSElev, Q
+         307 /Channel
+           3 /Locations
+           0.000        4.1679647          102.612 /Distance, WSElev, Q
+        6750.000        4.1678602           51.797 /Distance, WSElev, Q
+       13500.000        4.1678476            0.000 /Distance, WSElev, Q
+         308 /Channel
+           3 /Locations
+           0.000        4.1738983          106.632 /Distance, WSElev, Q
+        6250.000        4.1710264          104.758 /Distance, WSElev, Q
+       12500.000        4.1679647          102.612 /Distance, WSElev, Q
+         309 /Channel
+           2 /Locations
+           0.000        5.2919603       -21117.673 /Distance, WSElev, Q
+        7593.000        5.5094823       -21898.487 /Distance, WSElev, Q
+         310 /Channel
+           2 /Locations
+           0.000        5.0899854       -20291.373 /Distance, WSElev, Q
+        8100.000        5.2919603       -20994.192 /Distance, WSElev, Q
+         311 /Channel
+           4 /Locations
+           0.000        4.3864486         -245.042 /Distance, WSElev, Q
+        6212.667        4.4089734         -661.816 /Distance, WSElev, Q
+       12425.333        4.4342625        -1176.208 /Distance, WSElev, Q
+       18638.000        4.4505559        -1862.973 /Distance, WSElev, Q
+         312 /Channel
+           3 /Locations
+           0.000        4.3864486          220.382 /Distance, WSElev, Q
+        5692.500        4.3758218         -256.107 /Distance, WSElev, Q
+       11385.000        4.3695979         -758.485 /Distance, WSElev, Q
+         313 /Channel
+           4 /Locations
+           0.000        4.4505559        -2249.712 /Distance, WSElev, Q
+        5258.000        4.4603185        -2834.563 /Distance, WSElev, Q
+       10516.000        4.4718976        -3369.879 /Distance, WSElev, Q
+       15774.000        4.4816264        -4021.838 /Distance, WSElev, Q
+         314 /Channel
+           2 /Locations
+           0.000        4.4816264        -4011.853 /Distance, WSElev, Q
+        8130.000        4.4915679        -5147.446 /Distance, WSElev, Q
+         315 /Channel
+           2 /Locations
+           0.000        4.4915679         1527.515 /Distance, WSElev, Q
+        7400.000        4.4762570          816.700 /Distance, WSElev, Q
+         316 /Channel
+           2 /Locations
+           0.000        4.4915679        -6674.961 /Distance, WSElev, Q
+        2755.000        4.5003385        -6916.292 /Distance, WSElev, Q
+         317 /Channel
+           4 /Locations
+           0.000        4.4722871          767.975 /Distance, WSElev, Q
+        5140.667        4.4612240          412.137 /Distance, WSElev, Q
+       10281.333        4.4549618           62.342 /Distance, WSElev, Q
+       15422.000        4.4505559         -345.019 /Distance, WSElev, Q
+         318 /Channel
+           2 /Locations
+           0.000        4.4885228          408.108 /Distance, WSElev, Q
+        5030.000        4.4816264           -0.665 /Distance, WSElev, Q
+         319 /Channel
+           3 /Locations
+           0.000        4.5725249         4115.108 /Distance, WSElev, Q
+        5562.000        4.5542337         3600.860 /Distance, WSElev, Q
+       11124.000        4.5342197         3126.598 /Distance, WSElev, Q
+         320 /Channel
+           4 /Locations
+           0.000        4.4722871         -839.025 /Distance, WSElev, Q
+        5265.667        4.4775706        -1418.891 /Distance, WSElev, Q
+       10531.333        4.4835036        -1895.097 /Distance, WSElev, Q
+       15797.000        4.4885228        -2296.846 /Distance, WSElev, Q
+         321 /Channel
+           2 /Locations
+           0.000        4.5009406         3403.523 /Distance, WSElev, Q
+        7625.000        4.4885228         2729.744 /Distance, WSElev, Q
+         322 /Channel
+           3 /Locations
+           0.000        4.5190344         4192.011 /Distance, WSElev, Q
+        5175.500        4.5086663         3831.613 /Distance, WSElev, Q
+       10351.000        4.5009406         3403.523 /Distance, WSElev, Q
+         323 /Channel
+           2 /Locations
+           0.000        4.4765429          -68.025 /Distance, WSElev, Q
+        6101.000        4.5005856         -457.503 /Distance, WSElev, Q
+         324 /Channel
+           2 /Locations
+           0.000        4.5005856         -457.503 /Distance, WSElev, Q
+        5416.000        4.5190344         -822.334 /Distance, WSElev, Q
+         325 /Channel
+           2 /Locations
+           0.000        4.5190344        -5010.425 /Distance, WSElev, Q
+        9962.000        4.5725249        -5786.772 /Distance, WSElev, Q
+         326 /Channel
+           2 /Locations
+           0.000        4.5725249        -9901.010 /Distance, WSElev, Q
+        8225.000        4.6410464       -10441.121 /Distance, WSElev, Q
+         327 /Channel
+           3 /Locations
+           0.000        4.6410464       -10434.331 /Distance, WSElev, Q
+        5470.500        4.6670767       -11100.814 /Distance, WSElev, Q
+       10941.000        4.6862403       -11833.739 /Distance, WSElev, Q
+         328 /Channel
+           2 /Locations
+           0.000        4.6862403       -11833.739 /Distance, WSElev, Q
+        7158.000        4.7124375       -12629.965 /Distance, WSElev, Q
+         329 /Channel
+           2 /Locations
+           0.000        4.2900231        -1149.800 /Distance, WSElev, Q
+        4845.000        4.3516126        -1375.950 /Distance, WSElev, Q
+         330 /Channel
+           2 /Locations
+           0.000        4.3516126        -1375.950 /Distance, WSElev, Q
+        4591.000        4.3966082        -1646.717 /Distance, WSElev, Q
+         331 /Channel
+           2 /Locations
+           0.000        4.3966082         2997.155 /Distance, WSElev, Q
+        2145.000        4.3851263         2854.028 /Distance, WSElev, Q
+         332 /Channel
+           2 /Locations
+           0.000        4.3851263         1647.923 /Distance, WSElev, Q
+        7103.000        4.3927883         1268.558 /Distance, WSElev, Q
+         333 /Channel
+           2 /Locations
+           0.000        4.3851263         1203.295 /Distance, WSElev, Q
+        3369.000        4.3408237         1084.834 /Distance, WSElev, Q
+         334 /Channel
+           3 /Locations
+           0.000        4.2706948          357.558 /Distance, WSElev, Q
+        6148.000        4.2677480          278.350 /Distance, WSElev, Q
+       12296.000        4.2826368          182.766 /Distance, WSElev, Q
+         335 /Channel
+           2 /Locations
+           0.000        4.2826368          182.766 /Distance, WSElev, Q
+        7128.000        4.3114153           55.336 /Distance, WSElev, Q
+         336 /Channel
+           2 /Locations
+           0.000        4.3114153           55.336 /Distance, WSElev, Q
+        5953.000        4.3408237          -68.343 /Distance, WSElev, Q
+         337 /Channel
+           2 /Locations
+           0.000        4.3408237         1257.737 /Distance, WSElev, Q
+        7882.000        4.2693674         1023.340 /Distance, WSElev, Q
+         338 /Channel
+           2 /Locations
+           0.000        4.2693674         1023.340 /Distance, WSElev, Q
+        9962.000        4.2583354          691.886 /Distance, WSElev, Q
+         339 /Channel
+           2 /Locations
+           0.000        4.2583354           87.422 /Distance, WSElev, Q
+        5963.000        4.2965463         -217.491 /Distance, WSElev, Q
+         340 /Channel
+           2 /Locations
+           0.000        4.2965463         -217.491 /Distance, WSElev, Q
+        7356.000        4.3437168         -628.416 /Distance, WSElev, Q
+         341 /Channel
+           2 /Locations
+           0.000        4.3437168        -1510.347 /Distance, WSElev, Q
+        7139.000        4.3737199        -2108.141 /Distance, WSElev, Q
+         342 /Channel
+           2 /Locations
+           0.000        4.3737199        -2108.141 /Distance, WSElev, Q
+        7380.000        4.4075304        -2687.676 /Distance, WSElev, Q
+         343 /Channel
+           2 /Locations
+           0.000        4.4075304        -4013.303 /Distance, WSElev, Q
+        4443.000        4.4386603        -4327.578 /Distance, WSElev, Q
+         344 /Channel
+           2 /Locations
+           0.000        4.4386603        -4327.578 /Distance, WSElev, Q
+        7088.000        4.4765429        -4900.028 /Distance, WSElev, Q
+         345 /Channel
+           2 /Locations
+           0.000        4.4765429        -4842.493 /Distance, WSElev, Q
+        8752.000        4.5232135        -5697.457 /Distance, WSElev, Q
+         346 /Channel
+           2 /Locations
+           0.000        4.5232135        -5671.287 /Distance, WSElev, Q
+        8189.000        4.5608506        -6557.386 /Distance, WSElev, Q
+         347 /Channel
+           3 /Locations
+           0.000        4.5608506        -6557.386 /Distance, WSElev, Q
+        5124.500        4.5816354        -7005.009 /Distance, WSElev, Q
+       10249.000        4.6182523        -7363.147 /Distance, WSElev, Q
+         348 /Channel
+           2 /Locations
+           0.000        4.6182523        -8876.413 /Distance, WSElev, Q
+        7902.000        4.6793836       -10030.640 /Distance, WSElev, Q
+         349 /Channel
+           2 /Locations
+           0.000        4.6793836       -10030.640 /Distance, WSElev, Q
+        9672.000        4.7367226       -11290.017 /Distance, WSElev, Q
+         350 /Channel
+           2 /Locations
+           0.000        4.1960692          -21.070 /Distance, WSElev, Q
+        5905.000        4.2006222         -197.317 /Distance, WSElev, Q
+         351 /Channel
+           3 /Locations
+           0.000        4.2006222         -197.317 /Distance, WSElev, Q
+        5208.500        4.2149520         -378.711 /Distance, WSElev, Q
+       10417.000        4.2583354         -587.714 /Distance, WSElev, Q
+         352 /Channel
+           2 /Locations
+           0.000        4.3323385          -23.560 /Distance, WSElev, Q
+        6066.000        4.3344378         -390.493 /Distance, WSElev, Q
+         353 /Channel
+           2 /Locations
+           0.000        4.3344378         -390.493 /Distance, WSElev, Q
+        8793.000        4.3437168         -871.180 /Distance, WSElev, Q
+         354 /Channel
+           3 /Locations
+           0.000        4.3877315          -67.230 /Distance, WSElev, Q
+        5195.000        4.3897445         -306.102 /Distance, WSElev, Q
+       10390.000        4.3942091         -537.751 /Distance, WSElev, Q
+         355 /Channel
+           3 /Locations
+           0.000        4.3942091         -537.751 /Distance, WSElev, Q
+        6828.000        4.4004180         -904.640 /Distance, WSElev, Q
+       13656.000        4.4075304        -1304.417 /Distance, WSElev, Q
+         356 /Channel
+           2 /Locations
+           0.000        4.3408237         -268.117 /Distance, WSElev, Q
+        4249.000        4.3927883         -347.431 /Distance, WSElev, Q
+         357 /Channel
+           2 /Locations
+           0.000        4.3927883          920.157 /Distance, WSElev, Q
+        5023.000        4.4201535          747.606 /Distance, WSElev, Q
+         358 /Channel
+           2 /Locations
+           0.000        4.4201535          747.606 /Distance, WSElev, Q
+        3621.000        4.4404741          593.607 /Distance, WSElev, Q
+         359 /Channel
+           2 /Locations
+           0.000        4.4404741          585.497 /Distance, WSElev, Q
+        3398.000        4.4597319          433.769 /Distance, WSElev, Q
+         360 /Channel
+           2 /Locations
+           0.000        4.4597319          433.769 /Distance, WSElev, Q
+        9416.000        4.5100006            5.437 /Distance, WSElev, Q
+         361 /Channel
+           2 /Locations
+           0.000        4.5100006           -9.733 /Distance, WSElev, Q
+        5297.000        4.5358976         -238.238 /Distance, WSElev, Q
+         362 /Channel
+           3 /Locations
+           0.000        4.5358976         -238.238 /Distance, WSElev, Q
+        5366.500        4.5595402         -509.790 /Distance, WSElev, Q
+       10733.000        4.5784395         -775.022 /Distance, WSElev, Q
+         363 /Channel
+           2 /Locations
+           0.000        4.5784395         -786.562 /Distance, WSElev, Q
+        6133.000        4.5977914        -1118.223 /Distance, WSElev, Q
+         364 /Channel
+           2 /Locations
+           0.000        4.5977914        -1118.223 /Distance, WSElev, Q
+        7126.000        4.6182523        -1616.087 /Distance, WSElev, Q
+         365 /Channel
+           2 /Locations
+           0.000        4.4497585         4839.161 /Distance, WSElev, Q
+        3940.000        4.3966082         4644.072 /Distance, WSElev, Q
+         366 /Channel
+           2 /Locations
+           0.000        4.7110426         2513.935 /Distance, WSElev, Q
+        6324.000        4.6604556         2291.818 /Distance, WSElev, Q
+         367 /Channel
+           2 /Locations
+           0.000        4.6604556         2282.438 /Distance, WSElev, Q
+        4221.000        4.6354788         2133.114 /Distance, WSElev, Q
+         368 /Channel
+           2 /Locations
+           0.000        4.6354788         2133.114 /Distance, WSElev, Q
+        6610.000        4.6095666         1904.703 /Distance, WSElev, Q
+         369 /Channel
+           2 /Locations
+           0.000        4.6095666         1900.213 /Distance, WSElev, Q
+        8772.000        4.5890298         1592.998 /Distance, WSElev, Q
+         370 /Channel
+           2 /Locations
+           0.000        4.5890298         1592.998 /Distance, WSElev, Q
+        7738.000        4.5887825         1268.783 /Distance, WSElev, Q
+         371 /Channel
+           2 /Locations
+           0.000        4.5887825         1256.823 /Distance, WSElev, Q
+        7766.000        4.5912062          973.795 /Distance, WSElev, Q
+         372 /Channel
+           2 /Locations
+           0.000        4.5912062          973.795 /Distance, WSElev, Q
+        8624.000        4.5980671          665.906 /Distance, WSElev, Q
+         373 /Channel
+           2 /Locations
+           0.000        4.5980671          653.096 /Distance, WSElev, Q
+        9831.000        4.6091576          299.521 /Distance, WSElev, Q
+         374 /Channel
+           2 /Locations
+           0.000        4.6091576          299.521 /Distance, WSElev, Q
+        6080.000        4.6182523          120.092 /Distance, WSElev, Q
+         375 /Channel
+           3 /Locations
+           0.000        4.5216791           -5.570 /Distance, WSElev, Q
+        7000.000        4.5252639          -48.726 /Distance, WSElev, Q
+       14000.000        4.5360962          -94.194 /Distance, WSElev, Q
+         376 /Channel
+           3 /Locations
+           0.000        4.5360962         -106.014 /Distance, WSElev, Q
+        6000.000        4.5513383         -148.616 /Distance, WSElev, Q
+       12000.000        4.5719765         -196.081 /Distance, WSElev, Q
+         377 /Channel
+           3 /Locations
+           0.000        4.5719765         -189.651 /Distance, WSElev, Q
+        5698.500        4.5964384         -240.183 /Distance, WSElev, Q
+       11397.000        4.6258692         -296.991 /Distance, WSElev, Q
+         378 /Channel
+           5 /Locations
+           0.000        4.6258692         -302.531 /Distance, WSElev, Q
+        5000.000        4.6562163         -358.621 /Distance, WSElev, Q
+       10000.000        4.6912104         -422.256 /Distance, WSElev, Q
+       15000.000        4.7318328         -495.942 /Distance, WSElev, Q
+       20000.000        4.7795029         -582.964 /Distance, WSElev, Q
+         379 /Channel
+           2 /Locations
+           0.000        4.7845269         2560.045 /Distance, WSElev, Q
+        3300.000        4.7795029         2494.162 /Distance, WSElev, Q
+         380 /Channel
+           2 /Locations
+           0.000        4.7795029         1911.199 /Distance, WSElev, Q
+        9200.000        4.8109527         1703.444 /Distance, WSElev, Q
+         381 /Channel
+           3 /Locations
+           0.000        4.8109527         1696.244 /Distance, WSElev, Q
+        5227.000        4.8366433         1541.280 /Distance, WSElev, Q
+       10454.000        4.8632079         1345.214 /Distance, WSElev, Q
+         382 /Channel
+           3 /Locations
+           0.000        4.8632079         -198.637 /Distance, WSElev, Q
+        6170.000        4.9220583         -341.452 /Distance, WSElev, Q
+       12340.000        4.9739549         -492.821 /Distance, WSElev, Q
+         383 /Channel
+           3 /Locations
+           0.000        4.7688186          350.683 /Distance, WSElev, Q
+        6264.000        4.8237429          151.473 /Distance, WSElev, Q
+       12528.000        4.8837987          -61.583 /Distance, WSElev, Q
+         384 /Channel
+           3 /Locations
+           0.000        4.8837987          -71.513 /Distance, WSElev, Q
+        5288.500        4.9310012         -273.530 /Distance, WSElev, Q
+       10577.000        4.9739549         -497.188 /Distance, WSElev, Q
+         385 /Channel
+           2 /Locations
+           0.000        4.9739549        -1016.829 /Distance, WSElev, Q
+        8928.000        5.0452976        -1674.934 /Distance, WSElev, Q
+         386 /Channel
+           4 /Locations
+           0.000        5.0452976        -1697.884 /Distance, WSElev, Q
+        5231.333        5.0823935        -2171.580 /Distance, WSElev, Q
+       10462.667        5.1218473        -2542.925 /Distance, WSElev, Q
+       15694.000        5.1627477        -2991.121 /Distance, WSElev, Q
+         387 /Channel
+           3 /Locations
+           0.000        5.1627477        -2997.571 /Distance, WSElev, Q
+        5679.000        5.2059234        -3598.203 /Distance, WSElev, Q
+       11358.000        5.2518032        -4331.688 /Distance, WSElev, Q
+         388 /Channel
+           3 /Locations
+           0.000        4.8632079         1531.820 /Distance, WSElev, Q
+        6153.500        4.8421954         1334.950 /Distance, WSElev, Q
+       12307.000        4.8288516         1094.988 /Distance, WSElev, Q
+         389 /Channel
+           2 /Locations
+           0.000        4.8288516         1083.698 /Distance, WSElev, Q
+        8822.000        4.8488726          678.027 /Distance, WSElev, Q
+         390 /Channel
+           4 /Locations
+           0.000        4.8488726          676.487 /Distance, WSElev, Q
+        6005.333        4.8712480          393.916 /Distance, WSElev, Q
+       12010.667        4.8948467          113.442 /Distance, WSElev, Q
+       18016.000        4.9185609         -158.054 /Distance, WSElev, Q
+         391 /Channel
+           4 /Locations
+           0.000        4.4404092            0.000 /Distance, WSElev, Q
+        6593.667        4.4404935        -1022.645 /Distance, WSElev, Q
+       13187.333        4.4408592        -2046.865 /Distance, WSElev, Q
+       19781.000        4.4416251        -3070.677 /Distance, WSElev, Q
+         392 /Channel
+           5 /Locations
+           0.000        4.4416251        -3065.277 /Distance, WSElev, Q
+        5974.250        4.4434719        -3981.343 /Distance, WSElev, Q
+       11948.500        4.4466276        -4877.963 /Distance, WSElev, Q
+       17922.750        4.4513306        -5749.445 /Distance, WSElev, Q
+       23897.000        4.4579747        -6610.127 /Distance, WSElev, Q
+         393 /Channel
+           4 /Locations
+           0.000        4.4579747        -6612.657 /Distance, WSElev, Q
+        5171.667        4.4652898        -7377.321 /Distance, WSElev, Q
+       10343.333        4.4749370        -8132.287 /Distance, WSElev, Q
+       15515.000        4.4882361        -8873.055 /Distance, WSElev, Q
+         394 /Channel
+           5 /Locations
+           0.000        4.4882361        -8873.925 /Distance, WSElev, Q
+        5315.250        4.5066988        -9650.596 /Distance, WSElev, Q
+       10630.500        4.5276636       -10433.180 /Distance, WSElev, Q
+       15945.750        4.5506118       -11193.318 /Distance, WSElev, Q
+       21261.000        4.5751909       -11923.078 /Distance, WSElev, Q
+         395 /Channel
+           4 /Locations
+           0.000        4.5751909       -11923.078 /Distance, WSElev, Q
+        5363.667        4.6010064       -12622.358 /Distance, WSElev, Q
+       10727.333        4.6279116       -13300.356 /Distance, WSElev, Q
+       16091.000        4.6559815       -13988.591 /Distance, WSElev, Q
+         396 /Channel
+           5 /Locations
+           0.000        4.6559815       -14044.961 /Distance, WSElev, Q
+        6075.750        4.6939551       -14907.781 /Distance, WSElev, Q
+       12151.500        4.7359215       -15725.557 /Distance, WSElev, Q
+       18227.250        4.7887510       -16543.823 /Distance, WSElev, Q
+       24303.000        4.8366586       -17462.336 /Distance, WSElev, Q
+         397 /Channel
+           3 /Locations
+           0.000        4.8366586       -17461.606 /Distance, WSElev, Q
+        7415.500        4.8759178       -18642.242 /Distance, WSElev, Q
+       14831.000        4.9185609       -19780.278 /Distance, WSElev, Q
+         398 /Channel
+           5 /Locations
+           0.000        4.9185609       -74144.975 /Distance, WSElev, Q
+        5338.250        5.0432627       -75066.814 /Distance, WSElev, Q
+       10676.500        5.1440184       -76358.629 /Distance, WSElev, Q
+       16014.750        5.1848779       -77568.324 /Distance, WSElev, Q
+       21353.000        5.2518032       -78927.098 /Distance, WSElev, Q
+         399 /Channel
+           4 /Locations
+           0.000        4.8835518          -27.860 /Distance, WSElev, Q
+        5700.000        4.8850896         -463.608 /Distance, WSElev, Q
+       11400.000        4.8887723         -892.318 /Distance, WSElev, Q
+       17100.000        4.8926031        -1364.556 /Distance, WSElev, Q
+         400 /Channel
+           2 /Locations
+           0.000        4.8926031        -1497.577 /Distance, WSElev, Q
+        6300.000        4.8953683        -2285.897 /Distance, WSElev, Q
+         401 /Channel
+           6 /Locations
+           0.000        4.9550024          -44.570 /Distance, WSElev, Q
+        5140.000        4.9529057         -484.791 /Distance, WSElev, Q
+       10280.000        4.9468914         -929.116 /Distance, WSElev, Q
+       15420.000        4.9375871        -1384.453 /Distance, WSElev, Q
+       20560.000        4.9281115        -1954.156 /Distance, WSElev, Q
+       25700.000        4.9182211        -2628.707 /Distance, WSElev, Q
+         402 /Channel
+           3 /Locations
+           0.000        4.9184849          -98.620 /Distance, WSElev, Q
+        7300.000        4.9184245        -1702.928 /Distance, WSElev, Q
+       14600.000        4.9182211        -3491.962 /Distance, WSElev, Q
+         403 /Channel
+           2 /Locations
+           0.000        4.9182211        -6136.999 /Distance, WSElev, Q
+        6200.000        4.9110592        -7188.223 /Distance, WSElev, Q
+         404 /Channel
+           2 /Locations
+           0.000        4.9110592       -50219.890 /Distance, WSElev, Q
+        2600.000        4.8953683       -50824.147 /Distance, WSElev, Q
+         405 /Channel
+           2 /Locations
+           0.000        4.8953683       -53110.044 /Distance, WSElev, Q
+        4000.000        4.9185609       -54138.663 /Distance, WSElev, Q
+         406 /Channel
+           2 /Locations
+           0.000        4.9500694          -60.000 /Distance, WSElev, Q
+        8900.000        4.9445101         -240.788 /Distance, WSElev, Q
+         407 /Channel
+           2 /Locations
+           0.000        4.9445101         -240.788 /Distance, WSElev, Q
+        7700.000        4.9368983         -629.993 /Distance, WSElev, Q
+         408 /Channel
+           2 /Locations
+           0.000        4.9368983         -629.993 /Distance, WSElev, Q
+        7500.000        4.9303040        -1360.083 /Distance, WSElev, Q
+         409 /Channel
+           3 /Locations
+           0.000        4.9303040        -1367.663 /Distance, WSElev, Q
+        7050.000        4.9214003        -2298.106 /Distance, WSElev, Q
+       14100.000        4.9110592        -3148.043 /Distance, WSElev, Q
+         410 /Channel
+           3 /Locations
+           0.000        6.2668988        12585.252 /Distance, WSElev, Q
+        7023.500        6.1319067        12704.849 /Distance, WSElev, Q
+       14047.000        6.0418754        12822.719 /Distance, WSElev, Q
+         411 /Channel
+           4 /Locations
+           0.000        6.0418754        12806.849 /Distance, WSElev, Q
+        6206.667        5.9704006        12889.102 /Distance, WSElev, Q
+       12413.333        5.9227324        12958.573 /Distance, WSElev, Q
+       18620.000        5.8780069        13026.235 /Distance, WSElev, Q
+         412 /Channel
+           4 /Locations
+           0.000        5.8780069        13010.375 /Distance, WSElev, Q
+        5780.000        5.7996705        13072.563 /Distance, WSElev, Q
+       11560.000        5.7055910        13147.491 /Distance, WSElev, Q
+       17340.000        5.6094523        13210.607 /Distance, WSElev, Q
+         413 /Channel
+           3 /Locations
+           0.000        5.6094523        13194.947 /Distance, WSElev, Q
+        5914.000        5.5009965        13250.877 /Distance, WSElev, Q
+       11828.000        5.4075993        13289.021 /Distance, WSElev, Q
+         414 /Channel
+           5 /Locations
+           0.000        5.4075993        13260.711 /Distance, WSElev, Q
+        6044.250        5.2986392        13288.178 /Distance, WSElev, Q
+       12088.500        5.2314178        13293.748 /Distance, WSElev, Q
+       18132.750        5.1648773        13282.168 /Distance, WSElev, Q
+       24177.000        5.1071577        13251.776 /Distance, WSElev, Q
+         415 /Channel
+           2 /Locations
+           0.000        5.1071577        13419.406 /Distance, WSElev, Q
+        6300.000        5.0394298        13360.129 /Distance, WSElev, Q
+         416 /Channel
+           6 /Locations
+           0.000        5.0394298        13252.909 /Distance, WSElev, Q
+        5083.600        4.9804768        13169.621 /Distance, WSElev, Q
+       10167.200        4.9109647        13054.885 /Distance, WSElev, Q
+       15250.800        4.8796868        12929.801 /Distance, WSElev, Q
+       20334.400        4.8542619        12808.922 /Distance, WSElev, Q
+       25418.000        4.8404800        12644.691 /Distance, WSElev, Q
+         417 /Channel
+           2 /Locations
+           0.000        4.8404800        12643.051 /Distance, WSElev, Q
+        6133.000        4.8174403        12413.364 /Distance, WSElev, Q
+         418 /Channel
+           3 /Locations
+           0.000        4.8174403        12394.934 /Distance, WSElev, Q
+        6781.000        4.8004719        12128.417 /Distance, WSElev, Q
+       13562.000        4.7845269        11783.160 /Distance, WSElev, Q
+         419 /Channel
+           2 /Locations
+           0.000        4.7845269         9204.236 /Distance, WSElev, Q
+        8273.000        4.7688186         8724.561 /Distance, WSElev, Q
+         420 /Channel
+           3 /Locations
+           0.000        4.7688186         8343.758 /Distance, WSElev, Q
+        7387.000        4.7257507         8001.168 /Distance, WSElev, Q
+       14774.000        4.7007323         7630.020 /Distance, WSElev, Q
+         421 /Channel
+           3 /Locations
+           0.000        4.7007323         7598.850 /Distance, WSElev, Q
+        6604.500        4.6895874         7213.943 /Distance, WSElev, Q
+       13209.000        4.6860508         6774.174 /Distance, WSElev, Q
+         422 /Channel
+           2 /Locations
+           0.000        4.6860508         1918.953 /Distance, WSElev, Q
+        5317.000        4.7110426         1547.771 /Distance, WSElev, Q
+         423 /Channel
+           3 /Locations
+           0.000        4.7110426         -974.324 /Distance, WSElev, Q
+        5827.500        4.7553267        -1285.515 /Distance, WSElev, Q
+       11655.000        4.8010328        -1633.290 /Distance, WSElev, Q
+         424 /Channel
+           3 /Locations
+           0.000        4.8010328        -1647.660 /Distance, WSElev, Q
+        7082.500        4.8580662        -2094.673 /Distance, WSElev, Q
+       14165.000        4.9136342        -2556.447 /Distance, WSElev, Q
+         426 /Channel
+           2 /Locations
+           0.000        4.9136342        -2563.077 /Distance, WSElev, Q
+        8874.000        4.9842799        -3238.750 /Distance, WSElev, Q
+         427 /Channel
+           3 /Locations
+           0.000        4.9842799        -3253.580 /Distance, WSElev, Q
+        5732.500        5.0342387        -3812.634 /Distance, WSElev, Q
+       11465.000        5.0877578        -4374.118 /Distance, WSElev, Q
+         428 /Channel
+           2 /Locations
+           0.000        5.0877578        -4391.388 /Distance, WSElev, Q
+        8769.000        5.1702630        -5298.923 /Distance, WSElev, Q
+         429 /Channel
+           2 /Locations
+           0.000        5.1702630        -5298.923 /Distance, WSElev, Q
+        8661.000        5.2518032        -6880.380 /Distance, WSElev, Q
+         430 /Channel
+           3 /Locations
+           0.000        5.2518032       -90139.527 /Distance, WSElev, Q
+        6965.500        5.3093107       -93475.114 /Distance, WSElev, Q
+       13931.000        5.3632200       -97026.904 /Distance, WSElev, Q
+         431 /Channel
+           3 /Locations
+           0.000        5.3632200       -97043.564 /Distance, WSElev, Q
+        6891.500        5.4373073      -100839.021 /Distance, WSElev, Q
+       13783.000        5.5094823      -105068.447 /Distance, WSElev, Q
+         432 /Channel
+           4 /Locations
+           0.000        5.5094823       -16232.384 /Distance, WSElev, Q
+        5270.667        5.5466140       -17218.162 /Distance, WSElev, Q
+       10541.333        5.5793591       -18145.902 /Distance, WSElev, Q
+       15812.000        5.6070282       -19121.972 /Distance, WSElev, Q
+         433 /Channel
+           3 /Locations
+           0.000        5.5094823      -110756.000 /Distance, WSElev, Q
+        6067.000        5.5563475      -114139.478 /Distance, WSElev, Q
+       12134.000        5.6070282      -117479.298 /Distance, WSElev, Q
+         434 /Channel
+           5 /Locations
+           0.000        5.6070282      -136611.130 /Distance, WSElev, Q
+        5035.250        5.6405703      -139273.754 /Distance, WSElev, Q
+       10070.500        5.6754371      -141725.869 /Distance, WSElev, Q
+       15105.750        5.7175198      -144086.916 /Distance, WSElev, Q
+       20141.000        5.7627500      -146421.138 /Distance, WSElev, Q
+         435 /Channel
+           3 /Locations
+           0.000        5.7627500      -162796.906 /Distance, WSElev, Q
+        5413.500        5.8029810      -165456.311 /Distance, WSElev, Q
+       10827.000        5.8421899      -168014.621 /Distance, WSElev, Q
+         436 /Channel
+           2 /Locations
+           0.000        5.8421899      -182354.121 /Distance, WSElev, Q
+        7094.000        5.9208066      -186836.045 /Distance, WSElev, Q
+         437 /Channel
+           5 /Locations
+           0.000        5.9878739      -323369.867 /Distance, WSElev, Q
+        5050.000        6.0249098      -325945.388 /Distance, WSElev, Q
+       10100.000        6.0641364      -328057.250 /Distance, WSElev, Q
+       15150.000        6.1260663      -329821.313 /Distance, WSElev, Q
+       20200.000        6.1722843      -331548.531 /Distance, WSElev, Q
+         438 /Channel
+           3 /Locations
+           0.000        6.2747889      -212046.846 /Distance, WSElev, Q
+        6050.000        6.3182097      -214043.897 /Distance, WSElev, Q
+       12100.000        6.4052864      -215942.933 /Distance, WSElev, Q
+         439 /Channel
+           3 /Locations
+           0.000        6.4052864      -168132.964 /Distance, WSElev, Q
+        5100.000        6.4558713      -169939.136 /Distance, WSElev, Q
+       10200.000        6.5078145      -171585.596 /Distance, WSElev, Q
+         440 /Channel
+           3 /Locations
+           0.000        6.5078145      -220312.179 /Distance, WSElev, Q
+        7400.000        6.6069929      -223755.660 /Distance, WSElev, Q
+       14800.000        6.6809848      -225572.400 /Distance, WSElev, Q
+         441 /Channel
+           2 /Locations
+           0.000        6.6809848      -456529.960 /Distance, WSElev, Q
+        5398.000        6.6841021      -458027.649 /Distance, WSElev, Q
+         442 /Channel
+           3 /Locations
+           0.000        5.9878739        -5426.848 /Distance, WSElev, Q
+        5350.000        6.0709717        -5539.485 /Distance, WSElev, Q
+       10700.000        6.1957066        -5652.442 /Distance, WSElev, Q
+         443 /Channel
+           3 /Locations
+           0.000        6.1722843      -207150.939 /Distance, WSElev, Q
+        5750.000        6.2247546      -209566.404 /Distance, WSElev, Q
+       11500.000        6.2747889      -212046.846 /Distance, WSElev, Q
+         444 /Channel
+           3 /Locations
+           0.000        6.2677014       -62835.269 /Distance, WSElev, Q
+        6315.500        6.2968937       -64810.742 /Distance, WSElev, Q
+       12631.000        6.4231107       -66955.508 /Distance, WSElev, Q
+         445 /Channel
+           2 /Locations
+           0.000        6.4231107       -66955.508 /Distance, WSElev, Q
+        9098.000        6.5318864       -70468.787 /Distance, WSElev, Q
+         447 /Channel
+           3 /Locations
+           0.000        6.3306262       -84832.094 /Distance, WSElev, Q
+        5450.000        6.3697585       -85769.828 /Distance, WSElev, Q
+       10900.000        6.4296893       -87454.385 /Distance, WSElev, Q
+         448 /Channel
+           2 /Locations
+           0.000        6.4296893       -66595.272 /Distance, WSElev, Q
+        8200.000        6.4556606       -73000.521 /Distance, WSElev, Q
+         449 /Channel
+           2 /Locations
+           0.000        6.4478625       -28689.801 /Distance, WSElev, Q
+        7000.000        6.4556606       -31385.063 /Distance, WSElev, Q
+         450 /Channel
+           3 /Locations
+           0.000        6.3306262        44344.830 /Distance, WSElev, Q
+        5000.000        6.3056675        43575.255 /Distance, WSElev, Q
+       10000.000        6.2677014        42763.757 /Distance, WSElev, Q
+         451 /Channel
+           4 /Locations
+           0.000        6.4556606      -141053.059 /Distance, WSElev, Q
+        5266.667        6.5457580      -143475.801 /Distance, WSElev, Q
+       10533.333        6.5899289      -145720.213 /Distance, WSElev, Q
+       15800.000        6.6196334      -147809.254 /Distance, WSElev, Q
+         452 /Channel
+           2 /Locations
+           0.000        6.4052864       -47809.970 /Distance, WSElev, Q
+        9000.000        6.5078145       -48726.583 /Distance, WSElev, Q
+         453 /Channel
+           3 /Locations
+           0.000        6.5318864       -70468.787 /Distance, WSElev, Q
+        7214.000        6.5791913       -74521.083 /Distance, WSElev, Q
+       14428.000        6.6196334       -78158.726 /Distance, WSElev, Q
+         454 /Channel
+           3 /Locations
+           0.000        6.6196334      -225967.980 /Distance, WSElev, Q
+        6100.000        6.6504372      -228950.725 /Distance, WSElev, Q
+       12200.000        6.6809848      -230957.560 /Distance, WSElev, Q
+         455 /Channel
+           2 /Locations
+           0.000        5.1694561            0.000 /Distance, WSElev, Q
+        3000.000        5.1694385          -54.030 /Distance, WSElev, Q
+         456 /Channel
+           3 /Locations
+           0.000        5.1694385          -54.030 /Distance, WSElev, Q
+        5100.000        5.1695397         -811.648 /Distance, WSElev, Q
+       10200.000        5.1718028        -1567.436 /Distance, WSElev, Q
+         457 /Channel
+           4 /Locations
+           0.000        4.3354431            0.000 /Distance, WSElev, Q
+        5200.000        4.3354561         -477.859 /Distance, WSElev, Q
+       10400.000        4.3354975         -952.038 /Distance, WSElev, Q
+       15600.000        4.3355740        -1421.829 /Distance, WSElev, Q
+         458 /Channel
+           2 /Locations
+           0.000        6.5209474            0.000 /Distance, WSElev, Q
+        8189.000        6.5183393         -607.381 /Distance, WSElev, Q
+         459 /Channel
+           2 /Locations
+           0.000        6.5183393        -1575.831 /Distance, WSElev, Q
+        3546.000        6.5132847        -1876.603 /Distance, WSElev, Q
+         460 /Channel
+           3 /Locations
+           0.000        6.5132847        -2857.052 /Distance, WSElev, Q
+        5728.000        6.5018812        -3183.623 /Distance, WSElev, Q
+       11456.000        6.4894182        -3544.459 /Distance, WSElev, Q
+         461 /Channel
+           3 /Locations
+           0.000        6.4894182        -3727.370 /Distance, WSElev, Q
+        5464.500        6.4801933        -4092.570 /Distance, WSElev, Q
+       10929.000        6.4706899        -4429.934 /Distance, WSElev, Q
+         462 /Channel
+           2 /Locations
+           0.000        6.4706899        -4429.934 /Distance, WSElev, Q
+        7577.000        6.4596739        -5077.208 /Distance, WSElev, Q
+         463 /Channel
+           2 /Locations
+           0.000        6.4596739        -7055.559 /Distance, WSElev, Q
+        7670.000        6.4509807        -7527.614 /Distance, WSElev, Q
+         464 /Channel
+           3 /Locations
+           0.000        6.4508179        -3023.230 /Distance, WSElev, Q
+        5333.000        6.4497732        -3428.845 /Distance, WSElev, Q
+       10666.000        6.4473441        -3827.608 /Distance, WSElev, Q
+         465 /Channel
+           2 /Locations
+           0.000        6.4473441        -6764.122 /Distance, WSElev, Q
+        3782.000        6.4500711        -7113.611 /Distance, WSElev, Q
+         466 /Channel
+           2 /Locations
+           0.000        6.4500711        -7113.611 /Distance, WSElev, Q
+        6218.000        6.4478625        -8532.858 /Distance, WSElev, Q
+         467 /Channel
+           2 /Locations
+           0.000        5.1718028        -1567.436 /Distance, WSElev, Q
+        7000.000        5.2501046        -1778.518 /Distance, WSElev, Q
+         468 /Channel
+           3 /Locations
+           0.000        5.2501046        -1778.518 /Distance, WSElev, Q
+        7000.000        5.6599655        -1907.572 /Distance, WSElev, Q
+       14000.000        6.0929151        -2018.922 /Distance, WSElev, Q
+         469 /Channel
+           2 /Locations
+           0.000        6.0929151        -1460.826 /Distance, WSElev, Q
+        9552.000        6.2946295        -1590.984 /Distance, WSElev, Q
+         470 /Channel
+           3 /Locations
+           0.000        6.3464217        -2294.123 /Distance, WSElev, Q
+        5577.000        6.4002389        -2379.549 /Distance, WSElev, Q
+       11154.000        6.4473441        -2460.899 /Distance, WSElev, Q
+         471 /Channel
+           2 /Locations
+           0.000        6.4510366         -376.627 /Distance, WSElev, Q
+        7216.000        6.4473441         -475.615 /Distance, WSElev, Q
+         472 /Channel
+           3 /Locations
+           0.000        6.4595586          -52.576 /Distance, WSElev, Q
+        6116.500        6.4547171         -130.083 /Distance, WSElev, Q
+       12233.000        6.4493181         -197.346 /Distance, WSElev, Q
+         473 /Channel
+           2 /Locations
+           0.000        6.4607844            0.000 /Distance, WSElev, Q
+        3909.000        6.4595586          -52.576 /Distance, WSElev, Q
+         474 /Channel
+           2 /Locations
+           0.000        6.2946295        -2225.732 /Distance, WSElev, Q
+        4692.000        6.3464217        -2294.123 /Distance, WSElev, Q
+         475 /Channel
+           2 /Locations
+           0.000        6.3989740            0.000 /Distance, WSElev, Q
+        6300.000        6.3972806          -58.280 /Distance, WSElev, Q
+         476 /Channel
+           2 /Locations
+           0.000        4.3355740        -1421.829 /Distance, WSElev, Q
+        9200.000        6.1742217        -1467.990 /Distance, WSElev, Q
+         477 /Channel
+           2 /Locations
+           0.000        6.1742217        -1798.176 /Distance, WSElev, Q
+        4000.000        6.3972806        -1845.528 /Distance, WSElev, Q
+         478 /Channel
+           2 /Locations
+           0.000        6.3972806        -1903.808 /Distance, WSElev, Q
+        4137.000        6.4596739        -1978.350 /Distance, WSElev, Q
+         479 /Channel
+           3 /Locations
+           0.000        6.1742217          330.186 /Distance, WSElev, Q
+        5280.000        6.1748452          216.614 /Distance, WSElev, Q
+       10560.000        6.1761141          101.696 /Distance, WSElev, Q
+         480 /Channel
+           3 /Locations
+           0.000        6.1761141         -485.814 /Distance, WSElev, Q
+        6501.000        6.2444428         -564.143 /Distance, WSElev, Q
+       13002.000        6.2946295         -634.748 /Distance, WSElev, Q
+         481 /Channel
+           2 /Locations
+           0.000        6.0929151         -558.096 /Distance, WSElev, Q
+        2078.000        6.1761141         -587.510 /Distance, WSElev, Q
+         483 /Channel
+           3 /Locations
+           0.000        6.5273908            0.000 /Distance, WSElev, Q
+        6750.000        6.5246387         -177.846 /Distance, WSElev, Q
+       13500.000        6.5183393         -356.047 /Distance, WSElev, Q
+         484 /Channel
+           5 /Locations
+           0.000        6.4693414          -72.514 /Distance, WSElev, Q
+        5425.000        6.4652181         -434.327 /Distance, WSElev, Q
+       10850.000        6.4658097         -640.904 /Distance, WSElev, Q
+       16275.000        6.4804053         -826.889 /Distance, WSElev, Q
+       21700.000        6.5132847         -980.449 /Distance, WSElev, Q
+         485 /Channel
+           2 /Locations
+           0.000        6.4912573            0.000 /Distance, WSElev, Q
+        6000.000        6.4894182          -94.125 /Distance, WSElev, Q
+         486 /Channel
+           3 /Locations
+           0.000        6.5317439         -214.459 /Distance, WSElev, Q
+        5769.000        6.5251484         -372.412 /Distance, WSElev, Q
+       11538.000        6.5183393         -612.403 /Distance, WSElev, Q
+         487 /Channel
+           2 /Locations
+           0.000        6.4706921            0.000 /Distance, WSElev, Q
+        3500.000        6.4693414          -72.514 /Distance, WSElev, Q
+         488 /Channel
+           2 /Locations
+           0.000        6.4841813            0.000 /Distance, WSElev, Q
+        6052.000        6.4824228          -57.904 /Distance, WSElev, Q
+         489 /Channel
+           2 /Locations
+           0.000        6.4894182           88.786 /Distance, WSElev, Q
+        1930.000        6.4824228           56.259 /Distance, WSElev, Q
+         490 /Channel
+           2 /Locations
+           0.000        6.4824228           -1.645 /Distance, WSElev, Q
+        8824.000        6.4501686         -161.459 /Distance, WSElev, Q
+         491 /Channel
+           3 /Locations
+           0.000        6.4501686         -161.459 /Distance, WSElev, Q
+        5476.500        6.4316800         -264.459 /Distance, WSElev, Q
+       10953.000        6.4174117         -377.009 /Distance, WSElev, Q
+         497 /Channel
+           2 /Locations
+           0.000        6.3611755            0.000 /Distance, WSElev, Q
+        7449.000        6.3606061         -141.707 /Distance, WSElev, Q
+         498 /Channel
+           3 /Locations
+           0.000        6.3606061         -567.702 /Distance, WSElev, Q
+        5174.500        6.3598818         -819.147 /Distance, WSElev, Q
+       10349.000        6.3590748        -1060.347 /Distance, WSElev, Q
+         499 /Channel
+           2 /Locations
+           0.000        6.3590748        -1703.354 /Distance, WSElev, Q
+        5920.000        6.3573305        -2072.876 /Distance, WSElev, Q
+         500 /Channel
+           2 /Locations
+           0.000        6.4493181         -292.296 /Distance, WSElev, Q
+        3011.000        6.4501413         -325.147 /Distance, WSElev, Q
+         501 /Channel
+           2 /Locations
+           0.000        6.4501413         -325.147 /Distance, WSElev, Q
+        3814.000        6.4510366         -376.627 /Distance, WSElev, Q
+         502 /Channel
+           3 /Locations
+           0.000        6.3621352            0.000 /Distance, WSElev, Q
+        7150.000        6.3615430         -135.534 /Distance, WSElev, Q
+       14300.000        6.3606061         -275.851 /Distance, WSElev, Q
+         503 /Channel
+           3 /Locations
+           0.000        6.3606061          150.145 /Distance, WSElev, Q
+        5083.500        6.3599114           80.996 /Distance, WSElev, Q
+       10167.000        6.3594398         -138.007 /Distance, WSElev, Q
+         505 /Channel
+           2 /Locations
+           0.000        6.3594398         -138.007 /Distance, WSElev, Q
+        3226.000        6.3590748         -584.208 /Distance, WSElev, Q
+         506 /Channel
+           2 /Locations
+           0.000        6.3596568            0.000 /Distance, WSElev, Q
+        6836.000        6.3590748          -58.798 /Distance, WSElev, Q
+         507 /Channel
+           2 /Locations
+           0.000        6.5395119            0.000 /Distance, WSElev, Q
+        5262.000        6.5376171          -88.696 /Distance, WSElev, Q
+         508 /Channel
+           2 /Locations
+           0.000        6.5376171          -88.696 /Distance, WSElev, Q
+        6213.000        6.5317439         -214.459 /Distance, WSElev, Q
+         509 /Channel
+           3 /Locations
+           0.000        6.3586115            0.000 /Distance, WSElev, Q
+        5703.500        6.3582748          -84.483 /Distance, WSElev, Q
+       11407.000        6.3573305         -169.220 /Distance, WSElev, Q
+         511 /Channel
+           2 /Locations
+           0.000        5.9208066        -4970.953 /Distance, WSElev, Q
+        5773.000        5.9447827        -5220.133 /Distance, WSElev, Q
+         512 /Channel
+           2 /Locations
+           0.000        5.9447827        -5220.133 /Distance, WSElev, Q
+        6038.000        5.9912605        -5419.174 /Distance, WSElev, Q
+         513 /Channel
+           7 /Locations
+           0.000        6.0331517        -5419.174 /Distance, WSElev, Q
+        5240.833        6.0657231        -5653.023 /Distance, WSElev, Q
+       10481.667        6.1084718        -5920.341 /Distance, WSElev, Q
+       15722.500        6.1479903        -6176.798 /Distance, WSElev, Q
+       20963.333        6.1917748        -6453.035 /Distance, WSElev, Q
+       26204.167        6.2269173        -6683.086 /Distance, WSElev, Q
+       31445.000        6.2662585        -6938.961 /Distance, WSElev, Q
+         515 /Channel
+           3 /Locations
+           0.000        6.2662585        -6938.961 /Distance, WSElev, Q
+        6146.000        6.3179722        -7254.592 /Distance, WSElev, Q
+       12292.000        6.3573305        -7591.649 /Distance, WSElev, Q
+         516 /Channel
+           2 /Locations
+           0.000        6.3573305        -9833.745 /Distance, WSElev, Q
+        8664.000        6.3833357       -10428.796 /Distance, WSElev, Q
+         517 /Channel
+           3 /Locations
+           0.000        6.3833357       -10428.796 /Distance, WSElev, Q
+        6454.500        6.3975626       -10892.765 /Distance, WSElev, Q
+       12909.000        6.4174117       -11416.525 /Distance, WSElev, Q
+         522 /Channel
+           5 /Locations
+           0.000        6.4174117       -11968.888 /Distance, WSElev, Q
+        5685.500        6.4248574       -12517.888 /Distance, WSElev, Q
+       11371.000        6.4315059       -13013.191 /Distance, WSElev, Q
+       17056.500        6.4407942       -13541.174 /Distance, WSElev, Q
+       22742.000        6.4487444       -14201.801 /Distance, WSElev, Q
+         523 /Channel
+           3 /Locations
+           0.000        6.4487444       -19215.782 /Distance, WSElev, Q
+        5007.500        6.4485203       -19725.448 /Distance, WSElev, Q
+       10015.000        6.4478625       -20156.943 /Distance, WSElev, Q
+         527 /Channel
+           4 /Locations
+           0.000        6.4206700            0.000 /Distance, WSElev, Q
+        5233.333        6.4198716          -56.240 /Distance, WSElev, Q
+       10466.667        6.4182447         -113.794 /Distance, WSElev, Q
+       15700.000        6.4174117         -175.354 /Distance, WSElev, Q
+         528 /Channel
+           2 /Locations
+           0.000        6.4509807        -4970.535 /Distance, WSElev, Q
+        2107.000        6.4487444        -5013.981 /Distance, WSElev, Q
+         529 /Channel
+           2 /Locations
+           0.000        7.1854766            0.000 /Distance, WSElev, Q
+        1250.000        7.1854766            0.000 /Distance, WSElev, Q
+         530 /Channel
+           3 /Locations
+           0.000        7.1854766            0.000 /Distance, WSElev, Q
+        7125.000        7.1854766            0.000 /Distance, WSElev, Q
+       14250.000        7.1854766            0.000 /Distance, WSElev, Q
+         531 /Channel
+           3 /Locations
+           0.000        7.1854766            0.000 /Distance, WSElev, Q
+        5875.000        7.1854766            0.000 /Distance, WSElev, Q
+       11750.000        7.1854766            0.000 /Distance, WSElev, Q
+         532 /Channel
+           3 /Locations
+           0.000        7.1854766            0.000 /Distance, WSElev, Q
+        7375.000        7.1854766            0.000 /Distance, WSElev, Q
+       14750.000        7.1854766            0.000 /Distance, WSElev, Q
+         537 /Channel
+           2 /Locations
+           0.000        3.9867953           94.950 /Distance, WSElev, Q
+        3500.000        3.9862849           66.333 /Distance, WSElev, Q
+         539 /Channel
+           2 /Locations
+           0.000        3.9862849           36.304 /Distance, WSElev, Q
+        5500.000        3.9861301            0.000 /Distance, WSElev, Q
+         542 /Channel
+           2 /Locations
+           0.000        3.9862849           30.030 /Distance, WSElev, Q
+        4200.000        3.9862287            0.000 /Distance, WSElev, Q
+         543 /Channel
+           2 /Locations
+           0.000        6.4509807        -2557.079 /Distance, WSElev, Q
+        4398.000        6.4508179        -2959.056 /Distance, WSElev, Q
+         544 /Channel
+           2 /Locations
+           0.000        6.4533624            0.000 /Distance, WSElev, Q
+        7164.000        6.4508179          -64.174 /Distance, WSElev, Q
+         549 /Channel
+           2 /Locations
+           0.000        4.2704175          112.000 /Distance, WSElev, Q
+        2501.000        4.2706948           71.922 /Distance, WSElev, Q
+         550 /Channel
+           2 /Locations
+           0.000        4.2981518          377.000 /Distance, WSElev, Q
+        2617.000        4.2706948          349.176 /Distance, WSElev, Q
+         552 /Channel
+           2 /Locations
+           0.000        4.2541777            0.000 /Distance, WSElev, Q
+        9487.000        4.2642084         -204.876 /Distance, WSElev, Q
+         553 /Channel
+           3 /Locations
+           0.000        4.2642084         -204.876 /Distance, WSElev, Q
+        5059.000        4.2741166         -318.945 /Distance, WSElev, Q
+       10118.000        4.2900231         -435.536 /Distance, WSElev, Q
+         555 /Channel
+           2 /Locations
+           0.000        4.2569017            0.000 /Distance, WSElev, Q
+        5248.000        4.2584454          -97.575 /Distance, WSElev, Q
+         556 /Channel
+           2 /Locations
+           0.000        4.2584454          -97.575 /Distance, WSElev, Q
+        7237.000        4.2642593         -257.104 /Distance, WSElev, Q
+         557 /Channel
+           2 /Locations
+           0.000        4.2642593         -257.104 /Distance, WSElev, Q
+        7701.000        4.2747219         -499.927 /Distance, WSElev, Q
+         558 /Channel
+           2 /Locations
+           0.000        4.2747219         -599.973 /Distance, WSElev, Q
+        2039.000        4.2900231         -635.744 /Distance, WSElev, Q
+         559 /Channel
+           2 /Locations
+           0.000        4.2739051            0.000 /Distance, WSElev, Q
+        4951.000        4.2747219         -100.046 /Distance, WSElev, Q
+         560 /Channel
+           2 /Locations
+           0.000        4.2725540            0.000 /Distance, WSElev, Q
+        6244.000        4.2743967         -367.172 /Distance, WSElev, Q
+         561 /Channel
+           2 /Locations
+           0.000        4.2743967         -367.172 /Distance, WSElev, Q
+        6259.000        4.2768524         -958.868 /Distance, WSElev, Q
+         570 /Channel
+           2 /Locations
+           0.000        6.1722843      -118032.799 /Distance, WSElev, Q
+        7400.000        6.2677014      -120454.454 /Distance, WSElev, Q
+         571 /Channel
+           3 /Locations
+           0.000        6.2677014       -37283.745 /Distance, WSElev, Q
+        5575.000        6.3115562       -38598.931 /Distance, WSElev, Q
+       11150.000        6.3306262       -40487.263 /Distance, WSElev, Q
+         572 /Channel
+           2 /Locations
+           0.000        6.4410933       -28883.636 /Distance, WSElev, Q
+        8000.000        6.4556606       -36667.476 /Distance, WSElev, Q
+         573 /Channel
+           2 /Locations
+           0.000        6.4296893       -20859.112 /Distance, WSElev, Q
+        8000.000        6.4410933       -28883.636 /Distance, WSElev, Q
+         574 /Channel
+           3 /Locations
+           0.000        6.1957066       -18170.412 /Distance, WSElev, Q
+        6659.000        6.2469122       -20048.531 /Distance, WSElev, Q
+       13318.000        6.2677014       -22428.317 /Distance, WSElev, Q
+         575 /Channel
+           3 /Locations
+           0.000        6.1957066        12517.970 /Distance, WSElev, Q
+        6500.000        6.1834374         9755.246 /Distance, WSElev, Q
+       13000.000        6.1722843         6364.793 /Distance, WSElev, Q
+         700 /Channel
+           3 /Locations
+           0.000        6.2671029          449.250 /Distance, WSElev, Q
+        5000.000        6.2670726          521.987 /Distance, WSElev, Q
+       10000.000        6.2668988          601.122 /Distance, WSElev, Q
+         701 /Channel
+           3 /Locations
+           0.000        6.2678348          299.462 /Distance, WSElev, Q
+        5000.000        6.2676135          369.126 /Distance, WSElev, Q
+       10000.000        6.2671029          449.250 /Distance, WSElev, Q
+         702 /Channel
+           3 /Locations
+           0.000        6.2682776          145.173 /Distance, WSElev, Q
+        5000.000        6.2681010          227.014 /Distance, WSElev, Q
+       10000.000        6.2678348          299.462 /Distance, WSElev, Q
+         703 /Channel
+           3 /Locations
+           0.000        6.2681910            0.000 /Distance, WSElev, Q
+        5000.000        6.2682252           75.536 /Distance, WSElev, Q
+       10000.000        6.2682776          145.173 /Distance, WSElev, Q
+
+    6 /Number of Reservoir
+    1 /Reservoir Number
+    1 /Connections
+       4.9665112E+00 /Yres
+    1 -2.0507439E+03 /Connection, Qres
+    2 /Reservoir Number
+    1 /Connections
+       4.0380756E+00 /Yres
+    1  0.0000000E+00 /Connection, Qres
+    3 /Reservoir Number
+    2 /Connections
+       3.8927287E+00 /Yres
+    1 -1.4686301E+03 /Connection, Qres
+    2 -9.8860115E+02 /Connection, Qres
+    4 /Reservoir Number
+    6 /Connections
+       4.6615665E+00 /Yres
+    1 -2.3779379E+03 /Connection, Qres
+    2 -2.7485161E+03 /Connection, Qres
+    3 -4.2509544E+03 /Connection, Qres
+    4 -6.0049890E+03 /Connection, Qres
+    5 -6.6175024E+03 /Connection, Qres
+    6  2.5731719E+03 /Connection, Qres
+    5 /Reservoir Number
+    1 /Connections
+       4.4719416E+00 /Yres
+    1 -3.9883623E+04 /Connection, Qres
+    6 /Reservoir Number
+    4 /Connections
+       4.3516122E+00 /Yres
+    1  9.2808081E+02 /Connection, Qres
+    2 -2.7997071E+03 /Connection, Qres
+    3 -3.0510723E+03 /Connection, Qres
+    4 -1.6556171E+03 /Connection, Qres

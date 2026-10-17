@@ -81,10 +81,6 @@ def parse_date(value: str) -> pd.Timestamp:
     return pd.to_datetime(value, format="%Y%m%d", errors="raise")
 
 
-def water_year(value: pd.Timestamp) -> int:
-    return value.year + 1 if value.month >= 10 else value.year
-
-
 def require_file(path: Path, label: str) -> None:
     if not path.is_file():
         raise FileNotFoundError(f"{label} does not exist: {path}")
@@ -101,75 +97,104 @@ def warn_and_stop(message: str, exc_type=RuntimeError) -> None:
 
 
 def load_sls(run_date: pd.Timestamp, sls_dir: Path):
-    """Select the latest valid survey dated on or before the workflow date."""
-    require_dir(sls_dir, "SLS water-year folder")
-    candidates = sorted(
-        (
-            p for p in sls_dir.glob("*.csv")
-            if "processing_summary" not in p.name.lower()
-        ),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )
+    """Load SLS survey data from the folder matching the workflow date."""
+    require_dir(sls_dir, "SLS weekly folder")
+
+    # The workflow date selects the folder. File modification time is not used.
+    candidates = [
+        path
+        for path in sls_dir.glob("*.csv")
+        if "processing_summary" not in path.name.lower()
+    ]
+
     if not candidates:
         warn_and_stop(
-            f"No eligible SLS CSV files were found in {sls_dir}. Survey data are required.",
+            f"No eligible SLS CSV files were found in {sls_dir}. "
+            "Survey data are required.",
             FileNotFoundError,
         )
 
     rejected = []
+    valid_files = []
+
+    # Identify survey CSVs by required columns rather than filesystem metadata.
     for csv_path in candidates:
         try:
             df = pd.read_csv(csv_path)
         except Exception as exc:
             rejected.append(f"{csv_path.name}: could not be read ({exc})")
             continue
+
         missing = REQUIRED_SLS_COLUMNS - set(df.columns)
         if missing:
             rejected.append(f"{csv_path.name}: missing {sorted(missing)}")
             continue
 
-        df = df.copy()
-        # UTC timestamps are converted to timezone-naive calendar dates for
-        # comparison with the timezone-naive command-line workflow date.
-        df["survDate"] = pd.to_datetime(df["survDate"], errors="coerce", utc=True)
-        df["survDate"] = df["survDate"].dt.tz_convert(None)
-        df["Survey"] = pd.to_numeric(df["Survey"], errors="coerce")
-        df["Subregion_Abund"] = pd.to_numeric(df["Subregion_Abund"], errors="coerce")
-        usable = df.dropna(
-            subset=["survDate", "Survey", "SubRegion", "Subregion_Abund"]
+        valid_files.append((csv_path, df))
+
+    if not valid_files:
+        details = "\n".join(f"  - {item}" for item in rejected)
+        warn_and_stop(
+            f"No valid SLS survey CSV was found in {sls_dir}.\n"
+            "Survey data are required.\n"
+            f"Files checked:\n{details}"
         )
-        usable = usable.loc[usable["survDate"] <= run_date]
-        if usable.empty:
-            rejected.append(
-                f"{csv_path.name}: no survey dated on or before {run_date:%Y-%m-%d}"
-            )
-            continue
 
-        survey_date = usable["survDate"].max()
-        selected = usable.loc[usable["survDate"] == survey_date].copy()
-        survey_values = selected["Survey"].unique()
-        if len(survey_values) != 1:
-            rejected.append(
-                f"{csv_path.name}: inconsistent Survey values for {survey_date:%Y-%m-%d}"
-            )
-            continue
-
-        survey_number = int(survey_values[0])
-        selected = selected.drop_duplicates(subset=["SubRegion"], keep="last")
-        abundance = selected[["SubRegion", "Subregion_Abund"]].rename(
-            columns={"SubRegion": "Subregion", "Subregion_Abund": "Abundance"}
+    if len(valid_files) > 1:
+        valid_names = "\n".join(
+            f"  - {csv_path.name}" for csv_path, _ in valid_files
         )
-        if abundance.empty:
-            rejected.append(f"{csv_path.name}: selected survey has no abundance rows")
-            continue
-        return abundance, survey_date, survey_number, csv_path
+        warn_and_stop(
+            f"Multiple valid SLS survey CSV files were found in {sls_dir}.\n"
+            "Expected exactly one valid survey CSV.\n"
+            f"Valid files found:\n{valid_names}"
+        )
 
-    details = "\n".join(f"  - {item}" for item in rejected)
-    warn_and_stop(
-        "No valid historical SLS survey data were found. Survey data are required.\n"
-        f"Files checked:\n{details}"
+    csv_path, df = valid_files[0]
+    df = df.copy()
+
+    # UTC timestamps are converted to timezone-naive values for comparison
+    # with the timezone-naive command-line workflow date.
+    df["survDate"] = pd.to_datetime(df["survDate"], errors="coerce", utc=True)
+    df["survDate"] = df["survDate"].dt.tz_convert(None)
+    df["Survey"] = pd.to_numeric(df["Survey"], errors="coerce")
+    df["Subregion_Abund"] = pd.to_numeric(
+        df["Subregion_Abund"], errors="coerce"
     )
+
+    usable = df.dropna(
+        subset=["survDate", "Survey", "SubRegion", "Subregion_Abund"]
+    )
+    usable = usable.loc[usable["survDate"] <= run_date]
+
+    if usable.empty:
+        warn_and_stop(
+            f"{csv_path.name} contains no survey dated on or before "
+            f"{run_date:%Y-%m-%d}."
+        )
+
+    # Select the latest survey represented inside the chosen weekly CSV.
+    # This does not use file creation or modification timestamps.
+    survey_date = usable["survDate"].max()
+    selected = usable.loc[usable["survDate"] == survey_date].copy()
+    survey_values = selected["Survey"].unique()
+
+    if len(survey_values) != 1:
+        warn_and_stop(
+            f"{csv_path.name}: inconsistent Survey values for "
+            f"{survey_date:%Y-%m-%d}"
+        )
+
+    survey_number = int(survey_values[0])
+    selected = selected.drop_duplicates(subset=["SubRegion"], keep="last")
+    abundance = selected[["SubRegion", "Subregion_Abund"]].rename(
+        columns={"SubRegion": "Subregion", "Subregion_Abund": "Abundance"}
+    )
+
+    if abundance.empty:
+        warn_and_stop(f"{csv_path.name}: selected survey has no abundance rows")
+
+    return abundance, survey_date, survey_number, csv_path
 
 
 def parse_dss_filename(path: Path):
@@ -226,7 +251,8 @@ def load_ptm(ptm_dir: Path, run_date: pd.Timestamp, scenario: str):
             missing = [stamp for stamp in week_times if stamp not in total.index]
             if missing:
                 raise KeyError(
-                    "missing timestamps " + ", ".join(x.strftime("%Y-%m-%d %H:%M") for x in missing)
+                    "missing timestamps "
+                    + ", ".join(x.strftime("%Y-%m-%d %H:%M") for x in missing)
                 )
             values[node] = np.array([float(total.loc[x]) for x in week_times])
         except Exception as exc:
@@ -288,7 +314,8 @@ def load_zoi(run_string: str, row_number: int):
             raise ValueError(f"Week {week} ZOI shapefile has no CRS: {path}")
         if len(frame) <= row_number:
             raise ValueError(
-                f"Week {week} ZOI shapefile has {len(frame)} rows; row {row_number} is required."
+                f"Week {week} ZOI shapefile has {len(frame)} rows; "
+                f"row {row_number} is required."
             )
         frame = frame.to_crs("EPSG:4326")
         feature = json.loads(frame.iloc[[row_number]].to_json())
@@ -337,7 +364,6 @@ def build_map(
         zoom_start=10,
     )
 
-    # EDSM subregion boundaries.
     folium.GeoJson(
         json.loads(regions.to_json()),
         name="EDSM Subregions",
@@ -349,8 +375,6 @@ def build_map(
         },
     ).add_to(result)
 
-    # Weekly ZOI outlines. All three are visible by default, matching the
-    # historical report, and remain individually toggleable in LayerControl.
     for week, feature in enumerate(zoi_features, 1):
         folium.GeoJson(
             feature,
@@ -365,8 +389,6 @@ def build_map(
             },
         ).add_to(result)
 
-    # Filled PTM entrainment surfaces. Week 1 is displayed initially, while
-    # Weeks 2 and 3 are available in the layer control.
     for week, (_, contour) in enumerate(contours, 1):
         contour_geojson = geojsoncontour.contourf_to_geojson(
             contourf=contour,
@@ -388,9 +410,6 @@ def build_map(
             },
         ).add_to(result)
 
-    # LFS abundance circles. Positive values use a strong black outline and a
-    # lightly transparent gray fill to match the historical example. Zero
-    # abundance is represented by a small red point.
     abundance_lookup = abundance.set_index("Subregion")["Abundance"]
     positive = folium.FeatureGroup(name="LFS Abundance", show=True)
     zero = folium.FeatureGroup(name="No larva detected", show=True)
@@ -439,7 +458,6 @@ def build_map(
     positive.add_to(result)
     zero.add_to(result)
 
-    # Color scale for the filled entrainment surface.
     cm.LinearColormap(
         colors=["blue", "cyan", "green", "yellow", "orange", "red"],
         vmin=0,
@@ -447,7 +465,6 @@ def build_map(
         caption="Cumulative CVP/SWP Entrainment Flux (%)",
     ).add_to(result)
 
-    # Dedicated LFS legend styled after the historical map.
     lfs_legend = """
     <div style="position: fixed; top: 500px; right: 35px; width: 350px;
                 min-height: 64px; border: 2px solid #999; z-index: 9999;
@@ -465,7 +482,6 @@ def build_map(
     """
     result.get_root().html.add_child(folium.Element(lfs_legend))
 
-    # Dedicated ZOI legend with line samples matching the three weekly colors.
     zoi_legend = """
     <div style="position: fixed; top: 600px; right: 35px; width: 350px;
                 min-height: 92px; border: 2px solid #999; z-index: 9999;
@@ -499,22 +515,22 @@ def main() -> int:
     args = parse_args()
     run_date = parse_date(args.date)
     run_string = run_date.strftime("%Y%m%d")
-    wy = water_year(run_date)
 
     ptm_dir = PTM_OUTPUT_ROOT / run_string / "PTM" / "pp"
-    sls_dir = SLS_ROOT / str(wy)
+    sls_dir = SLS_ROOT / run_string
     output_dir = FIGURE_ROOT / run_string / "LFS"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Run date: {run_date:%Y-%m-%d}")
-    print(f"Water year: {wy}")
     print(f"PTM folder: {ptm_dir}")
     print(f"SLS folder: {sls_dir}")
     print(f"ZOI folder: {ZOI_ROOT / run_string}")
     print(f"DSM2 coordinate file: {DSM2_GRID_FILE}")
     print(f"EDSM shapefile: {EDSM_SHAPEFILE}")
 
-    abundance, survey_date, survey_number, survey_file = load_sls(run_date, sls_dir)
+    abundance, survey_date, survey_number, survey_file = load_sls(
+        run_date, sls_dir
+    )
     print(f"Selected SLS survey: {survey_number}")
     print(f"Selected SLS survey date: {survey_date:%Y-%m-%d}")
     print(f"Selected SLS file: {survey_file}")

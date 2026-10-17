@@ -477,7 +477,7 @@ for week_num, week_label in enumerate(["week1", "week2", "week3"], start=1):
                 grp_df["lat"].values,
                 color=COLOR_MAP[omr_level],
                 linestyle=LINE_MAP[omr_level],
-                linewidth=1.25,
+                linewidth=2.25,
                 transform=ccrs.PlateCarree()
             )
 
@@ -522,7 +522,7 @@ for week_num, week_label in enumerate(["week1", "week2", "week3"], start=1):
         h = mlines.Line2D([], [],
                           color=COLOR_MAP[omr],
                           linestyle=LINE_MAP[omr],
-                          linewidth=1.5,
+                          linewidth=2.5,
                           label=omr)
         legend_handles.append(h)
     ax.legend(handles=legend_handles,

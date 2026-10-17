@@ -1,0 +1,161 @@
+
+# ====================== Files used in simulation ========================
+
+# Entry file (top priority):  .\input\ptm\pp\ptmd_465.inp
+# Other files, increasing priority: 
+# 1    input\ptm\pp\configd_465.inp
+
+
+
+#===================      Simulation input data    =====================
+
+ENVVAR
+NAME  VALUE  
+DSM2MODIFIER                        20260609-21D    
+DSM2OUTPUTDIR                       ./././/Output/20260609/PTM/pp    
+DSM2SHAREDDIR                       ./././/Output/20260609    
+END_DATE                            30Jun2026    
+END_TIME                            0000    
+HYDROTIDEFILE                       ./././/Output/20260609/hydro/20260609-21D.h5    
+INSERT_NODE                         465    
+OUTPUTFILE                          N/A    
+PTMOUTFILE                          ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.pof    
+PTMOUTPUTFILE                       ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+PTM_START_DATE                      01May2026    
+STUDYDIR                            ./././    
+TEMPDIR                             N/A    
+TSINPUTDIR                          N/A    
+WEEK                                20260609    
+END
+
+SCALAR
+NAME  VALUE  
+binary_output                       false    
+display_intvl                       1day    
+dss_direct                          true    
+flush_output                        15day    
+printlevel                          1    
+ptm_flux_cumulative                 t    
+ptm_flux_percent                    t    
+ptm_group_percent                   t    
+ptm_iey                             t    
+ptm_iez                             t    
+ptm_itrans                          t    
+ptm_ivert                           t    
+ptm_no_animated                     2000    
+ptm_random_seed                     32001    
+ptm_time_step                       15min    
+ptm_trans_a_coef                    1.2    
+ptm_trans_b_coef                    0.3    
+ptm_trans_c_coef                    -1.5    
+ptm_trans_constant                  0.6    
+ptm_vert_constant                   0.067    
+run_end_date                        30Jun2026    
+run_end_time                        0000    
+run_start_date                      01May2026    
+run_start_time                      0000    
+temp_dir                            N/A    
+theta                               0.6    
+title                               "PTM SIMULATION: 20260609-21D"  
+END
+
+IO_FILE
+MODEL  TYPE  IO  INTERVAL  FILE  
+ptm         behavior      in          none          ./Input/PTM/pp/ptm_behavior_inputs.inp    
+ptm         echo        out         none          ./././/Output/20260609/PTM/pp/ptm_echo_20260609-21D_PPptm_465.inp    
+ptm         output      out         none          ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.pof    
+ptm         trace       out         none          ./././/Output/20260609/PTM/pp/trace_20260609-21D_PPptm_465.out    
+END
+
+TIDEFILE
+START_DATE  END_DATE  FILE  
+runtime             length              ./././/Output/20260609/hydro/20260609-21D.h5    
+END
+
+GROUP
+NAME  
+GS    
+RIO    
+RIO_UP    
+STM    
+SUT    
+ag_div    
+chipps_east    
+chipps_west    
+cvp    
+ds_decker    
+franks    
+midrn    
+midrs    
+mtz    
+oldrn    
+oldrs    
+swp    
+us_decker    
+whole    
+END
+
+GROUP_MEMBER
+GROUP_NAME  MEMBER_TYPE  PATTERN  
+GS                  channel             (366)    
+RIO                 channel             (430)    
+RIO_UP              channel             (387|398|429)    
+STM                 channel             (383)    
+SUT                 channel             (379)    
+ag_div              qext                bbid.*    
+ag_div              qext                dicu_div_.*    
+chipps_east         channel             (288|294|291)    
+chipps_west         channel             (442|437)    
+cvp                 qext                cvp    
+ds_decker           channel             (433|432)    
+franks              reservoir           franks_tract    
+midrn               channel             (152)    
+midrs               channel             (151)    
+mtz                 stage               mtz.*    
+oldrn               channel             (111)    
+oldrs               channel             (107|108)    
+swp                 qext                swp    
+us_decker           channel             (431|309)    
+whole               channel             .*    
+whole               reservoir           .*    
+END
+
+PARTICLE_INSERTION
+NODE  NPARTS  DELAY  DURATION  
+465   1000    39day           1day            
+END
+
+PARTICLE_FILTER
+NAME  NODE  AT_WB  FILLIN  FILE  PATH  
+END
+
+PARTICLE_RES_FILTER
+NAME  RES_NAME  AT_WB  FILLIN  FILE  PATH  
+END
+
+PARTICLE_GROUP_OUTPUT
+NAME  GROUP_NAME  INTERVAL  FILE  
+GS                  GS                          15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+RIO                 RIO                         15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+STM                 STM                         15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+SUT                 SUT                         15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+franks              franks                      15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+whole               whole                       15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+END
+
+PARTICLE_FLUX_OUTPUT
+NAME  FROM_WB  TO_WB  INTERVAL  FILE  
+GS_flux             chan:422                    chan:366                    15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+STM_flux            chan:419                    chan:383                    15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+SUT_flux            chan:418                    chan:379                    15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+decker              group:us_decker             group:ds_decker             15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+diversion_ag        group:all                   group:ag_div                15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+export_cvp          chan:216                    group:cvp                   15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+export_swp          res:clifton_court           group:swp                   15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+middleriver         group:midrs                 group:midrn                 15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+oldriver            group:oldrs                 group:oldrn                 15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+pass_rio            group:RIO_UP                chan:430                    15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+past_chipps         group:chipps_east           group:chipps_west           15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+past_mtz            chan:441                    group:mtz                   15min         ./././/Output/20260609/PTM/pp/20260609-21D_PPptm_465.dss    
+END
+

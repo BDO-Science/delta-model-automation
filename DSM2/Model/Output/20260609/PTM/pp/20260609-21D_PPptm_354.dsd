@@ -1,0 +1,27 @@
+
+     HECDSS Condensed Catalog of Record Pathnames in File C:\Users\esimon\DSM2\delta-model-automation\DSM2\Model\Output\20
+
+     Catalog Created on Oct 16, 2026 at 22:33    File Created on Oct 16, 2026
+     Number of Records:     54                   DSS Version 6-WE,  File 6-WE
+     Sort Order: ABCFED
+
+ Tag  A Part     B Part        C Part     F Part        E Part  D Part
+
+ T54  PTMV8.2.2  DECKER        FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    DIVERSION_AG  FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    EXPORT_CVP    FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    EXPORT_SWP    FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    FRANKS        PTM_GROUP  20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    GS            PTM_GROUP  20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    GS_FLUX       FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    MIDDLERIVER   FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    OLDRIVER      FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    PASS_RIO      FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    PAST_CHIPPS   FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    PAST_MTZ      FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    RIO           PTM_GROUP  20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    STM           PTM_GROUP  20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    STM_FLUX      FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    SUT           PTM_GROUP  20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    SUT_FLUX      FLUX       20260609-21D  15MIN   01APR2026 - 01JUN2026
+ T54  - - - -    WHOLE         PTM_GROUP  20260609-21D  15MIN   01APR2026 - 01JUN2026
