@@ -3,11 +3,11 @@
 # 202208
 ENVVAR
 NAME                     VALUE
-WEEK					 20260609
+WEEK					 20260512
 DSM2MODIFIER             ${WEEK}-21C                #Study name used for DSM2 output
 INSERT_NODE				352							#Chipps Island
-PTM_START_DATE           01May2026
-END_DATE                 30Jun2026
+PTM_START_DATE           18Apr2026
+END_DATE                 02Jun2026
 END_TIME                 0000
 TEMPDIR                  N/A
 #Input envvars

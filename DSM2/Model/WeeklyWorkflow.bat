@@ -102,7 +102,7 @@ set "D_FILE="
 
 for %%F in ("%BASE%\*_OMRI *.csv") do (
     if exist "%%F" (
-        echo %%~nxF | findstr /E /C:"_OMRI -5000.csv" /C:"_OMRI -3500.csv" /C:"_OMRI -2000.csv" >nul
+        echo %%~nxF| findstr /E /C:"_OMRI -5000.csv" /C:"_OMRI -3500.csv" /C:"_OMRI -2000.csv" >nul
         if errorlevel 1 set "D_FILE=%%F"
     )
 )
