@@ -21,7 +21,7 @@ Reclamation's Central Valley Operations (CVO) office issues weekly Delta inflow/
 | `DSM2/Model/DataExternal/` | Weekly forecast inputs (organized by `YYYYMMDD`); excluded from version control via `.gitignore` |
 | `DSM2/Model/Output/`, `DSM2/Model/Figures/` | Model run outputs and generated figures (also excluded via `.gitignore`) |
 | `DSM2/ZOI/` | Zone of Influence preprocessing and plotting scripts |
-| `SacPAS/` | Quarto markdown and code supporting the SacPAS forecast summary |
+| `quarto_report/` | Quarto markdown and code supporting the SacPAS forecast summary |
 | `ShinyApp/` | PTM Emulator / Event Horizon real-time assessment dashboard |
 
 > **Note:** Data-heavy folders (`DataExternal`, `Output`, etc.) are intentionally excluded from the repo per `.gitignore` and must be created locally in the directory structure described in this documentation before running the workflow.
