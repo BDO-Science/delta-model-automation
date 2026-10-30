@@ -5,7 +5,7 @@
 #   2) Find the daily reports currently listed on the EBMUD website.
 #   3) For dates not already in the CSV, extract "Mokelumne River below WID".
 #   4) Append only the missing dates.
-#   5) Update STN_ShinyApp/data/MOKE_daily.csv for the Shiny app.
+#   5) Update ShinyApp/data/MOKE_daily.csv for the Shiny app.
 #
 # Required R packages:
 #   install.packages(c("httr2", "rvest"))
