@@ -10,80 +10,237 @@ app_version <- "1.2.2"
 run_page <- function(prefix, title, theme_class) {
   
   is_current <- identical(prefix, "current")
-  status_name <- if (is_current) "warning" else "info"
+  status_name <- "warning"
+
+  flow_input <- function(input_id, label, value) {
+    if (is_current) {
+      textInput(
+        input_id,
+        label,
+        format(value, big.mark = ",", scientific = FALSE, trim = TRUE)
+      )
+    } else {
+      numericInput(input_id, label, value)
+    }
+  }
+
+  flow_info <- function(
+    text = "Default value is based on the latest available 7-day average flow.",
+    note_output_id = NULL
+  ) {
+    if (!is_current) {
+      return(NULL)
+    }
+
+    tags$div(
+      class = "flow-info-hover",
+      tags$span(
+        class = "flow-info-trigger",
+        tabindex = "0",
+        role = "button",
+        `aria-label` = "Input information",
+        icon("info-circle")
+      ),
+      tags$div(
+        class = "flow-info-popover",
+        tags$div(class = "flow-info-static", text),
+        if (!is.null(note_output_id)) {
+          tagList(
+            tags$hr(),
+            uiOutput(note_output_id)
+          )
+        }
+      )
+    )
+  }
+
+  info_heading <- function(title, text, heading_class = NULL) {
+    tags$div(
+      class = "section-heading-with-info",
+      tags$h4(
+        class = heading_class,
+        title
+      ),
+      if (is_current) {
+        flow_info(text)
+      } else {
+        tags$div(
+          class = "flow-info-hover",
+          tags$span(
+            class = "flow-info-trigger",
+            tabindex = "0",
+            role = "button",
+            `aria-label` = paste(title, "information"),
+            icon("info-circle")
+          ),
+          tags$div(
+            class = "flow-info-popover",
+            tags$div(class = "flow-info-static", text)
+          )
+        )
+      }
+    )
+  }
   
+  weekly_value_card <- function(label, output_id, info_text) {
+    div(
+      class = "exploration-input-card weekly-static-input-card",
+      tags$div(
+        class = "flow-info-hover",
+        tags$span(
+          class = "flow-info-trigger",
+          tabindex = "0",
+          role = "button",
+          `aria-label` = paste(label, "information"),
+          icon("info-circle")
+        ),
+        tags$div(
+          class = "flow-info-popover",
+          tags$div(class = "flow-info-static", info_text)
+        )
+      ),
+      tags$label(label),
+      tags$div(
+        class = "weekly-static-value form-control",
+        textOutput(output_id, inline = TRUE)
+      )
+    )
+  }
+
   tabItem(
     tabName = paste0("run_", prefix),
     
     div(
       class = theme_class,
-      
-      fluidRow(
-        box(
-          width = 12,
-          title = paste(title, " Input Method"),
-          status = status_name,
-          solidHeader = TRUE,
-          
-          radioButtons(
-            paste0(prefix, "_input_method"),
-            "Input Method:",
-            choices = c(
-              "Enter a Single Set of Values" = "single",
-              "Upload CSV or Excel File (coming soon)" = "upload",
-              "Read from Archive Folder" = "folder"
-            ),
-            selected = if (is_current) "single" else "folder",
-            inline = TRUE
-          ),
-          
+
+      if (is_current) {
+        tagList(
           conditionalPanel(
-            condition = sprintf(
-              "input.%s_input_method == 'single' && '%s' == 'forecast'",
-              prefix,
-              prefix
-            ),
+            condition = sprintf("input.%s_model_tabs == 'PTM Emulator and Event Horizon'", prefix),
             tags$div(
-              class = "alert alert-info forecast-single-warning",
-              tags$b("Forecast runs require Read from Archive Folder."),
-              tags$br(),
-              "Use Observed Conditions with Enter a Single Set of Values for a user-defined single-value run."
+              class = "exploration-workflow-guide",
+              icon("info-circle"),
+              tags$span(
+                tags$b("How to use this page: "),
+                "Run using current Delta condition flows or test your own. Review or edit the flow inputs below, select the risk threshold, and click Run Models. Model processing may take a few minutes. Results will appear below in the map, charts, and tables."
+              )
             )
           ),
-          
           conditionalPanel(
-            condition = sprintf("input.%s_input_method == 'upload'", prefix),
+            condition = sprintf("input.%s_model_tabs == 'ECO-PTM Emulator'", prefix),
             tags$div(
-              class = "alert alert-info",
-              "The upload-file workflow will be implemented in a later phase."
-            )
-          ),
-          
-          conditionalPanel(
-            condition = sprintf("input.%s_input_method == 'folder'", prefix),
-            tags$div(
-              class = "archive-control-panel",
-              tags$h4("Archive Selection"),
-              uiOutput(paste0(prefix, "_archive_date_ui")),
-              
-              if (!is_current) {
-                uiOutput(paste0(prefix, "_archive_scenario_ui"))
-              },
-              
-              tags$p(
-                class = "figure-note",
-                "Select a run date from the box above."
+              class = "exploration-workflow-guide",
+              icon("info-circle"),
+              tags$span(
+                tags$b("How to use this page: "),
+                "Run using current Delta condition flows or test your own. Review or edit the inputs below and click Run Models. Model processing may take a few minutes. ECO-PTM results will appear in the results table below."
               )
             )
           )
         )
-      ),
+      },
       
+      if (!is_current) {
+        tagList(
+          conditionalPanel(
+            condition = sprintf("input.%s_model_tabs == 'PTM Emulator and Event Horizon'", prefix),
+            tags$div(
+              class = "exploration-workflow-guide",
+              icon("info-circle"),
+              tags$span(
+                tags$b("How to use this page: "),
+                "Run using historical Delta condition flows or historical OMRI scenario flows. Select the archive week and flow source, review the read-only 7-day average inputs, select the risk threshold, and click Run Models. Model processing may take a few minutes. Results will appear below in the maps, bar charts, tables, and Event Horizon plot."
+              )
+            )
+          ),
+          conditionalPanel(
+            condition = sprintf("input.%s_model_tabs == 'ECO-PTM Emulator'", prefix),
+            tags$div(
+              class = "exploration-workflow-guide",
+              icon("info-circle"),
+              tags$span(
+                tags$b("How to use this page: "),
+                "Run using historical Delta condition flows or historical OMRI scenario flows. Select the archive week and flow source, review the read-only 7-day average inputs, and click Run Models. Model processing may take a few minutes. ECO-PTM results will appear in the results table below."
+              )
+            )
+          )
+        )
+      },
+
+      fluidRow(
+        box(
+          width = 12,
+          title = "Input Methods",
+          status = status_name,
+          solidHeader = TRUE,
+
+          if (is_current) {
+            tagList(
+              radioButtons(
+                paste0(prefix, "_input_method"),
+                "Input Method:",
+                choices = c(
+                  "Enter a Single Set of Values" = "single",
+                  "Upload CSV or Excel File (coming soon)" = "upload"
+                ),
+                selected = "single",
+                inline = TRUE
+              ),
+              conditionalPanel(
+                condition = sprintf("input.%s_input_method == 'upload'", prefix),
+                tags$div(
+                  class = "alert alert-info",
+                  "The upload-file workflow will be implemented in a later phase."
+                )
+              )
+            )
+          } else {
+            tagList(
+              tags$div(
+                class = "weekly-input-method-row",
+                tags$div(
+                  class = "weekly-input-method-primary",
+                  radioButtons(
+                    paste0(prefix, "_input_method"),
+                    NULL,
+                    choices = c(
+                      "Read from weekly assessment archive folder" = "folder"
+                    ),
+                    selected = "folder",
+                    inline = TRUE
+                  )
+                ),
+                tags$div(
+                  class = "weekly-input-method-source",
+                  radioButtons(
+                    "forecast_flow_source",
+                    NULL,
+                    choices = c(
+                      "Use Observed Flow" = "observed",
+                      "Use Forecast OMRI Scenario Flows" = "forecast"
+                    ),
+                    selected = "observed",
+                    inline = TRUE
+                  )
+                )
+              ),
+              tags$div(
+                class = "archive-control-panel weekly-archive-selection",
+                uiOutput(paste0(prefix, "_archive_date_ui")),
+                conditionalPanel(
+                  condition = "input.forecast_flow_source == 'forecast'",
+                  uiOutput(paste0(prefix, "_archive_scenario_ui"))
+                )
+              )
+            )
+          }
+        )
+      ),
+
       conditionalPanel(
         condition = if (is_current) {
           sprintf(
-            "input.%s_input_method == 'single' || input.%s_input_method == 'folder'",
-            prefix,
+            "input.%s_input_method == 'single'",
             prefix
           )
         } else {
@@ -100,206 +257,304 @@ run_page <- function(prefix, title, theme_class) {
           # PTM
           # ==========================================================
           tabPanel(
-            "PTM and Event Horizon Emulators",
+            "PTM Emulator and Event Horizon",
             
             fluidRow(
               class = "emulator-top-row",
               
               box(
-                width = 4,
-                title = "Emulator Inputs (PTM and Event Horizon)",
+                width = 12,
+                title = "Inputs",
                 status = status_name,
                 solidHeader = TRUE,
-                
-                tags$div(
-                  class = "alert alert-info",
-                  style = "padding:10px 12px; margin-bottom:12px; font-size:13px;",
-                  tags$b("Input Averaging"),
-                  tags$br(),
-                  HTML("&#8226; <b>PTM 7-Day</b> and <b>Event Horizon</b> emulators use <b>7-day average flow</b> inputs."),
-                  tags$br(),
-                  HTML("&#8226; <b>PTM 30-Day</b> emulator uses <b>30-day average flow</b> inputs.")
-                ),
-                
-                conditionalPanel(
+conditionalPanel(
                   condition = sprintf("input.%s_input_method == 'single'", prefix),
-                  
-                  textInput(
-                    paste0(prefix, "_ptm_name"),
-                    "Scenario Name (User Defined):",
-                    if (is_current) {
-                      "Observed Conditions Run 1"
-                    } else {
-                      "Forecast Conditions Run 1"
-                    }
-                  ),
-                  
+
                   if (is_current) {
-                    tags$div(
-                      class = "alert alert-info observed-flow-intro",
-                      "Input flow values are shown below in each box. Boxes are populated with observed conditions when current source data are available."
+                    tagList(
+                      div(
+                        class = "exploration-action-row",
+                        div(
+                          class = "exploration-scenario-field",
+                          textInput(
+                            paste0(prefix, "_ptm_name"),
+                            "Scenario Name (User Defined):",
+                            paste0(format(Sys.Date(), "%m%d%Y"), "_EXPLOR_01")
+                          )
+                        ),
+                        div(
+                          class = "exploration-action-buttons",
+                          actionButton(
+                            paste0("run_", prefix, "_ptm"),
+                            "Run Models",
+                            icon = icon("play"),
+                            class = "btn-success model-run-button"
+                          ),
+                          downloadButton(
+                            paste0("download_", prefix, "_ptm"),
+                            "Download Results (CSV)",
+                            class = "btn-primary"
+                          )
+                        )
+                      ),
+
+                      div(
+                        class = "exploration-input-grid exploration-ptm-grid",
+
+                        div(
+                          class = "exploration-input-card",
+                          flow_info(
+                            note_output_id = paste0(prefix, "_ptm_exp_note")
+                          ),
+                          flow_input(
+                            paste0(prefix, "_ptm_exp"),
+                            "EXP: Combined CVP and SWP Export (cfs):",
+                            6000
+                          )
+                        ),
+
+                        div(
+                          class = "exploration-input-card",
+                          flow_info(
+                            note_output_id = paste0(prefix, "_ptm_ver_note")
+                          ),
+                          flow_input(
+                            paste0(prefix, "_ptm_ver"),
+                            "VER: San Joaquin River Flow at Vernalis Flow (cfs):",
+                            3000
+                          )
+                        ),
+
+                        div(
+                          class = "exploration-input-card",
+                          flow_info(
+                            "Default value is based on the latest available 7-day average flow. PTM emulator input only: SAC is used by the PTM emulators and is not used by the Event Horizon emulator.",
+                            paste0(prefix, "_ptm_sac_note")
+                          ),
+                          flow_input(
+                            paste0(prefix, "_ptm_sac"),
+                            "SAC: Sacramento River Flow at Freeport Flow (cfs):",
+                            18000
+                          )
+                        ),
+
+                        div(
+                          class = "exploration-input-card",
+                          flow_info(
+                            "Default value is based on the latest available 7-day average flow. EAST is the sum of Mokelumne, Calaveras, and Cosumnes River flows.",
+                            paste0(prefix, "_ptm_east_note")
+                          ),
+                          flow_input(
+                            paste0(prefix, "_ptm_east"),
+                            "EAST: East-Side River Flow (cfs):",
+                            1500
+                          )
+                        ),
+
+                        div(
+                          class = "exploration-input-card",
+                          flow_info(
+                            "Default value is based on the latest available 7-day average flow. XGEO is the sum of Sacramento River above Delta Cross Channel and Sacramento River below Georgiana Slough.",
+                            paste0(prefix, "_ptm_xgeo_note")
+                          ),
+                          flow_input(
+                            paste0(prefix, "_ptm_xgeo"),
+                            "XGEO: Interior Delta Flow (cfs):",
+                            3000
+                          )
+                        ),
+
+                        div(
+                          class = "exploration-input-card exploration-threshold-card",
+                          tags$div(class = "input-card-spacer"),
+                          selectInput(
+                            paste0(prefix, "_ptm_threshold"),
+                            "Entrainment Risk/Event Horizon Risk Threshold (%):",
+                            choices = seq(15, 80, by = 5),
+                            selected = 25
+                          )
+                        )
+                      )
                     )
-                  },
-                  
-                  numericInput(
-                    paste0(prefix, "_ptm_exp"),
-                    "EXP: Combined CVP and SWP Export (cfs):",
-                    6000
-                  ),
-                  
-                  if (is_current) {
-                    uiOutput(paste0(prefix, "_ptm_exp_note"))
-                  },
-                  
-                  numericInput(
-                    paste0(prefix, "_ptm_ver"),
-                    "VER: San Joaquin River Flow at Vernalis Flow (cfs):",
-                    3000
-                  ),
-                  
-                  if (is_current) {
-                    uiOutput(paste0(prefix, "_ptm_ver_note"))
-                  },
-                  
-                  tags$div(
-                    class = "alert alert-info",
-                    style = "padding:8px 10px;margin-bottom:8px;font-size:12px;",
-                    tags$b("PTM emulator input only: "),
-                    "SAC is used by the PTM emulators and is not used by the Event Horizon emulator."
-                  ),
-                  
-                  numericInput(
-                    paste0(prefix, "_ptm_sac"),
-                    "SAC: Sacramento River Flow at Freeport Flow (cfs):",
-                    18000
-                  ),
-                  
-                  if (is_current) {
-                    uiOutput(paste0(prefix, "_ptm_sac_note"))
-                  },
-                  
-                  numericInput(
-                    paste0(prefix, "_ptm_east"),
-                    "EAST: East-Side River Flow (cfs):",
-                    1500
-                  ),
-                  
-                  if (is_current) {
-                    uiOutput(paste0(prefix, "_ptm_east_note"))
-                  },
-                  
-                  numericInput(
-                    paste0(prefix, "_ptm_xgeo"),
-                    "XGEO: Interior Delta Flow (cfs):",
-                    3000
-                  ),
-                  
-                  if (is_current) {
-                    uiOutput(paste0(prefix, "_ptm_xgeo_note"))
+                  } else {
+                    textInput(
+                      paste0(prefix, "_ptm_name"),
+                      "Scenario Name (User Defined):",
+                      "Forecast Conditions Run 1"
+                    )
                   }
                 ),
-                
+
                 conditionalPanel(
                   condition = sprintf("input.%s_input_method == 'folder'", prefix),
-                  
-                  textInput(
-                    paste0(prefix, "_ptm_archive_name"),
-                    "Scenario Name (User Defined):",
-                    if (is_current) {
-                      "Observed Conditions Run 1"
-                    } else {
-                      "Forecast Conditions Run 1"
-                    }
-                  ),
-                  
-                  uiOutput(paste0(prefix, "_ptm_archive_summary"))
-                ),
-                
-                conditionalPanel(
-                  condition = sprintf(
-                    "input.%s_input_method == 'folder' && '%s' == 'forecast'",
-                    prefix,
-                    prefix
-                  ),
-                  
-                  tags$p(
-                    class = "figure-note",
-                    style = "margin-top:6px;font-size:12px;",
-                    "Note: Forecast calculations hold XGEO constant at the latest observed value."
-                  )
-                ),
-                
-                selectInput(
-                  paste0(prefix, "_ptm_threshold"),
-                  "Entrainment Risk/Event Horizon Risk Threshold (%):",
-                  choices = seq(15, 80, by = 5),
-                  selected = 25
-                ),
-                
-                actionButton(
-                  paste0("run_", prefix, "_ptm"),
-                  if (is_current) {
-                    "Run Observed Conditions PTM and Event Horizon Emulators"
+
+                  if (!is_current) {
+                    tagList(
+                                            div(
+                        class = "weekly-inputs-info-row",
+                        tags$div(
+                          class = "flow-info-hover",
+                          tags$span(
+                            class = "flow-info-trigger",
+                            tabindex = "0",
+                            role = "button",
+                            `aria-label` = "Weekly Assessment input information",
+                            icon("info-circle")
+                          ),
+                          tags$div(
+                            class = "flow-info-popover",
+                            tags$div(
+                              class = "flow-info-static",
+                              "Inputs are read-only. Values remain blank until an archive week is selected. The 7-day average flow from the selected archive week and flow source is used for all models."
+                            )
+                          )
+                        )
+                      ),
+
+                      div(
+                        class = "exploration-action-row weekly-action-row",
+                        div(
+                          class = "exploration-scenario-field",
+                          textInput(
+                            paste0(prefix, "_ptm_archive_name"),
+                            "Scenario Name:",
+                            ""
+                          )
+                        ),
+                        div(
+                          class = "exploration-action-buttons",
+                          actionButton(
+                            paste0("run_", prefix, "_ptm"),
+                            "Run Models",
+                            icon = icon("play"),
+                            class = "btn-success model-run-button"
+                          ),
+                          downloadButton(
+                            paste0("download_", prefix, "_ptm"),
+                            "Download Results (CSV)",
+                            class = "btn-primary"
+                          )
+                        )
+                      ),
+
+                      div(
+                        class = "exploration-input-grid exploration-ptm-grid weekly-input-grid",
+                        weekly_value_card(
+                          "EXP: Combined CVP and SWP Export (cfs):",
+                          "forecast_ptm_exp_value",
+                          "Read-only 7-day average EXP calculated from the selected archive week and flow source."
+                        ),
+                        weekly_value_card(
+                          "VER: San Joaquin River Flow at Vernalis (cfs):",
+                          "forecast_ptm_ver_value",
+                          "Read-only 7-day average VER calculated from the selected archive week and flow source."
+                        ),
+                        weekly_value_card(
+                          "SAC: Sacramento River Flow at Freeport (cfs):",
+                          "forecast_ptm_sac_value",
+                          "Read-only 7-day average SAC calculated from the selected archive week and flow source. SAC is used by the PTM emulators and is not used by the Event Horizon emulator."
+                        ),
+                        weekly_value_card(
+                          "EAST: East-Side River Flow (cfs):",
+                          "forecast_ptm_east_value",
+                          "Read-only 7-day average EAST calculated from the selected archive week and flow source. EAST is the sum of Mokelumne, Calaveras, and Cosumnes River flows."
+                        ),
+                        weekly_value_card(
+                          "XGEO: Interior Delta Flow (cfs):",
+                          "forecast_ptm_xgeo_value",
+                          "Read-only 7-day average XGEO calculated from the selected archive week and flow source."
+                        ),
+                        div(
+                          class = "exploration-input-card exploration-threshold-card",
+                          tags$div(class = "input-card-spacer"),
+                          selectInput(
+                            paste0(prefix, "_ptm_threshold"),
+                            "Entrainment Risk/Event Horizon Risk Threshold (%):",
+                            choices = seq(15, 80, by = 5),
+                            selected = 25
+                          )
+                        )
+                      )
+                    )
                   } else {
-                    "Run Forecast PTM 7-Day and Event Horizon Emulators"
-                  },
-                  icon = icon("play"),
-                  class = "btn-success",
-                  width = "100%"
-                ),
-                
-                br(), br(),
-                
-                downloadButton(
-                  paste0("download_", prefix, "_ptm"),
-                  "Download PTM Emulator Results (CSV)",
-                  class = "btn-primary",
-                  style = "width:100%;"
+                    tagList(
+                      textInput(
+                        paste0(prefix, "_ptm_archive_name"),
+                        "Scenario Name (User Defined):",
+                        "Observed Conditions Run 1"
+                      ),
+                      uiOutput(paste0(prefix, "_ptm_archive_summary"))
+                    )
+                  }
                 )
               ),
-              
+
               box(
-                width = 8,
-                title = "PTM Emulator Results: All Supported Nodes",
+                width = 12,
+                title = NULL,
                 status = status_name,
                 solidHeader = TRUE,
+                class = "model-results-box",
+
+                tags$div(
+                  class = "model-results-loading",
+                  tags$div(
+                    class = "model-results-loading-card",
+                    icon("spinner", class = "fa-spin"),
+                    tags$span(" Running models and loading results...")
+                  )
+                ),
                 
                 tabsetPanel(
                   id = paste0(prefix, "_ptm_result_tabs"),
                   
                   tabPanel(
-                    "7-Day: 15 Nodes",
-                    
-                    tags$h4("7-Day Entrainment Risk Map"),
+                    "Event Horizon and 7-Day Entrainment",
                     
                     uiOutput(
                       paste0(prefix, "_eh_summary")
                     ),
-                    
-                    conditionalPanel(
-                      condition = sprintf(
-                        "input.%s_input_method == 'folder' && '%s' == 'current'",
-                        prefix,
-                        prefix
-                      ),
-                      uiOutput(paste0(prefix, "_ptm7_map_date_ui"))
+
+                    info_heading(
+                      "7-Day Entrainment Risk Map",
+                      if (is_current) {
+                        "The map contains PTM emulator results from the 7-day observed conditions input values. Results include PTM emulator estimated entrainment at each node, a contour polygon that interpolates a boundary between nodes based on the user defined entrainment risk threshold, and the entrainment event horizon. Click a node for details."
+                      } else {
+                        "The map contains PTM emulator results from the 7-day forecast conditions input values. Results include PTM emulator estimated entrainment at each node, a contour polygon that interpolates a boundary between nodes based on the user defined entrainment risk threshold, and the entrainment event horizon. Click a node for details."
+                      }
                     ),
                     
-                    tags$p(
-                      class = "figure-note",
-                      paste(
-                        "The map contains PTM emulator results from the 7-day",
-                        if (is_current) {
-                          "observed conditions"
-                        } else {
-                          "forecast conditions"
-                        },
-                        "input values. Results include PTM emulator estimated",
-                        "entrainment at each node, a contour polygon that",
-                        "interpolates a boundary between nodes based on the",
-                        "user defined entrainment risk threshold, and the",
-                        "entrainment event horizon. Click a node for details."
-                      )
+                    conditionalPanel(
+                      condition = if (is_current) {
+                        sprintf("input.%s_input_method == 'folder'", prefix)
+                      } else {
+                        sprintf(
+                          "input.%s_input_method == 'folder' && input.forecast_flow_source == 'observed'",
+                          prefix
+                        )
+                      },
+                      tags$div(
+                        class = "section-heading-with-info map-window-heading",
+                        tags$h4("Map Window End Date"),
+                        tags$div(
+                          class = "flow-info-hover",
+                          tags$span(
+                            class = "flow-info-trigger",
+                            tabindex = "0",
+                            role = "button",
+                            `aria-label` = "Map Window End Date information",
+                            icon("info-circle")
+                          ),
+                          tags$div(
+                            class = "flow-info-popover",
+                            tags$div(
+                              class = "flow-info-static",
+                              "For observed-flow weekly assessments, measured archive data are evaluated using seven rolling 7-day average windows. Each slider date is the end date of one rolling 7-day window. Move the slider to update the map and Event Horizon result for that window."
+                            )
+                          )
+                        )
+                      ),
+                      uiOutput(paste0(prefix, "_ptm7_map_date_ui"))
                     ),
                     
                     leafletOutput(
@@ -344,14 +599,10 @@ run_page <- function(prefix, title, theme_class) {
                   ),
                   
                   tabPanel(
-                    "30-Day: 39 Nodes",
+                    "30-Day Entrainment",
                     
                     conditionalPanel(
-                      condition = sprintf(
-                        "input.%s_input_method == 'folder' && '%s' == 'forecast'",
-                        prefix,
-                        prefix
-                      ),
+                      condition = "false",
                       
                       tags$div(
                         class = "alert alert-info",
@@ -363,48 +614,13 @@ run_page <- function(prefix, title, theme_class) {
                     ),
                     
                     conditionalPanel(
-                      condition = sprintf(
-                        "!(input.%s_input_method == 'folder' && '%s' == 'forecast')",
-                        prefix,
-                        prefix
-                      ),
-                      
-                      if (is_current) {
-                        conditionalPanel(
-                          condition = sprintf(
-                            "input.%s_input_method == 'single'",
-                            prefix
-                          ),
-                          tags$div(
-                            class = "alert alert-warning",
-                            style = "padding:10px 12px; margin-bottom:12px; font-size:13px;",
-                            tags$b("30-Day Input Reminder"),
-                            tags$br(),
-                            paste(
-                              "The values currently shown in the input boxes are populated using",
-                              "7-day observed-condition averages. Before running the PTM 30-Day emulator,",
-                              "replace the default input values with the appropriate 30-day average flows."
-                            )
-                          )
-                        )
-                      },
-                      
-                      tags$h4("30-Day Entrainment Risk Map"),
-                      
-                      tags$p(
-                        class = "figure-note",
-                        paste(
-                          "The map contains PTM emulator results from the 30-day",
-                          if (is_current) {
-                            "observed conditions"
-                          } else {
-                            "forecast conditions"
-                          },
-                          "input values. Results include PTM emulator estimated",
-                          "entrainment at each node and a contour polygon that",
-                          "interpolates a boundary between nodes based on the",
-                          "user defined entrainment risk threshold."
-                        )
+                      condition = "true",                      info_heading(
+                        "30-Day Entrainment Risk Map",
+                        if (is_current) {
+                          "The map contains PTM 30-Day emulator results using 7-day observed conditions input values. Results include PTM emulator estimated entrainment at each node and a contour polygon that interpolates a boundary between nodes based on the user defined entrainment risk threshold."
+                        } else {
+                          "The map contains PTM 30-Day emulator results using 7-day forecast conditions input values. Results include PTM emulator estimated entrainment at each node and a contour polygon that interpolates a boundary between nodes based on the user defined entrainment risk threshold."
+                        }
                       ),
                       
                       leafletOutput(
@@ -418,10 +634,9 @@ run_page <- function(prefix, title, theme_class) {
                         class = "btn-primary map-download"
                       ),
                       
-                      br(), br(),
-                      
-                      tags$h4(
-                        "30-Day Estimated Entrainment Barchart by Locations (DSM2 Node)"
+                      br(), br(),                      info_heading(
+                        "30-Day Estimated Entrainment Bar-chart by Locations (DSM2 Node)",
+                        "Values are percent entrainment."
                       ),
                       
                       plotlyOutput(
@@ -445,7 +660,7 @@ run_page <- function(prefix, title, theme_class) {
             
             conditionalPanel(
               condition = sprintf(
-                "input.%s_ptm_result_tabs == '7-Day: 15 Nodes'",
+                "input.%s_ptm_result_tabs == 'Event Horizon and 7-Day Entrainment'",
                 prefix
               ),
               
@@ -458,12 +673,10 @@ run_page <- function(prefix, title, theme_class) {
                   
                   fluidRow(
                     column(
-                      width = 6,
-                      
-                      tags$h4(
-                        class = "emulator-figure-title",
-                        
-                        "7-Day Estimated Entrainment Barchart by Locations (DSM2 Node)"
+                      width = 6,                      info_heading(
+                        "7-Day Estimated Entrainment Bar-chart by Locations (DSM2 Node)",
+                        "Values are percent entrainment.",
+                        heading_class = "emulator-figure-title"
                       ),
                       
                       plotlyOutput(
@@ -473,20 +686,10 @@ run_page <- function(prefix, title, theme_class) {
                     ),
                     
                     column(
-                      width = 6,
-                      
-                      tags$h4(
-                        class = "emulator-figure-title",
-                        "Event Horizon: River Miles from Clifton Court Forebay"
-                      ),
-                      tags$p(
-                        class = "figure-note",
-                        paste(
-                          "Historical 7-day average flows (2023-2026) were used to",
-                          "generate the event horizons that shown in the background of the",
-                          "scatter plot;",
-                          "the selected result is highlighted in red."
-                        )
+                      width = 6,                      info_heading(
+                        "Event Horizon: River Miles from Clifton Court Forebay",
+                        "Historical 7-day average flows (2023-2026) were used to generate the event horizons that shown in the background of the scatter plot; the selected result is highlighted in red.",
+                        heading_class = "emulator-figure-title"
                       ),
                       plotlyOutput(
                         paste0(prefix, "_eh_scatter"),
@@ -499,24 +702,13 @@ run_page <- function(prefix, title, theme_class) {
               
               fluidRow(
                 box(
-                  width = 8,
+                  width = 12,
                   title = "7-Day Estimated Entrainment Percentage by Location (DSM2 Node)",
                   status = status_name,
                   solidHeader = TRUE,
                   
                   tableOutput(
                     paste0(prefix, "_ptm7_table")
-                  )
-                ),
-                
-                box(
-                  width = 4,
-                  title = "7-Day Event Horizon Distance by Observed Date",
-                  status = status_name,
-                  solidHeader = TRUE,
-                  
-                  tableOutput(
-                    paste0(prefix, "_eh7_table")
                   )
                 )
               )
@@ -530,11 +722,7 @@ run_page <- function(prefix, title, theme_class) {
             "ECO-PTM Emulator",
             
             conditionalPanel(
-              condition = sprintf(
-                "input.%s_input_method == 'folder' && '%s' == 'forecast'",
-                prefix,
-                prefix
-              ),
+              condition = "false",
               tags$div(
                 class = "alert alert-info",
                 paste(
@@ -545,129 +733,253 @@ run_page <- function(prefix, title, theme_class) {
             ),
             
             conditionalPanel(
-              condition = sprintf(
-                "!(input.%s_input_method == 'folder' && '%s' == 'forecast')",
-                prefix,
-                prefix
-              ),
+              condition = "true",
               
               fluidRow(
                 class = "emulator-top-row",
                 
                 box(
-                  width = 4,
-                  title = "ECO-PTM Emulator Inputs",
+                  width = 12,
+                  title = "Inputs",
                   status = status_name,
                   solidHeader = TRUE,
                   
-                  
-                  tags$div(
-                    class = "alert alert-info",
-                    style = "padding:10px 12px; margin-bottom:12px; font-size:13px;",
-                    tags$b("Input Averaging"),
-                    tags$br(),
-                    "ECO-PTM emulator uses 30-day average flow inputs."
-                  ),
                   
                   conditionalPanel(
                     condition = sprintf(
                       "input.%s_input_method == 'single'",
                       prefix
                     ),
-                    
-                    textInput(
-                      paste0(prefix, "_eco_name"),
-                      "Scenario Name (User Defined):",
-                      if (is_current) {
-                        "Observed Conditions Run 1"
-                      } else {
-                        "Forecast Conditions Run 1"
-                      }
-                    ),
-                    
-                    tags$div(
-                      class = "alert alert-info",
-                      style = "padding:10px 12px; margin-bottom:12px; font-size:13px;",
-                      paste(
-                        "Input flow values are shown in the boxes below.",
-                        "The existing values are randomly generated and should",
-                        "be replaced with the 30-day average flow at each site."
+
+                    if (is_current) {
+                      tagList(
+                        div(
+                          class = "exploration-action-row",
+                          div(
+                            class = "exploration-scenario-field",
+                            textInput(
+                              paste0(prefix, "_eco_name"),
+                              "Scenario Name (User Defined):",
+                              paste0(format(Sys.Date(), "%m%d%Y"), "_EXPLOR_01")
+                            )
+                          ),
+                          div(
+                            class = "exploration-action-buttons",
+                            actionButton(
+                              paste0("run_", prefix, "_eco"),
+                              "Run Models",
+                              icon = icon("play"),
+                              class = "btn-success model-run-button"
+                            ),
+                            downloadButton(
+                              paste0("download_", prefix, "_eco"),
+                              "Download Results (CSV)",
+                              class = "btn-primary"
+                            )
+                          )
+                        ),
+
+                        div(
+                          class = "exploration-input-grid exploration-eco-grid",
+
+                          div(
+                            class = "exploration-input-card",
+                            flow_info(
+                              note_output_id = paste0(prefix, "_eco_sac_note")
+                            ),
+                            flow_input(
+                              paste0(prefix, "_eco_sac"),
+                              "SAC: Sacramento River Flow at Freeport Flow (cfs):",
+                              18000
+                            )
+                          ),
+
+                          div(
+                            class = "exploration-input-card",
+                            flow_info(
+                              "Default value is based on the latest available 7-day average flow. YOL is the sum of Sacramento Weir and Fremont Weir. Sacramento Weir flow is assumed to be 0 cfs; Fremont Weir uses CDEC FRE flow data.",
+                              paste0(prefix, "_eco_yol_note")
+                            ),
+                            flow_input(
+                              paste0(prefix, "_eco_yol"),
+                              "YOL: Yolo Bypass Flow (cfs):",
+                              1000
+                            )
+                          ),
+
+                          div(
+                            class = "exploration-input-card",
+                            flow_info(
+                              "MOKE uses the latest available 7-day average flow calculated from MOKE_daily.csv.",
+                              paste0(prefix, "_eco_moke_note")
+                            ),
+                            flow_input(
+                              paste0(prefix, "_eco_moke"),
+                              "MOKE: Mokelumne Flow (cfs):",
+                              800
+                            )
+                          ),
+
+                          div(
+                            class = "exploration-input-card exploration-dcc-card",
+                            tags$div(class = "input-card-spacer"),
+                            radioButtons(
+                              paste0(prefix, "_eco_dcc"),
+                              "Delta Cross Channel Status:",
+                              choices = c("Closed" = 0, "Open" = 1),
+                              selected = 0,
+                              inline = TRUE
+                            )
+                          )
+                        )
                       )
-                    ),
-                    
-                    numericInput(
-                      paste0(prefix, "_eco_sac"),
-                      "SAC: Sacramento River Flow at Freeport Flow (cfs):",
-                      18000
-                    ),
-                    numericInput(
-                      paste0(prefix, "_eco_yol"),
-                      "YOL: Yolo Bypass Flow (cfs):",
-                      1000
-                    ),
-                    numericInput(
-                      paste0(prefix, "_eco_moke"),
-                      "MOKE: Mokelumne Flow (cfs):",
-                      800
-                    ),
-                    radioButtons(
-                      paste0(prefix, "_eco_dcc"),
-                      "Delta Cross Channel Status:",
-                      choices = c("Closed" = 0, "Open" = 1),
-                      selected = 0,
-                      inline = TRUE
-                    )
+                    } else {
+                      tagList(
+                        textInput(
+                          paste0(prefix, "_eco_name"),
+                          "Scenario Name (User Defined):",
+                          "Forecast Conditions Run 1"
+                        ),
+                        numericInput(
+                          paste0(prefix, "_eco_sac"),
+                          "SAC: Sacramento River Flow at Freeport Flow (cfs):",
+                          18000
+                        ),
+                        numericInput(
+                          paste0(prefix, "_eco_yol"),
+                          "YOL: Yolo Bypass Flow (cfs):",
+                          1000
+                        ),
+                        numericInput(
+                          paste0(prefix, "_eco_moke"),
+                          "MOKE: Mokelumne Flow (cfs):",
+                          800
+                        ),
+                        radioButtons(
+                          paste0(prefix, "_eco_dcc"),
+                          "Delta Cross Channel Status:",
+                          choices = c("Closed" = 0, "Open" = 1),
+                          selected = 0,
+                          inline = TRUE
+                        )
+                      )
+                    }
                   ),
-                  
+
                   conditionalPanel(
                     condition = sprintf(
                       "input.%s_input_method == 'folder'",
                       prefix
                     ),
-                    
-                    textInput(
-                      paste0(prefix, "_eco_archive_name"),
-                      "Scenario Name (User Defined):",
-                      if (is_current) {
-                        "Observed Conditions Run 1"
-                      } else {
-                        "Forecast Conditions Run 1"
-                      }
-                    ),
-                    
-                    tags$p(
-                      class = "figure-note",
-                      paste(
-                        "The model inputs are calculated from the latest",
-                        "30 measured days. DCC is read from the archive file",
-                        "when available; otherwise it defaults to closed (0)."
+
+                    if (!is_current) {
+                      tagList(
+                                                div(
+                          class = "weekly-inputs-info-row",
+                          tags$div(
+                            class = "flow-info-hover",
+                            tags$span(
+                              class = "flow-info-trigger",
+                              tabindex = "0",
+                              role = "button",
+                              `aria-label` = "Weekly Assessment input information",
+                              icon("info-circle")
+                            ),
+                            tags$div(
+                              class = "flow-info-popover",
+                              tags$div(
+                                class = "flow-info-static",
+                                "Inputs are read-only. Values remain blank until an archive week is selected. The 7-day average flow from the selected archive week and flow source is used for all models."
+                              )
+                            )
+                          )
+                        ),
+
+                        div(
+                          class = "exploration-action-row weekly-action-row",
+                          div(
+                            class = "exploration-scenario-field",
+                            textInput(
+                              paste0(prefix, "_eco_archive_name"),
+                              "Scenario Name:",
+                              ""
+                            )
+                          ),
+                          div(
+                            class = "exploration-action-buttons",
+                            actionButton(
+                              paste0("run_", prefix, "_eco"),
+                              "Run Models",
+                              icon = icon("play"),
+                              class = "btn-success model-run-button"
+                            ),
+                            downloadButton(
+                              paste0("download_", prefix, "_eco"),
+                              "Download Results (CSV)",
+                              class = "btn-primary"
+                            )
+                          )
+                        ),
+
+                        div(
+                          class = "exploration-input-grid exploration-eco-grid weekly-input-grid",
+                          weekly_value_card(
+                            "SAC: Sacramento River Flow at Freeport (cfs):",
+                            "forecast_eco_sac_value",
+                            "Read-only 7-day average SAC calculated from the selected archive week and flow source."
+                          ),
+                          weekly_value_card(
+                            "YOL: Yolo Bypass Flow (cfs):",
+                            "forecast_eco_yol_value",
+                            "Read-only 7-day average YOL calculated from the selected archive week and flow source."
+                          ),
+                          weekly_value_card(
+                            "MOKE: Mokelumne Flow (cfs):",
+                            "forecast_eco_moke_value",
+                            "Read-only 7-day average MOKE calculated from the selected archive week and flow source."
+                          ),
+                          weekly_value_card(
+                            "Delta Cross Channel Status:",
+                            "forecast_eco_dcc_value",
+                            "Read-only DCC status from the selected archive week. DCC is a status variable rather than a flow."
+                          )
+                        )
                       )
-                    )
-                  ),
-                  
-                  actionButton(
-                    paste0("run_", prefix, "_eco"),
-                    "Run ECO-PTM Emulator Models",
-                    icon = icon("play"),
-                    class = "btn-success",
-                    width = "100%"
-                  ),
-                  
-                  br(), br(),
-                  
-                  downloadButton(
-                    paste0("download_", prefix, "_eco"),
-                    "Download ECO-PTM Emulator Results (CSV)",
-                    class = "btn-primary",
-                    style = "width:100%;"
+                    } else {
+                      tagList(
+                        textInput(
+                          paste0(prefix, "_eco_archive_name"),
+                          "Scenario Name (User Defined):",
+                          "Observed Conditions Run 1"
+                        ),
+                        tags$p(
+                          class = "figure-note",
+                          paste(
+                            "The model inputs are calculated from the latest",
+                            "7 measured days. DCC is read from the archive file",
+                            "when available; otherwise it defaults to closed (0)."
+                          )
+                        )
+                      )
+                    }
                   )
                 ),
-                
+
                 box(
-                  width = 8,
+                  width = 12,
                   title = "ECO-PTM Emulator Results",
                   status = status_name,
                   solidHeader = TRUE,
+                  class = "model-results-box",
+
+                  tags$div(
+                    class = "model-results-loading",
+                    tags$div(
+                      class = "model-results-loading-card",
+                      icon("spinner", class = "fa-spin"),
+                      tags$span(" Running models and loading results...")
+                    )
+                  ),
                   
                   div(
                     class = "wide-table-scroll",
@@ -699,8 +1011,8 @@ ui <- dashboardPage(
     sidebarMenu(
       id = "tabs",
       menuItem("About", tabName = "about", icon = icon("info-circle")),
-      menuItem("Run Observed Conditions", tabName = "run_current", icon = icon("water")),
-      menuItem("Run Forecast Conditions", tabName = "run_forecast", icon = icon("cloud-sun")),
+      menuItem("Exploration", tabName = "run_current", icon = icon("water")),
+      menuItem("Weekly Assessments", tabName = "run_forecast", icon = icon("cloud-sun")),
       menuItem("Scenario Comparison", tabName = "comparison", icon = icon("balance-scale")),
       menuItem("Data Access", tabName = "data", icon = icon("database"))
     )
@@ -727,14 +1039,14 @@ ui <- dashboardPage(
         .box{border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-top:4px solid #0a7e8c}
         .current-theme{background:#fffaf2;padding:6px;border-radius:8px}
         .current-theme .box{border-top-color:#e69f00}
-        .forecast-theme{background:#f7f3fb;padding:6px;border-radius:8px}
-        .forecast-theme .box{border-top-color:#7b4fa3}
-        .forecast-theme .box.box-info > .box-header{
-          background:#7b4fa3 !important;
+        .forecast-theme{background:#fffaf2;padding:6px;border-radius:8px}
+        .forecast-theme .box{border-top-color:#e69f00}
+        .forecast-theme .box.box-warning > .box-header{
+          background:#f39c12 !important;
           color:#ffffff !important;
         }
-        .forecast-theme .box.box-info{
-          border-top-color:#7b4fa3 !important;
+        .forecast-theme .box.box-warning{
+          border-top-color:#e69f00 !important;
         }
         .forecast-single-warning{
           margin-top:10px;
@@ -753,18 +1065,18 @@ ui <- dashboardPage(
         .observed-flow-note a{
           font-weight:600;
         }
-        /* Align the input and results panels to the height of the taller panel. */
+        /* Keep input/results panels compact and let each panel fit its own content. */
         .emulator-top-row{
           display:flex;
           flex-wrap:wrap;
-          align-items:stretch;
+          align-items:flex-start;
         }
         .emulator-top-row > [class*='col-']{
-          display:flex;
+          display:block;
         }
         .emulator-top-row > [class*='col-'] > .box{
           width:100%;
-          height:100%;
+          height:auto;
           margin-bottom:15px;
         }
         @media (max-width:991px){
@@ -777,6 +1089,7 @@ ui <- dashboardPage(
         }
 
         body{font-family:Segoe UI;color:#333}
+
 
         .figure-note {
           font-size: 14px;
@@ -869,7 +1182,645 @@ ui <- dashboardPage(
         font-size: 17px;
         font-weight: 700;
         }
-          ")),
+
+        /* Exploration page: compact, accessible horizontal input layout. */
+        .current-theme .exploration-intro {
+          margin-bottom: 16px;
+        }
+
+        .current-theme .nav-tabs {
+          margin-bottom: 14px;
+        }
+
+        .current-theme .exploration-action-row {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 18px;
+          padding: 2px 0 16px 0;
+          margin-bottom: 16px;
+          border-bottom: 1px solid #e3eaee;
+        }
+
+        .current-theme .exploration-scenario-field {
+          flex: 1 1 420px;
+          max-width: 620px;
+        }
+
+        .current-theme .exploration-scenario-field .form-group {
+          margin-bottom: 0;
+        }
+
+        .current-theme .exploration-action-buttons {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 10px;
+          flex: 0 0 auto;
+          padding-bottom: 1px;
+        }
+
+        .current-theme .exploration-action-buttons .btn {
+          min-width: 150px;
+          min-height: 36px;
+          border-radius: 5px;
+          font-weight: 600;
+        }
+
+        .current-theme .exploration-input-grid {
+          display: grid;
+          gap: 14px;
+          width: 100%;
+          align-items: stretch;
+        }
+
+        .current-theme .exploration-ptm-grid {
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+
+        .current-theme .exploration-eco-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .current-theme .exploration-input-card {
+          position: relative;
+          min-width: 0;
+          padding: 12px 12px 10px 12px;
+          background: #ffffff;
+          border: 1px solid #d9e5e9;
+          border-radius: 7px;
+          box-shadow: 0 1px 3px rgba(0,0,0,.035);
+        }
+
+        .current-theme .exploration-input-card:hover {
+          border-color: #aacbd2;
+          box-shadow: 0 2px 7px rgba(0,0,0,.055);
+        }
+
+        .current-theme .exploration-input-card .form-group {
+          margin-bottom: 0;
+        }
+
+        .current-theme .exploration-input-card label.control-label {
+          display: block;
+          min-height: 38px;
+          margin-bottom: 6px;
+          color: #34444c;
+          font-size: 12.5px;
+          line-height: 1.3;
+          font-weight: 600;
+        }
+
+        .current-theme .exploration-input-card input.form-control,
+        .current-theme .exploration-input-card select.form-control {
+          width: 100%;
+          height: 36px;
+          border-radius: 4px;
+        }
+
+        .current-theme .exploration-input-card .radio {
+          margin-top: 7px;
+        }
+
+        .current-theme .input-card-spacer {
+          height: 22px;
+        }
+
+        /* Accessible hover/focus information control.
+           Live date/flow notes render inside the popover instead of below inputs. */
+        .current-theme .flow-info-hover {
+          position: relative;
+          display: flex;
+          justify-content: flex-end;
+          min-height: 22px;
+          margin-bottom: 2px;
+          z-index: 25;
+        }
+
+        .current-theme .flow-info-trigger {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 22px;
+          height: 22px;
+          color: #287d93;
+          background: #eef8fa;
+          border: 1px solid #b9dbe2;
+          border-radius: 50%;
+          font-size: 13px;
+          cursor: help;
+          outline: none;
+        }
+
+        .current-theme .flow-info-trigger:hover,
+        .current-theme .flow-info-trigger:focus {
+          color: #075f6d;
+          background: #e2f3f6;
+          border-color: #82bcc7;
+          box-shadow: 0 0 0 2px rgba(10,126,140,.12);
+        }
+
+        .current-theme .flow-info-popover {
+          display: none;
+          position: absolute;
+          top: 27px;
+          right: 0;
+          width: 330px;
+          max-width: min(330px, calc(100vw - 60px));
+          padding: 12px 14px;
+          background: #ffffff;
+          color: #33454d;
+          border: 1px solid #c9d9de;
+          border-radius: 7px;
+          box-shadow: 0 5px 18px rgba(0,0,0,.14);
+          font-size: 12.5px;
+          line-height: 1.45;
+          text-align: left;
+          white-space: normal;
+        }
+
+        .current-theme .flow-info-hover:hover .flow-info-popover,
+        .current-theme .flow-info-hover:focus-within .flow-info-popover {
+          display: block;
+        }
+
+        .current-theme .flow-info-popover hr {
+          margin: 9px 0;
+          border-top: 1px solid #e4ecef;
+        }
+
+        .current-theme .flow-info-popover .observed-flow-note {
+          margin: 0;
+          padding: 0;
+          background: transparent;
+          border: 0;
+          color: #40525a;
+          font-size: 12.5px;
+          line-height: 1.45;
+        }
+
+        .current-theme .flow-info-popover .observed-flow-note a {
+          font-weight: 600;
+        }
+
+        /* Keep information popovers fully visible, including the leftmost EXP card. */
+        .current-theme .exploration-input-grid,
+        .current-theme .exploration-input-card,
+        .current-theme .box-body {
+          overflow: visible;
+        }
+
+        .current-theme .exploration-input-card:hover,
+        .current-theme .exploration-input-card:focus-within {
+          z-index: 60;
+        }
+
+        .current-theme .exploration-input-card:first-child .flow-info-popover {
+          left: 0;
+          right: auto;
+        }
+
+        /* Keep section information icons immediately beside their headings. */
+        .current-theme .section-heading-with-info {
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          gap: 7px;
+          margin: 4px 0 10px 0;
+        }
+
+        .current-theme .section-heading-with-info h4 {
+          margin: 0;
+        }
+
+        .current-theme .section-heading-with-info .flow-info-hover {
+          display: inline-flex;
+          flex: 0 0 auto;
+          min-height: 0;
+          margin: 0;
+          z-index: 70;
+        }
+
+        .current-theme .section-heading-with-info .flow-info-popover {
+          left: 0;
+          right: auto;
+        }
+
+        /* Compact workflow guidance for Exploration. */
+        .current-theme .exploration-workflow-guide {
+          display: flex;
+          align-items: flex-start;
+          gap: 9px;
+          margin: 0 0 14px 0;
+          padding: 10px 12px;
+          background: #f4fafb;
+          border: 1px solid #cfe3e7;
+          border-left: 4px solid #0a7e8c;
+          border-radius: 6px;
+          color: #344a52;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+
+        .current-theme .exploration-workflow-guide > i {
+          margin-top: 2px;
+          color: #0a7e8c;
+        }
+
+                /* Full-width input and result sections on Exploration keep the page linear. */
+        .current-theme .emulator-top-row {
+          display: block;
+        }
+
+        .current-theme .emulator-top-row > [class*='col-'] {
+          display: block;
+          width: 100%;
+          float: none;
+        }
+
+        .current-theme .emulator-top-row > [class*='col-'] > .box {
+          width: 100%;
+          height: auto;
+          margin-bottom: 16px;
+        }
+
+        @media (max-width: 1350px) {
+          .current-theme .exploration-ptm-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 1050px) {
+          .current-theme .exploration-eco-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .current-theme .exploration-action-row {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .current-theme .exploration-scenario-field {
+            max-width: none;
+          }
+
+          .current-theme .exploration-action-buttons {
+            justify-content: flex-start;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .current-theme .exploration-ptm-grid,
+          .current-theme .exploration-eco-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .current-theme .exploration-action-buttons {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .current-theme .exploration-action-buttons .btn {
+            width: 100%;
+          }
+
+          .current-theme .flow-info-popover {
+            right: auto;
+            left: 0;
+          }
+        }
+
+        /* Loading state stays inside the results panel. */
+        .model-results-box .box-body {
+          position: relative;
+          min-height: 220px;
+        }
+        .model-results-loading {
+          display: none;
+          position: absolute;
+          z-index: 2000;
+          inset: 0;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255,255,255,0.88);
+          border-radius: 4px;
+        }
+        .model-run-requested .model-results-loading {
+          display: flex;
+        }
+        .model-results-loading-card {
+          padding: 16px 20px;
+          background: #ffffff;
+          border: 1px solid #d9e4ea;
+          border-radius: 7px;
+          box-shadow: 0 2px 10px rgba(0,0,0,.08);
+          color: #31515f;
+          font-size: 15px;
+          font-weight: 600;
+        }
+    
+        .weekly-input-method-row{
+          display:flex;
+          align-items:flex-start;
+          gap:32px;
+          flex-wrap:wrap;
+        }
+        .weekly-input-method-primary,
+        .weekly-input-method-source{
+          flex:1 1 360px;
+          min-width:280px;
+        }
+        .weekly-archive-selection{
+          margin-top:8px;
+          display:flex;
+          gap:24px;
+          align-items:flex-end;
+          flex-wrap:wrap;
+        }
+        .weekly-archive-selection .form-group{
+          min-width:280px;
+          margin-bottom:0;
+        }
+        .weekly-static-value{
+          background:#f7fafb !important;
+          cursor:default;
+          min-height:34px;
+          display:flex;
+          align-items:center;
+          font-weight:600;
+        }
+        .weekly-action-row{
+          margin-bottom:18px;
+        }
+      
+        /* Weekly Assessments: mirror Exploration's readable visual system. */
+        .forecast-theme .exploration-workflow-guide {
+          display:flex;
+          align-items:flex-start;
+          gap:9px;
+          margin:0 0 14px 0;
+          padding:10px 12px;
+          background:#f4fafb;
+          border:1px solid #cfe3e7;
+          border-left:4px solid #0a7e8c;
+          border-radius:6px;
+          color:#344a52;
+          font-size:13px;
+          line-height:1.45;
+        }
+        .forecast-theme .exploration-workflow-guide > i {
+          margin-top:2px;
+          color:#0a7e8c;
+        }
+        .forecast-theme .exploration-action-row {
+          display:flex;
+          gap:16px;
+          align-items:flex-end;
+          justify-content:space-between;
+          flex-wrap:wrap;
+        }
+        .forecast-theme .exploration-scenario-field {
+          flex:1 1 360px;
+          max-width:520px;
+        }
+        .forecast-theme .exploration-action-buttons {
+          display:flex;
+          gap:10px;
+          align-items:center;
+          flex-wrap:wrap;
+        }
+        .forecast-theme .weekly-input-grid {
+          display:grid;
+          gap:12px;
+          align-items:stretch;
+          margin-top:12px;
+        }
+        .forecast-theme .exploration-ptm-grid.weekly-input-grid {
+          grid-template-columns:repeat(3, minmax(0, 1fr));
+        }
+        .forecast-theme .exploration-eco-grid.weekly-input-grid {
+          grid-template-columns:repeat(4, minmax(0, 1fr));
+        }
+        .forecast-theme .exploration-input-card {
+          position:relative;
+          min-width:0;
+          padding:14px 14px 12px;
+          background:#ffffff;
+          border:1px solid #e1e7eb;
+          border-radius:7px;
+          box-shadow:0 1px 3px rgba(0,0,0,.04);
+        }
+        .forecast-theme .exploration-input-card label {
+          display:block;
+          font-weight:600;
+          margin-bottom:7px;
+          line-height:1.35;
+        }
+        .forecast-theme .flow-info-hover {
+          position:relative;
+          display:inline-flex;
+          z-index:80;
+        }
+        .forecast-theme .flow-info-trigger {
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          width:24px;
+          height:24px;
+          color:#0a7e8c;
+          cursor:help;
+          border-radius:50%;
+          outline:none;
+        }
+        .forecast-theme .flow-info-popover {
+          display:none;
+          position:absolute;
+          z-index:3000;
+          top:28px;
+          left:0;
+          width:320px;
+          max-width:min(320px, 78vw);
+          padding:10px 12px;
+          background:#ffffff;
+          border:1px solid #cfd9df;
+          border-radius:6px;
+          box-shadow:0 4px 14px rgba(0,0,0,.12);
+          color:#344a52;
+          font-size:12px;
+          line-height:1.45;
+        }
+        .forecast-theme .flow-info-hover:hover .flow-info-popover,
+        .forecast-theme .flow-info-hover:focus-within .flow-info-popover {
+          display:block;
+        }
+        .forecast-theme .section-heading-with-info {
+          display:flex;
+          align-items:center;
+          justify-content:flex-start;
+          gap:7px;
+          margin:4px 0 10px 0;
+        }
+        .forecast-theme .section-heading-with-info h4 {
+          margin:0;
+        }
+        .forecast-theme .section-heading-with-info .flow-info-hover {
+          flex:0 0 auto;
+          margin:0;
+        }
+        .forecast-theme .weekly-inputs-info-row {
+          display:flex;
+          justify-content:flex-start;
+          margin:0 0 8px 0;
+        }
+        .map-window-heading {
+          margin-top:12px !important;
+          margin-bottom:2px !important;
+        }
+        .map-window-heading h4 {
+          font-size:14px;
+          font-weight:700;
+        }
+        @media (max-width:1100px) {
+          .forecast-theme .exploration-ptm-grid.weekly-input-grid {
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+          }
+          .forecast-theme .exploration-eco-grid.weekly-input-grid {
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+          }
+        }
+        @media (max-width:760px) {
+          .forecast-theme .exploration-ptm-grid.weekly-input-grid,
+          .forecast-theme .exploration-eco-grid.weekly-input-grid {
+            grid-template-columns:1fr;
+          }
+          .forecast-theme .exploration-action-buttons {
+            width:100%;
+          }
+        }
+        .compare-input-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;align-items:start;margin-bottom:14px;}
+        .compare-input-grid .form-group {margin-bottom:6px;}
+        .comparison-controls-row {
+          display:grid;
+          grid-template-columns:minmax(220px,1.05fr) minmax(180px,.75fr) minmax(360px,2fr) auto;
+          gap:14px 18px;
+          align-items:end;
+          width:100%;
+        }
+        .omri-controls-row {
+          grid-template-columns:minmax(260px,1.25fr) minmax(220px,1fr) minmax(190px,.75fr) auto auto;
+        }
+        .comparison-control-item {min-width:0;}
+        .comparison-runs-item .checkbox-inline {
+          margin-left:0;
+          margin-right:14px;
+          margin-bottom:6px;
+        }
+        .comparison-download-item,
+        .comparison-action-item {
+          display:flex;
+          align-items:flex-end;
+          padding-bottom:15px;
+        }
+        .comparison-download-item .btn,
+        .comparison-action-item .btn {white-space:normal;}
+        .comparison-section-heading {
+          justify-content:flex-start !important;
+          gap:7px !important;
+          margin-bottom:10px !important;
+        }
+        .comparison-section-heading h4 {margin:0 !important;}
+
+        /* Scenario Comparison info icons: keep descriptive text hidden until hover/focus. */
+        .content-wrapper .flow-info-hover,
+        .tab-content .flow-info-hover {
+          position:relative;
+          display:inline-flex;
+          align-items:center;
+          z-index:200;
+        }
+
+        .content-wrapper .flow-info-trigger,
+        .tab-content .flow-info-trigger {
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          width:22px;
+          height:22px;
+          color:#0a7e8c;
+          cursor:help;
+          border-radius:50%;
+          outline:none;
+          line-height:1;
+        }
+
+        .content-wrapper .flow-info-popover,
+        .tab-content .flow-info-popover {
+          display:none !important;
+          position:absolute;
+          z-index:5000;
+          top:26px;
+          left:0;
+          width:340px;
+          max-width:min(340px, 80vw);
+          padding:10px 12px;
+          background:#ffffff;
+          border:1px solid #cfd9df;
+          border-radius:6px;
+          box-shadow:0 5px 16px rgba(0,0,0,.16);
+          color:#344a52;
+          font-size:12px;
+          font-weight:400;
+          line-height:1.45;
+          text-align:left;
+          white-space:normal;
+        }
+
+        .content-wrapper .flow-info-hover:hover .flow-info-popover,
+        .content-wrapper .flow-info-hover:focus-within .flow-info-popover,
+        .tab-content .flow-info-hover:hover .flow-info-popover,
+        .tab-content .flow-info-hover:focus-within .flow-info-popover {
+          display:block !important;
+        }
+
+        .comparison-section-heading,
+        .section-heading-with-info {
+          display:flex;
+          align-items:center;
+          justify-content:flex-start;
+          gap:7px;
+        }
+
+        .comparison-section-heading .flow-info-hover,
+        .section-heading-with-info .flow-info-hover {
+          flex:0 0 auto;
+          margin-left:0 !important;
+        }
+        .comparison-global-guide {
+          margin:0 0 14px 0 !important;
+        }
+        .comparison-section-heading {
+          padding:4px 0 2px 0;
+        }
+        .comparison-section-heading .flow-info-hover {
+          margin-left:0 !important;
+          flex:0 0 auto;
+        }
+        @media (max-width:1200px) {
+          .comparison-controls-row,
+          .omri-controls-row {
+            grid-template-columns:repeat(2,minmax(0,1fr));
+          }
+          .comparison-runs-item {grid-column:1 / -1;}
+        }
+        @media (max-width:760px) {
+          .comparison-controls-row,
+          .omri-controls-row {grid-template-columns:1fr;}
+          .comparison-runs-item {grid-column:auto;}
+          .comparison-download-item,
+          .comparison-action-item {padding-bottom:0;}
+        }
+        @media (max-width:900px) {.compare-input-grid {grid-template-columns:1fr;}}
+")),
       tags$script(HTML("
       function resizeLeafletMaps() {
         setTimeout(function() {
@@ -891,6 +1842,39 @@ ui <- dashboardPage(
     
       $(document).on('click', '.sidebar-menu a', function() {
         resizeLeafletMaps();
+      });
+
+      var modelRunWaiting = false;
+      var modelRunBecameBusy = false;
+
+      $(function() {
+        $('body').tooltip({
+          selector: '.flow-info-icon',
+          container: 'body'
+        });
+      });
+
+      $(document).on('click', '.model-run-button', function() {
+        modelRunWaiting = true;
+        modelRunBecameBusy = false;
+        $('body').addClass('model-run-requested');
+      });
+
+      $(document).on('shiny:busy', function() {
+        if (modelRunWaiting) {
+          modelRunBecameBusy = true;
+          $('body').addClass('model-run-requested');
+        }
+      });
+
+      $(document).on('shiny:idle', function() {
+        if (modelRunWaiting && modelRunBecameBusy) {
+          setTimeout(function() {
+            $('body').removeClass('model-run-requested');
+            modelRunWaiting = false;
+            modelRunBecameBusy = false;
+          }, 150);
+        }
       });
     "))
     ),
@@ -1179,123 +2163,158 @@ ui <- dashboardPage(
       
       tabItem(
         tabName = "comparison",
+
+        tags$div(
+          class = "exploration-workflow-guide comparison-global-guide",
+          icon("info-circle"),
+          tags$span(
+            tags$b("How to use this page: "),
+            "Select a model and two or more compatible saved runs from this Shiny session. Review the comparison chart, spatial map, and detailed table below. PTM and Event Horizon runs support spatial comparison; ECO-PTM results are compared in the chart and table."
+          )
+        ),
+
         tabsetPanel(
           id = "comparison_sections",
           
           tabPanel(
-            "General Scenario Comparison",
-            
-            # ----------------------------------------------------------
-            # Top panel: controls + entrainment / model comparison chart
-            # ----------------------------------------------------------
+            "Library of runs",
+
             fluidRow(
               box(
-                width = 4,
+                width = 12,
                 title = "Comparison Controls",
                 status = "primary",
                 solidHeader = TRUE,
-                
-                selectInput(
-                  "comparison_model",
-                  "Model:",
-                  choices = c(
-                    "PTM Emulator 7-Day Entrainment",
-                    "PTM Emulator 30-Day Entrainment",
-                    "ECO-PTM Emulator Survival",
-                    "ECO-PTM Emulator Interior Routing",
-                    "Event Horizon"
+                div(
+                  class = "comparison-controls-row",
+                  div(
+                    class = "comparison-control-item",
+                    selectInput(
+                      "comparison_model",
+                      "Model:",
+                      choices = c(
+                        "PTM Emulator 7-Day Entrainment",
+                        "PTM Emulator 30-Day Entrainment",
+                        "ECO-PTM Emulator Survival",
+                        "ECO-PTM Emulator Interior Routing",
+                        "Event Horizon"
+                      )
+                    )
+                  ),
+                  div(
+                    class = "comparison-control-item",
+                    conditionalPanel(
+                      condition = "input.comparison_model == 'PTM Emulator 7-Day Entrainment' || input.comparison_model == 'PTM Emulator 30-Day Entrainment'",
+                      selectInput(
+                        "comparison_map_threshold",
+                        "Map Risk Threshold (%):",
+                        choices = seq(15, 80, by = 5),
+                        selected = 25
+                      )
+                    )
+                  ),
+                  div(
+                    class = "comparison-control-item comparison-runs-item",
+                    uiOutput("comparison_run_selector")
+                  ),
+                  div(
+                    class = "comparison-control-item comparison-download-item",
+                    downloadButton(
+                      "download_comparison",
+                      "Download Comparison (CSV)",
+                      class = "btn-primary"
+                    )
                   )
-                ),
-                
-                conditionalPanel(
-                  condition = "input.comparison_model == 'PTM Emulator 7-Day Entrainment' || input.comparison_model == 'PTM Emulator 30-Day Entrainment'",
-                  selectInput(
-                    "comparison_map_threshold",
-                    "Map Risk Threshold (%):",
-                    choices = seq(15, 80, by = 5),
-                    selected = 25
-                  )
-                ),
-                
-                uiOutput("comparison_run_selector"),
-                
-                downloadButton(
-                  "download_comparison",
-                  "Download Comparison (CSV)",
-                  class = "btn-primary",
-                  style = "width:100%;"
-                )
-              ),
-              
-              box(
-                width = 8,
-                title = "Scenario Comparison Chart",
-                status = "primary",
-                solidHeader = TRUE,
-                
-                tags$p(
-                  class = "figure-note",
-                  paste(
-                    "Compare compatible model runs saved during the current Shiny session.",
-                    "For PTM Emulator models, the chart compares predicted entrainment",
-                    "by DSM2 node. For Event Horizon, the chart compares predicted",
-                    "river-mile distance across selected scenarios."
-                  )
-                ),
-                
-                plotlyOutput(
-                  "comparison_plot",
-                  height = 700
                 )
               )
             ),
-            
-            # ----------------------------------------------------------
-            # Middle panel: entrainment risk and event horizon map
-            # ----------------------------------------------------------
+
             fluidRow(
               box(
                 width = 12,
-                title = "Scenario Spatial Comparison Map",
                 status = "primary",
-                solidHeader = TRUE,
-                
-                tags$p(
-                  class = "figure-note",
-                  paste(
-                    "This map compares spatial outputs for the selected scenarios.",
-                    "For PTM Emulator comparisons, high- and low-risk zones are",
-                    "overlaid for each selected scenario. For Event Horizon comparisons,",
-                    "the predicted channel-path reaches are overlaid in different colors."
+                solidHeader = FALSE,
+                tags$div(
+                  class = "section-heading-with-info comparison-section-heading",
+                  tags$h4("Scenario Comparison Chart"),
+                  tags$div(
+                    class = "flow-info-hover",
+                    tags$span(
+                      class = "flow-info-trigger",
+                      tabindex = "0",
+                      role = "button",
+                      `aria-label` = "Scenario Comparison Chart information",
+                      icon("info-circle")
+                    ),
+                    tags$div(
+                      class = "flow-info-popover",
+                      tags$div(
+                        class = "flow-info-static",
+                        "Compare compatible model runs saved during the current Shiny session. For PTM Emulator models, the chart compares predicted entrainment by DSM2 node. For Event Horizon, the chart compares predicted river-mile distance across selected scenarios."
+                      )
+                    )
                   )
                 ),
-                
-                leafletOutput(
-                  "comparison_spatial_map",
-                  height = 650
-                )
+                plotlyOutput("comparison_plot", height = 700)
               )
             ),
-            
-            # ----------------------------------------------------------
-            # Bottom panel: detailed results table
-            # ----------------------------------------------------------
+
             fluidRow(
               box(
                 width = 12,
-                title = "Detailed Scenario Comparison Results",
                 status = "primary",
-                solidHeader = TRUE,
-                
-                tags$p(
-                  class = "figure-note",
-                  paste(
-                    "Detailed tabular results for the selected compatible runs.",
-                    "Use this table to inspect node-level PTM predictions, Event Horizon",
-                    "distances, model inputs, archive metadata, and saved-run identifiers."
+                solidHeader = FALSE,
+                tags$div(
+                  class = "section-heading-with-info comparison-section-heading",
+                  tags$h4("Scenario Spatial Comparison Map"),
+                  tags$div(
+                    class = "flow-info-hover",
+                    tags$span(
+                      class = "flow-info-trigger",
+                      tabindex = "0",
+                      role = "button",
+                      `aria-label` = "Scenario Spatial Comparison Map information",
+                      icon("info-circle")
+                    ),
+                    tags$div(
+                      class = "flow-info-popover",
+                      tags$div(
+                        class = "flow-info-static",
+                        "This map compares spatial outputs for the selected scenarios. For PTM Emulator comparisons, high- and low-risk zones are overlaid for each selected scenario. For Event Horizon comparisons, the predicted channel-path reaches are overlaid in different colors."
+                      )
+                    )
                   )
                 ),
-                
+                leafletOutput("comparison_spatial_map", height = 650)
+              )
+            ),
+
+            fluidRow(
+              box(
+                width = 12,
+                status = "primary",
+                solidHeader = FALSE,
+                tags$div(
+                  class = "section-heading-with-info comparison-section-heading",
+                  tags$h4("Detailed Scenario Comparison Results"),
+                  tags$div(
+                    class = "flow-info-hover",
+                    tags$span(
+                      class = "flow-info-trigger",
+                      tabindex = "0",
+                      role = "button",
+                      `aria-label` = "Detailed Scenario Comparison Results information",
+                      icon("info-circle")
+                    ),
+                    tags$div(
+                      class = "flow-info-popover",
+                      tags$div(
+                        class = "flow-info-static",
+                        "Detailed tabular results for the selected compatible runs. Use this table to inspect node-level PTM predictions, Event Horizon distances, model inputs, archive metadata, and saved-run identifiers."
+                      )
+                    )
+                  )
+                ),
                 div(
                   class = "wide-table-scroll",
                   tableOutput("comparison_table")
@@ -1303,144 +2322,256 @@ ui <- dashboardPage(
               )
             )
           ),
-          
+
           tabPanel(
-            "OMRI Archive Comparison",
-            
-            # ----------------------------------------------------------
-            # Top panel: controls + OMRI comparison chart
-            # ----------------------------------------------------------
+            "OMRI Comparison",
+
             fluidRow(
               box(
-                width = 4,
-                title = "Archive Comparison Controls",
+                width = 12,
+                title = "OMRI Comparison Controls",
                 status = "primary",
                 solidHeader = TRUE,
-                
-                uiOutput("omri_archive_dates_ui"),
-                
-                selectInput(
-                  "omri_comparison_model",
-                  "Forecast Model:",
-                  choices = c(
-                    "PTM Emulator 7-Day Entrainment",
-                    "Event Horizon"
+                div(
+                  class = "comparison-controls-row omri-controls-row",
+                  div(
+                    class = "comparison-control-item",
+                    uiOutput("omri_archive_dates_ui")
                   ),
-                  selected = "PTM Emulator 7-Day Entrainment"
-                ),
-                
-                conditionalPanel(
-                  condition = "input.omri_comparison_model == 'PTM Emulator 7-Day Entrainment'",
-                  selectInput(
-                    "omri_comparison_map_threshold",
-                    "Map Risk Threshold (%):",
-                    choices = seq(15, 80, by = 5),
-                    selected = 25
+                  div(
+                    class = "comparison-control-item",
+                    selectInput(
+                      "omri_comparison_model",
+                      "Forecast Model:",
+                      choices = c(
+                        "PTM Emulator 7-Day Entrainment",
+                        "Event Horizon"
+                      ),
+                      selected = "PTM Emulator 7-Day Entrainment"
+                    )
+                  ),
+                  div(
+                    class = "comparison-control-item",
+                    conditionalPanel(
+                      condition = "input.omri_comparison_model == 'PTM Emulator 7-Day Entrainment'",
+                      selectInput(
+                        "omri_comparison_map_threshold",
+                        "Map Risk Threshold (%):",
+                        choices = seq(15, 80, by = 5),
+                        selected = 25
+                      )
+                    ),
+                    conditionalPanel(
+                      condition = "input.omri_comparison_model == 'Event Horizon'",
+                      selectInput(
+                        "omri_comparison_risk",
+                        "Event Horizon Risk Level (%):",
+                        choices = seq(15, 80, by = 5),
+                        selected = 25
+                      )
+                    )
+                  ),
+                  div(
+                    class = "comparison-control-item comparison-action-item",
+                    actionButton(
+                      "build_omri_comparison",
+                      "Run All Available OMRI Scenarios",
+                      icon = icon("play"),
+                      class = "btn-success"
+                    )
+                  ),
+                  div(
+                    class = "comparison-control-item comparison-download-item",
+                    downloadButton(
+                      "download_omri_comparison",
+                      "Download OMRI Comparison (CSV)",
+                      class = "btn-primary"
+                    )
                   )
-                ),
-                
-                conditionalPanel(
-                  condition = "input.omri_comparison_model == 'Event Horizon'",
-                  selectInput(
-                    "omri_comparison_risk",
-                    "Event Horizon Risk Level (%):",
-                    choices = seq(15, 80, by = 5),
-                    selected = 25
-                  )
-                ),
-                
-                actionButton(
-                  "build_omri_comparison",
-                  "Run All Available OMRI Scenarios",
-                  icon = icon("play"),
-                  class = "btn-success",
-                  width = "100%"
-                ),
-                
-                br(), br(),
-                
-                downloadButton(
-                  "download_omri_comparison",
-                  "Download OMRI Comparison (CSV)",
-                  class = "btn-primary",
-                  style = "width:100%;"
                 )
-              ),
-              
+              )
+            ),
+
+            fluidRow(
               box(
-                width = 8,
-                title = "OMRI Forecast Scenario Comparison Chart",
+                width = 12,
                 status = "primary",
-                solidHeader = TRUE,
-                
-                tags$p(
-                  class = "figure-note",
-                  paste(
-                    "For every selected archive date, the app reads each available OMRI CSV,",
-                    "calculates the seven-day forecast average, carries forward the latest measured XGEO,",
-                    "and compares the forecast emulator results."
+                solidHeader = FALSE,
+                tags$div(
+                  class = "section-heading-with-info comparison-section-heading",
+                  tags$h4("OMRI Forecast Scenario Comparison Chart"),
+                  tags$div(
+                    class = "flow-info-hover",
+                    tags$span(
+                      class = "flow-info-trigger",
+                      tabindex = "0",
+                      role = "button",
+                      `aria-label` = "OMRI Forecast Scenario Comparison Chart information",
+                      icon("info-circle")
+                    ),
+                    tags$div(
+                      class = "flow-info-popover",
+                      tags$div(
+                        class = "flow-info-static",
+                        "For every selected archive date, the app reads each available OMRI CSV, calculates the seven-day forecast average, carries forward the latest measured XGEO, and compares the forecast emulator results."
+                      )
+                    )
                   )
                 ),
-                
                 uiOutput("omri_comparison_status"),
-                
-                plotlyOutput(
-                  "omri_comparison_plot",
-                  height = 750
-                )
+                plotlyOutput("omri_comparison_plot", height = 750)
               )
             ),
-            
-            # ----------------------------------------------------------
-            # Middle panel: OMRI spatial map
-            # ----------------------------------------------------------
+
             fluidRow(
               box(
                 width = 12,
-                title = "OMRI Forecast Scenario Spatial Comparison Map",
                 status = "primary",
-                solidHeader = TRUE,
-                
-                tags$p(
-                  class = "figure-note",
-                  paste(
-                    "This map compares spatial outputs for all available OMRI forecast scenarios",
-                    "from the selected archive date(s). For PTM Emulator comparisons, high- and",
-                    "low-risk zones are overlaid by OMRI scenario. For Event Horizon comparisons,",
-                    "the predicted channel-path reaches are overlaid in different colors."
+                solidHeader = FALSE,
+                tags$div(
+                  class = "section-heading-with-info comparison-section-heading",
+                  tags$h4("OMRI Forecast Scenario Spatial Comparison Map"),
+                  tags$div(
+                    class = "flow-info-hover",
+                    tags$span(
+                      class = "flow-info-trigger",
+                      tabindex = "0",
+                      role = "button",
+                      `aria-label` = "OMRI Forecast Scenario Spatial Comparison Map information",
+                      icon("info-circle")
+                    ),
+                    tags$div(
+                      class = "flow-info-popover",
+                      tags$div(
+                        class = "flow-info-static",
+                        "This map compares spatial outputs for all available OMRI forecast scenarios from the selected archive date(s). For PTM Emulator comparisons, high- and low-risk zones are overlaid by OMRI scenario. For Event Horizon comparisons, the predicted channel-path reaches are overlaid in different colors."
+                      )
+                    )
                   )
                 ),
-                
-                leafletOutput(
-                  "omri_comparison_spatial_map",
-                  height = 650
-                )
+                leafletOutput("omri_comparison_spatial_map", height = 650)
               )
             ),
-            
-            # ----------------------------------------------------------
-            # Bottom panel: OMRI detailed table
-            # ----------------------------------------------------------
+
             fluidRow(
               box(
                 width = 12,
-                title = "Detailed OMRI Forecast Scenario Results",
                 status = "primary",
-                solidHeader = TRUE,
-                
-                tags$p(
-                  class = "figure-note",
-                  paste(
-                    "Detailed tabular results for the selected archive date(s) and OMRI scenario(s)."
+                solidHeader = FALSE,
+                tags$div(
+                  class = "section-heading-with-info comparison-section-heading",
+                  tags$h4("Detailed OMRI Forecast Scenario Results"),
+                  tags$div(
+                    class = "flow-info-hover",
+                    tags$span(
+                      class = "flow-info-trigger",
+                      tabindex = "0",
+                      role = "button",
+                      `aria-label` = "Detailed OMRI Forecast Scenario Results information",
+                      icon("info-circle")
+                    ),
+                    tags$div(
+                      class = "flow-info-popover",
+                      tags$div(
+                        class = "flow-info-static",
+                        "Detailed tabular results for the selected archive date(s) and OMRI scenario(s)."
+                      )
+                    )
                   )
                 ),
-                
                 div(
                   class = "wide-table-scroll",
                   tableOutput("omri_comparison_table")
                 )
               )
             )
+          ),
+
+          tabPanel(
+            "Compare 2 Scenarios",
+            fluidRow(
+              box(
+                width = 6, title = "Scenario 1", status = "warning", solidHeader = TRUE,
+                tags$div(
+                  class = "section-heading-with-info",
+                  tags$h4("Inputs"),
+                  tags$div(
+                    class = "flow-info-hover",
+                    tags$span(class = "flow-info-trigger", tabindex = "0", role = "button", `aria-label` = "Scenario 1 input information", icon("info-circle")),
+                    tags$div(class = "flow-info-popover", tags$div(class = "flow-info-static", "Scenario 1 is initialized with the same latest observed 7-day average flows used by the Exploration page. Edit any input to create a user-defined scenario, then click Run Scenario 1."))
+                  )
+                ),
+                textInput("compare_s1_name", "Scenario Name:", paste0(format(Sys.Date(), "%m%d%Y"), "_COMPARE_01")),
+                div(class = "compare-input-grid",
+                  textInput("compare_s1_exp", "EXP: Combined CVP and SWP Export (cfs):", "6,000"),
+                  textInput("compare_s1_ver", "VER: San Joaquin River Flow at Vernalis (cfs):", "3,000"),
+                  textInput("compare_s1_sac", "SAC: Sacramento River Flow at Freeport (cfs):", "18,000"),
+                  textInput("compare_s1_east", "EAST: East-Side River Flow (cfs):", "1,500"),
+                  textInput("compare_s1_xgeo", "XGEO: Interior Delta Flow (cfs):", "3,000"),
+                  textInput("compare_s1_yol", "YOL: Yolo Bypass Flow (cfs):", "1,000"),
+                  textInput("compare_s1_moke", "MOKE: Mokelumne Flow (cfs):", "800"),
+                  radioButtons("compare_s1_dcc", "Delta Cross Channel Status:", choices = c("Closed" = 0, "Open" = 1), selected = 0, inline = TRUE),
+                  selectInput("compare_s1_risk", "Entrainment / Event Horizon Risk Threshold (%):", choices = seq(15,80,by=5), selected = 25)
+                ),
+                actionButton("run_compare_s1", "Run Scenario 1", icon = icon("play"), class = "btn-success", width = "100%")
+              ),
+              box(
+                width = 6, title = "Scenario 2", status = "warning", solidHeader = TRUE,
+                tags$div(
+                  class = "section-heading-with-info",
+                  tags$h4("Inputs"),
+                  tags$div(
+                    class = "flow-info-hover",
+                    tags$span(class = "flow-info-trigger", tabindex = "0", role = "button", `aria-label` = "Scenario 2 input information", icon("info-circle")),
+                    tags$div(class = "flow-info-popover", tags$div(class = "flow-info-static", "Scenario 2 starts from the same current-condition baseline as Scenario 1. Change only the variables you want to test, then click Run Scenario 2."))
+                  )
+                ),
+                textInput("compare_s2_name", "Scenario Name:", paste0(format(Sys.Date(), "%m%d%Y"), "_COMPARE_02")),
+                div(class = "compare-input-grid",
+                  textInput("compare_s2_exp", "EXP: Combined CVP and SWP Export (cfs):", "6,000"),
+                  textInput("compare_s2_ver", "VER: San Joaquin River Flow at Vernalis (cfs):", "3,000"),
+                  textInput("compare_s2_sac", "SAC: Sacramento River Flow at Freeport (cfs):", "18,000"),
+                  textInput("compare_s2_east", "EAST: East-Side River Flow (cfs):", "1,500"),
+                  textInput("compare_s2_xgeo", "XGEO: Interior Delta Flow (cfs):", "3,000"),
+                  textInput("compare_s2_yol", "YOL: Yolo Bypass Flow (cfs):", "1,000"),
+                  textInput("compare_s2_moke", "MOKE: Mokelumne Flow (cfs):", "800"),
+                  radioButtons("compare_s2_dcc", "Delta Cross Channel Status:", choices = c("Closed" = 0, "Open" = 1), selected = 0, inline = TRUE),
+                  selectInput("compare_s2_risk", "Entrainment / Event Horizon Risk Threshold (%):", choices = seq(15,80,by=5), selected = 25)
+                ),
+                actionButton("run_compare_s2", "Run Scenario 2", icon = icon("play"), class = "btn-success", width = "100%")
+              )
+            ),
+            fluidRow(
+              box(width=12, title="Comparison Controls", status="primary", solidHeader=TRUE,
+                tags$div(class="section-heading-with-info", tags$h4("Select Output"),
+                  tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Comparison output information", icon("info-circle")),
+                    tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "After both scenarios have been run, choose which emulator output to compare. PTM and Event Horizon outputs include a spatial comparison map; ECO-PTM outputs are compared in the chart and table."))
+                  )
+                ),
+                selectInput("compare_two_model", "Model:", choices=c("PTM Emulator 7-Day Entrainment","PTM Emulator 30-Day Entrainment","ECO-PTM Emulator Survival","ECO-PTM Emulator Interior Routing","Event Horizon"), selected="PTM Emulator 7-Day Entrainment"),
+                conditionalPanel(condition="input.compare_two_model == 'PTM Emulator 7-Day Entrainment' || input.compare_two_model == 'PTM Emulator 30-Day Entrainment'",
+                  selectInput("compare_two_map_threshold", "Map Risk Threshold (%):", choices=seq(15,80,by=5), selected=25)
+                )
+              )
+            ),
+            fluidRow(box(width=12,status="primary",solidHeader=FALSE,
+              tags$div(class="section-heading-with-info", tags$h4("Scenario Comparison Chart"),
+                tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Comparison chart information", icon("info-circle")),
+                  tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "The chart compares Scenario 1 and Scenario 2 for the selected emulator output."))
+                )
+              ), plotlyOutput("compare_two_plot",height=700))),
+            fluidRow(box(width=12,status="primary",solidHeader=FALSE,
+              tags$div(class="section-heading-with-info", tags$h4("Scenario Spatial Comparison Map"),
+                tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Spatial comparison information", icon("info-circle")),
+                  tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "For PTM outputs, the map compares the two scenarios using the selected risk threshold. For Event Horizon, the predicted channel-path reaches are compared. ECO-PTM outputs do not have map geometry."))
+                )
+              ), leafletOutput("compare_two_spatial_map",height=650))),
+            fluidRow(box(width=12,status="primary",solidHeader=FALSE,
+              tags$div(class="section-heading-with-info", tags$h4("Detailed Scenario Comparison Results"),
+                tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Comparison table information", icon("info-circle")),
+                  tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "The table provides the detailed emulator outputs and input values for Scenario 1 and Scenario 2."))
+                )
+              ), div(class="wide-table-scroll", tableOutput("compare_two_table"))))
           )
         )
       ),

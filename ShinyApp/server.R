@@ -286,6 +286,7 @@ observed_source_links <- list(
   TRP = cdec_daily_link("TRP"),
   VNS = cdec_daily_link("VNS"),
   FPT = cdec_daily_link("FPT"),
+  FRE = cdec_daily_link("FRE"),
   NHG = cdec_daily_link("NHG"),
   MOK = "https://www.ebmud.com/water/about-your-water/water-supply/water-supply-reports/daily-water-supply-report",
   COS = "https://waterdata.usgs.gov/monitoring-location/USGS-11335000/#dataTypeId=daily-00060-0&period=P1Y&showFieldMeasurements=true",
@@ -683,6 +684,106 @@ read_cdec_daily_values <- function(
   result
 }
 
+read_cdec_query_daily_mflow <- function(
+  station_id,
+  end_date = Sys.Date(),
+  lookback_days = 45
+) {
+  station_id <- toupper(trimws(station_id))
+  end_date <- as.Date(end_date)
+  start_date <- end_date - lookback_days
+
+  query_url <- paste0(
+    "https://cdec.water.ca.gov/dynamicapp/QueryDaily?s=",
+    utils::URLencode(station_id, reserved = TRUE),
+    "&end=",
+    format(end_date, "%Y-%m-%d")
+  )
+
+  rows <- extract_cdec_query_daily_rows(
+    download_observed_source_file(
+      query_url,
+      fileext = ".html"
+    )
+  )
+
+  header_index <- which(
+    vapply(
+      rows,
+      function(row) any(grepl("M\\s*FLOW", row, ignore.case = TRUE, perl = TRUE)),
+      logical(1)
+    )
+  )[1]
+
+  if (is.na(header_index)) {
+    stop(paste0("Could not find the M FLOW column on the CDEC ", station_id, " daily page."))
+  }
+
+  header_row <- rows[[header_index]]
+  flow_column <- which(grepl("M\\s*FLOW", header_row, ignore.case = TRUE, perl = TRUE))[1]
+
+  parsed_rows <- lapply(
+    rows[(header_index + 1):length(rows)],
+    function(row) {
+      if (length(row) < flow_column || length(row) < 1) {
+        return(NULL)
+      }
+
+      date_value <- parse_observed_dates(row[1])
+      flow_value <- parse_cdec_numeric_value(row[flow_column])
+
+      if (is.na(date_value) || !is.finite(flow_value) || flow_value < 0) {
+        return(NULL)
+      }
+
+      data.frame(
+        Date = date_value,
+        Value = flow_value,
+        stringsAsFactors = FALSE
+      )
+    }
+  )
+
+  parsed_rows <- parsed_rows[!vapply(parsed_rows, is.null, logical(1))]
+
+  if (length(parsed_rows) == 0) {
+    stop(paste0("No usable M FLOW values were found on the CDEC ", station_id, " daily page."))
+  }
+
+  result <- dplyr::bind_rows(parsed_rows)
+  result <- result[
+    result$Date >= start_date &
+      result$Date <= end_date,
+    ,
+    drop = FALSE
+  ]
+  result <- result[!duplicated(result$Date, fromLast = TRUE), , drop = FALSE]
+  result <- result[order(result$Date), , drop = FALSE]
+
+  if (nrow(result) == 0) {
+    stop(paste0("No usable CDEC ", station_id, " M FLOW values were found in the requested date range."))
+  }
+
+  attr(result, "source_url") <- query_url
+  attr(result, "station_id") <- station_id
+  attr(result, "sensor_number") <- 41
+  result
+}
+
+read_fremont_weir_daily_values <- function(
+  end_date = Sys.Date(),
+  lookback_days = 45
+) {
+  # Read Fremont Weir directly from the CDEC QueryDaily page and
+  # explicitly extract the M FLOW (CFS) column. This avoids relying
+  # on a hard-coded sensor number for FRE.
+  read_cdec_query_daily_mflow(
+    station_id = "FRE",
+    end_date = end_date,
+    lookback_days = lookback_days
+  )
+}
+
 read_moke_daily_values <- function(
   file_path = file.path("data", "MOKE_daily.csv")
 ) {
@@ -711,13 +812,8 @@ read_moke_daily_values <- function(
   }
 
   result <- data.frame(
-    Date = as.Date(
-      sub(
-        " .*",
-        "",
-        as.character(raw_data[[1]])
-      ),
-      format = "%m/%d/%Y"
+    Date = parse_observed_dates(
+      as.character(raw_data[[1]])
     ),
     Value = suppressWarnings(
       as.numeric(
@@ -1009,6 +1105,14 @@ format_observed_value <- function(value) {
   )
 }
 
+parse_flow_input <- function(value) {
+  suppressWarnings(
+    as.numeric(
+      gsub(",", "", as.character(value), fixed = TRUE)
+    )
+  )
+}
+
 
 server <- function(input, output, session) {
 
@@ -1023,7 +1127,7 @@ server <- function(input, output, session) {
 
   observed_note <- function(
     label,
-    source_items,
+    source_items = NULL,
     special_note = NULL
   ) {
     state <- observed_flow_state()
@@ -1033,12 +1137,9 @@ server <- function(input, output, session) {
         tags$div(
           class = "observed-flow-note",
           if (identical(state$status, "loading")) {
-            "Retrieving the latest observed trailing 7-day average."
+            "Retrieving the latest observed 7-day flow data."
           } else {
-            paste0(
-              "Live source refresh is temporarily unavailable. ",
-              "The existing box value is being used and the app will retry when this input method is selected again."
-            )
+            "Live source refresh is temporarily unavailable. The existing box value is being used."
           }
         )
       )
@@ -1050,52 +1151,42 @@ server <- function(input, output, session) {
       return(
         tags$div(
           class = "observed-flow-note",
-          paste0(
-            "Live source refresh is temporarily unavailable. ",
-            "The existing box value is being used. Re-select Enter a Single Set of Values to retry."
-          )
+          "Live source refresh is temporarily unavailable. The existing box value is being used."
         )
       )
     }
 
-    link_tags <- lapply(
-      seq_along(source_items),
-      function(index) {
-        source <- source_items[[index]]
+    latest_date <- if (!is.null(item$latest_date)) {
+      item$latest_date
+    } else if (!is.null(item$dates) && length(item$dates) > 0) {
+      max(item$dates, na.rm = TRUE)
+    } else {
+      item$end_date
+    }
 
-        tagList(
-          if (index > 1) ", " else NULL,
-          tags$a(
-            href = source$url,
-            target = "_blank",
-            rel = "noopener noreferrer",
-            source$text
-          )
-        )
-      }
-    )
+    latest_value <- if (!is.null(item$latest_value)) {
+      item$latest_value
+    } else if (!is.null(item$values) && length(item$values) > 0) {
+      tail(item$values, 1)
+    } else {
+      item$value
+    }
 
     tags$div(
       class = "observed-flow-note",
-      tags$b(
-        paste0(
-          "Trailing 7-day average flow as of ",
-          format(item$end_date, "%m/%d/%Y"),
-          ": ",
-          format_observed_value(item$value),
-          " cfs."
-        )
+      paste0(
+        "Latest available data date ",
+        format(latest_date, "%m/%d/%Y"),
+        ": flow = ",
+        format_observed_value(latest_value),
+        " cfs"
       ),
       tags$br(),
-      "Source",
-      if (length(source_items) > 1) "s: " else ": ",
-      tagList(link_tags),
-      if (!is.null(special_note)) {
-        tagList(
-          tags$br(),
-          tags$span(special_note)
-        )
-      }
+      paste0(
+        "7-day average flow = ",
+        format_observed_value(item$value),
+        " cfs"
+      )
     )
   }
 
@@ -1192,6 +1283,18 @@ server <- function(input, output, session) {
     )
   })
 
+  output$current_eco_sac_note <- renderUI({
+    observed_note("SAC")
+  })
+
+  output$current_eco_yol_note <- renderUI({
+    observed_note("YOL")
+  })
+
+  output$current_eco_moke_note <- renderUI({
+    observed_note("MOK")
+  })
+
   observeEvent(
     input$current_input_method,
     {
@@ -1231,6 +1334,12 @@ server <- function(input, output, session) {
         )
       )
 
+      fre <- safe_observed_summary(
+        trailing_seven_summary(
+          read_fremont_weir_daily_values()
+        )
+      )
+
       nhg <- safe_observed_summary(
         trailing_seven_summary(
           read_cdec_daily_values("NHG", 23)
@@ -1257,30 +1366,6 @@ server <- function(input, output, session) {
           )
         )
       }
-
-      mok_30 <- if (inherits(moke_daily, "error")) {
-        list(
-          ok = FALSE,
-          data = NULL,
-          message = conditionMessage(moke_daily)
-        )
-      } else {
-        safe_observed_summary(
-          trailing_thirty_summary(
-            moke_daily
-          )
-        )
-      }
-
-      fpt_30 <- safe_observed_summary(
-        trailing_thirty_summary(
-          read_cdec_daily_values(
-            "FPT",
-            20,
-            lookback_days = 45
-          )
-        )
-      )
 
       cos <- safe_observed_summary(
         trailing_seven_summary(
@@ -1315,6 +1400,8 @@ server <- function(input, output, session) {
           value = clc$data$value + trp$data$value,
           start_date = max(clc$data$start_date, trp$data$start_date),
           end_date = min(clc$data$end_date, trp$data$end_date),
+          latest_date = min(clc$data$end_date, trp$data$end_date),
+          latest_value = tail(clc$data$values, 1) + tail(trp$data$values, 1),
           message = NULL
         )
       } else {
@@ -1342,6 +1429,22 @@ server <- function(input, output, session) {
         list(ok = FALSE, message = fpt$message)
       }
 
+      yol_result <- if (isTRUE(fre$ok)) {
+        list(
+          ok = TRUE,
+          value = 0 + fre$data$value,
+          start_date = fre$data$start_date,
+          end_date = fre$data$end_date,
+          latest_date = max(fre$data$dates, na.rm = TRUE),
+          latest_value = 0 + tail(fre$data$values, 1),
+          dates = fre$data$dates,
+          values = 0 + fre$data$values,
+          message = NULL
+        )
+      } else {
+        list(ok = FALSE, message = fre$message)
+      }
+
       east_result <- if (
         isTRUE(mok$ok) &&
         isTRUE(nhg$ok) &&
@@ -1360,6 +1463,10 @@ server <- function(input, output, session) {
             nhg$data$end_date,
             cos$data$end_date
           ),
+          # Display the latest MOKE date from MOKE_daily.csv for EAST,
+          # because MOKE is the locally maintained component used in EAST.
+          latest_date = max(moke_daily$Date, na.rm = TRUE),
+          latest_value = tail(mok$data$values, 1) + tail(nhg$data$values, 1) + tail(cos$data$values, 1),
           message = NULL
         )
       } else {
@@ -1391,6 +1498,11 @@ server <- function(input, output, session) {
             xgeo_a$data$end_date,
             xgeo_c$data$end_date
           ),
+          latest_date = min(
+            xgeo_a$data$end_date,
+            xgeo_c$data$end_date
+          ),
+          latest_value = tail(xgeo_a$data$values, 1) - tail(xgeo_c$data$values, 1),
           message = NULL
         )
       } else {
@@ -1414,136 +1526,96 @@ server <- function(input, output, session) {
         )
       }
 
+      moke_state <- if (isTRUE(mok$ok) && !inherits(moke_daily, "error")) {
+        latest_moke_date <- max(moke_daily$Date, na.rm = TRUE)
+        latest_moke_index <- which(moke_daily$Date == latest_moke_date)[1]
+        c(
+          list(ok = TRUE),
+          mok$data,
+          list(
+            latest_date = latest_moke_date,
+            latest_value = moke_daily$Value[latest_moke_index]
+          )
+        )
+      } else {
+        list(ok = FALSE)
+      }
+
       state <- list(
         status = "ready",
         updated_at = Sys.time(),
         EXP = exp_result,
         VER = ver_result,
         SAC = sac_result,
+        YOL = yol_result,
         EAST = east_result,
         XGEO = xgeo_result,
-        MOK = if (isTRUE(mok$ok)) mok$data else NULL
+        MOK = moke_state
       )
 
       observed_flow_state(state)
 
       if (isTRUE(exp_result$ok)) {
-        updateNumericInput(
+        updateTextInput(
           session,
           "current_ptm_exp",
-          value = round(exp_result$value, 0)
+          value = format_observed_value(exp_result$value)
         )
       }
 
       if (isTRUE(ver_result$ok)) {
-        updateNumericInput(
+        updateTextInput(
           session,
           "current_ptm_ver",
-          value = round(ver_result$value, 0)
+          value = format_observed_value(ver_result$value)
         )
       }
 
       if (isTRUE(sac_result$ok)) {
-        updateNumericInput(
+        updateTextInput(
           session,
           "current_ptm_sac",
-          value = round(sac_result$value, 0)
+          value = format_observed_value(sac_result$value)
         )
       }
 
       if (isTRUE(east_result$ok)) {
-        updateNumericInput(
+        updateTextInput(
           session,
           "current_ptm_east",
-          value = round(east_result$value, 0)
+          value = format_observed_value(east_result$value)
         )
       }
 
       if (isTRUE(xgeo_result$ok)) {
-        updateNumericInput(
+        updateTextInput(
           session,
           "current_ptm_xgeo",
-          value = round(xgeo_result$value, 0)
+          value = format_observed_value(xgeo_result$value)
         )
       }
 
-      if (isTRUE(fpt_30$ok)) {
-        updateNumericInput(
+      if (isTRUE(sac_result$ok)) {
+        updateTextInput(
           session,
           "current_eco_sac",
-          value = round(fpt_30$data$value, 0)
-        )
-
-        removeUI(
-          selector = "#current_eco_sac_observed_note",
-          immediate = TRUE
-        )
-
-        insertUI(
-          selector = "#current_eco_sac",
-          where = "afterEnd",
-          ui = tags$div(
-            id = "current_eco_sac_observed_note",
-            class = "observed-flow-note",
-            tags$b(
-              paste0(
-                "Trailing 30-day average flow as of ",
-                format(fpt_30$data$end_date, "%m/%d/%Y"),
-                ": ",
-                format_observed_value(fpt_30$data$value),
-                " cfs."
-              )
-            ),
-            tags$br(),
-            "Source: ",
-            tags$a(
-              href = observed_source_links$FPT,
-              target = "_blank",
-              rel = "noopener noreferrer",
-              "FPT FLOW CFS (sensor 20)"
-            )
-          ),
-          immediate = TRUE
+          value = format_observed_value(sac_result$value)
         )
       }
 
-      if (isTRUE(mok_30$ok)) {
-        updateNumericInput(
+      if (isTRUE(yol_result$ok)) {
+        updateTextInput(
+          session,
+          "current_eco_yol",
+          value = format_observed_value(yol_result$value)
+        )
+      }
+
+      if (isTRUE(mok$ok)) {
+        updateTextInput(
           session,
           "current_eco_moke",
-          value = round(mok_30$data$value, 0)
-        )
-
-        removeUI(
-          selector = "#current_eco_moke_observed_note",
-          immediate = TRUE
-        )
-
-        insertUI(
-          selector = "#current_eco_moke",
-          where = "afterEnd",
-          ui = tags$div(
-            id = "current_eco_moke_observed_note",
-            class = "observed-flow-note",
-            tags$b(
-              paste0(
-                "Trailing 30-day average flow as of ",
-                format(mok_30$data$end_date, "%m/%d/%Y"),
-                ": ",
-                format_observed_value(mok_30$data$value),
-                " cfs."
-              )
-            ),
-            tags$br(),
-            "Source: ",
-            tags$a(
-              href = observed_source_links$MOK,
-              target = "_blank",
-              rel = "noopener noreferrer",
-              "EBMUD Mokelumne River below WID"
-            )
-          ),
-          immediate = TRUE
+          value = format_observed_value(mok$data$value)
         )
       }
 
@@ -1551,6 +1623,7 @@ server <- function(input, output, session) {
         if (!isTRUE(exp_result$ok)) "EXP" else NULL,
         if (!isTRUE(ver_result$ok)) "VER" else NULL,
         if (!isTRUE(sac_result$ok)) "SAC" else NULL,
+        if (!isTRUE(yol_result$ok)) "YOL" else NULL,
         if (!isTRUE(east_result$ok)) "EAST" else NULL,
         if (!isTRUE(xgeo_result$ok)) "XGEO" else NULL
       )
@@ -1661,7 +1734,7 @@ server <- function(input, output, session) {
         color = "#ffffff",
         opacity = 0.85,
         weight = 1,
-        group = "Delta Boundary"
+        group = "DSM2 Delta Boundary"
       ) %>%
       leaflet::addPolylines(
         data = delta_channels_wgs84,
@@ -1670,6 +1743,56 @@ server <- function(input, output, session) {
         opacity = 0.85,
         group = "Delta Channels"
       )
+  }
+
+  add_osm_basemap <- function(map) {
+    map %>%
+      leaflet::addTiles(
+        urlTemplate = "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        attribution = "&copy; OpenStreetMap contributors",
+        group = "OpenStreetMap",
+        options = leaflet::tileOptions(
+          maxZoom = 19
+        )
+      )
+  }
+
+  add_reset_view_control <- function(
+    map,
+    lng = -121.60,
+    lat = 38.05,
+    zoom = 9
+  ) {
+    js <- sprintf(
+      "function(el, x) {
+         var map = this;
+         var ResetControl = L.Control.extend({
+           options: {position: 'topleft'},
+           onAdd: function(map) {
+             var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+             var link = L.DomUtil.create('a', '', container);
+             link.href = '#';
+             link.title = 'Reset map view';
+             link.setAttribute('aria-label', 'Reset map view');
+             link.innerHTML = '&#8962;';
+             link.style.fontSize = '20px';
+             link.style.lineHeight = '30px';
+             link.style.textAlign = 'center';
+             link.style.width = '30px';
+             link.style.height = '30px';
+             L.DomEvent.disableClickPropagation(container);
+             L.DomEvent.on(link, 'click', function(e) {
+               L.DomEvent.preventDefault(e);
+               map.setView([%f, %f], %d);
+             });
+             return container;
+           }
+         });
+         map.addControl(new ResetControl());
+       }",
+      lat, lng, zoom
+    )
+    htmlwidgets::onRender(map, js)
   }
   
   dsm2_nodes_raw <- st_read(
@@ -2156,9 +2279,7 @@ server <- function(input, output, session) {
   make_empty_comparison_map <- function(message) {
     
     leaflet() %>%
-      addProviderTiles(
-        providers$CartoDB.Positron
-      ) %>%
+      add_osm_basemap() %>%
       addPolygons(
         data = st_transform(
           delta_boundary,
@@ -2168,7 +2289,7 @@ server <- function(input, output, session) {
         fillOpacity = 0.2,
         color = "#0a7e8c",
         weight = 1,
-        group = "Delta Boundary"
+        group = "DSM2 Delta Boundary"
       ) %>%
       addPolylines(
         data = st_transform(
@@ -2191,6 +2312,7 @@ server <- function(input, output, session) {
         ),
         position = "topright"
       ) %>%
+      add_reset_view_control(zoom = 9) %>%
       leaflet::setView(
         lng = -121.60,
         lat = 38.05,
@@ -3871,6 +3993,37 @@ server <- function(input, output, session) {
   }
   
   
+  weekly_measured_7day_inputs <- function(data) {
+
+    measured <- data %>%
+      filter(DATA_TYPE == "Measured") %>%
+      arrange(DATE) %>%
+      slice_tail(n = 7)
+
+    validate(
+      need(
+        nrow(measured) >= 7,
+        "At least seven measured rows are required for the selected archive week."
+      )
+    )
+
+    latest_dcc <- measured %>%
+      filter(!is.na(DCC)) %>%
+      slice_tail(n = 1) %>%
+      pull(DCC)
+
+    if (length(latest_dcc) == 0) latest_dcc <- 0
+
+    mean_archive_inputs(measured) %>%
+      mutate(
+        DCC = as.numeric(latest_dcc[1]),
+        Window_Start_Date = min(measured$DATE),
+        Window_End_Date = max(measured$DATE),
+        Window_Days = nrow(measured)
+      )
+  }
+
+
   measured_30day_inputs <- function(data) {
     
     measured <- data %>%
@@ -4134,6 +4287,102 @@ server <- function(input, output, session) {
   }
   
   
+  make_weekly_ptm_observed <- function(archive_date, scenario_name) {
+    source_file <- archive_csv_files(archive_date)[1]
+    validate(need(length(source_file) > 0, "No archive CSV file was found for the selected week."))
+    archive_data <- read_archive_csv(source_file)
+
+    rolling_7 <- rolling_measured_7day_inputs(archive_data)
+    inputs_7 <- weekly_measured_7day_inputs(archive_data)
+
+    ref <- reference_data()
+    bind_rows(
+      predict_ptm_from_windows(
+        rolling_7,
+        ptm7_model,
+        "PTM Emulator 7-Day Entrainment",
+        ref$nodes_7d,
+        "Observed Conditions",
+        scenario_name,
+        archive_date,
+        "Measured"
+      ),
+      predict_ptm_from_windows(
+        inputs_7,
+        ptm30_model,
+        "PTM Emulator 30-Day Entrainment",
+        ref$nodes_30d,
+        "Observed Conditions",
+        scenario_name,
+        archive_date,
+        "Measured"
+      )
+    )
+  }
+
+
+  make_weekly_ptm_forecast <- function(archive_date, omri_scenario, scenario_name) {
+    source_file <- archive_file_for_scenario(archive_date, omri_scenario)
+    archive_data <- read_archive_csv(source_file)
+    inputs_7 <- forecast_7day_inputs(archive_data)
+    ref <- reference_data()
+    bind_rows(
+      predict_ptm_from_windows(inputs_7, ptm7_model, "PTM Emulator 7-Day Entrainment",
+                               ref$nodes_7d, "Forecast Conditions", scenario_name,
+                               archive_date, omri_scenario),
+      predict_ptm_from_windows(inputs_7, ptm30_model, "PTM Emulator 30-Day Entrainment",
+                               ref$nodes_30d, "Forecast Conditions", scenario_name,
+                               archive_date, omri_scenario)
+    )
+  }
+
+
+  make_weekly_eco_observed <- function(archive_date, scenario_name) {
+    source_file <- archive_csv_files(archive_date)[1]
+    archive_data <- read_archive_csv(source_file)
+    inputs <- weekly_measured_7day_inputs(archive_data)
+    make_eco_results(
+      condition = "Observed Conditions",
+      scenario_name = scenario_name,
+      sac = inputs$SAC,
+      yol = inputs$YOL,
+      moke = inputs$MOKE,
+      dcc = inputs$DCC
+    ) %>%
+      mutate(
+        Input_Method = "weekly_archive",
+        Archive_Date = archive_date,
+        OMRI_Scenario = "Measured",
+        Window_Start_Date = inputs$Window_Start_Date,
+        Window_End_Date = inputs$Window_End_Date,
+        Window_Days = inputs$Window_Days
+      )
+  }
+
+
+  make_weekly_eco_forecast <- function(archive_date, omri_scenario, scenario_name) {
+    source_file <- archive_file_for_scenario(archive_date, omri_scenario)
+    archive_data <- read_archive_csv(source_file)
+    inputs <- forecast_7day_inputs(archive_data)
+    make_eco_results(
+      condition = "Forecast Conditions",
+      scenario_name = scenario_name,
+      sac = inputs$SAC,
+      yol = inputs$YOL,
+      moke = inputs$MOKE,
+      dcc = inputs$DCC
+    ) %>%
+      mutate(
+        Input_Method = "weekly_archive",
+        Archive_Date = archive_date,
+        OMRI_Scenario = omri_scenario,
+        Window_Start_Date = inputs$Window_Start_Date,
+        Window_End_Date = inputs$Window_End_Date,
+        Window_Days = inputs$Window_Days
+      )
+  }
+
+
   make_archive_eco_current <- function(
     archive_date,
     scenario_name
@@ -4279,6 +4528,32 @@ server <- function(input, output, session) {
   }
   
   
+  make_weekly_eh_observed <- function(archive_date, scenario_name, risk) {
+    source_file <- archive_csv_files(archive_date)[1]
+    archive_data <- read_archive_csv(source_file)
+
+    rolling_7 <- rolling_measured_7day_inputs(archive_data)
+
+    predict_eh_from_windows(
+      rolling_7,
+      "Observed Conditions",
+      scenario_name,
+      archive_date,
+      "Measured",
+      risk
+    )
+  }
+
+
+  make_weekly_eh_forecast <- function(archive_date, omri_scenario, scenario_name, risk) {
+    source_file <- archive_file_for_scenario(archive_date, omri_scenario)
+    archive_data <- read_archive_csv(source_file)
+    inputs_7 <- forecast_7day_inputs(archive_data)
+    predict_eh_from_windows(inputs_7, "Forecast Conditions", scenario_name,
+                            archive_date, omri_scenario, risk)
+  }
+
+
   latest_result_window <- function(
     data,
     model_name
@@ -4691,17 +4966,13 @@ server <- function(input, output, session) {
   }
   
   
-  make_ptm_bar <- function(df, title) {
+  make_ptm_bar <- function(df, title, show_plot_title = TRUE) {
     validate(need(nrow(df) > 0, "Run the model to display results."))
     
     plot_df <- df %>%
       mutate(
         DSM2_Node_Num = suppressWarnings(as.numeric(DSM2_Node)),
-        node_label = ifelse(
-          is.na(Location) | Location == "",
-          DSM2_Node,
-          paste0(DSM2_Node, " - ", Location)
-        ),
+        node_label = as.character(DSM2_Node),
         value_label = sprintf("%.0f%%", Prediction_Final),
         hover_text = paste0(
           "<b>DSM2 Node:</b> ", DSM2_Node,
@@ -4742,32 +5013,55 @@ server <- function(input, output, session) {
       cliponaxis = FALSE
     ) %>%
       layout(
-        title = list(
-          text = paste0(
-            "<b>", title, "</b>",
-            "<br><span style='font-size:13px;'>",
-            "Fixed numeric DSM2-node order; values are percent entrainment.",
-            "</span>"
-          ),
-          x = 0.02,
-          xanchor = "left",
-          font = list(size = 20, color = "#1F1F1F")
-        ),
+        title = if (isTRUE(show_plot_title)) {
+          list(
+            text = paste0(
+              "<b>", title, "</b>",
+              "<br><span style='font-size:13px;'>",
+              "Fixed numeric DSM2-node order; values are percent entrainment.",
+              "</span>"
+            ),
+            x = 0.02,
+            xanchor = "left",
+            font = list(size = 20, color = "#1F1F1F")
+          )
+        } else {
+          NULL
+        },
         xaxis = list(
           title = list(
             text = "<b>Predicted Entrainment (%)</b>",
-            font = list(size = 16, color = "#1F1F1F")
+            font = list(
+              family = "Arial, Segoe UI, sans-serif",
+              size = 14,
+              color = "#1F1F1F"
+            )
           ),
           range = c(0, x_max),
-          tickfont = list(size = 14, color = "#1F1F1F"),
+          tickfont = list(
+            family = "Arial, Segoe UI, sans-serif",
+            size = 12,
+            color = "#1F1F1F"
+          ),
           gridcolor = "#D9D9D9",
           zerolinecolor = "#666666",
           showline = TRUE,
           linecolor = "#666666"
         ),
         yaxis = list(
-          title = "",
-          tickfont = list(size = 13, color = "#1F1F1F"),
+          title = list(
+            text = "<b>DSM2 Node</b>",
+            font = list(
+              family = "Arial, Segoe UI, sans-serif",
+              size = 14,
+              color = "#1F1F1F"
+            )
+          ),
+          tickfont = list(
+            family = "Arial, Segoe UI, sans-serif",
+            size = 12,
+            color = "#1F1F1F"
+          ),
           automargin = TRUE,
           showgrid = FALSE
         ),
@@ -4778,12 +5072,12 @@ server <- function(input, output, session) {
           size = 14,
           color = "#1F1F1F"
         ),
-        margin = list(l = 300, r = 95, t = 100, b = 75),
+        margin = list(l = 90, r = 95, t = 100, b = 75),
         showlegend = FALSE,
         margin = list(
-          l = 300,
+          l = 90,
           r = 95,
-          t = 100,
+          t = if (isTRUE(show_plot_title)) 100 else 35,
           b = 35
         )
 #        annotations = list(
@@ -5159,9 +5453,7 @@ server <- function(input, output, session) {
     names(run_colors) <- run_ids
     
     m <- leaflet() %>%
-      addProviderTiles(
-        providers$CartoDB.Positron
-      ) %>%
+      add_osm_basemap() %>%
       addPolygons(
         data = st_transform(
           delta_boundary,
@@ -5171,7 +5463,7 @@ server <- function(input, output, session) {
         fillOpacity = 0.2,
         color = "#0a7e8c",
         weight = 1,
-        group = "Delta Boundary"
+        group = "DSM2 Delta Boundary"
       ) %>%
       addPolylines(
         data = st_transform(
@@ -5185,7 +5477,7 @@ server <- function(input, output, session) {
       )
     
     overlay_groups <- c(
-      "Delta Boundary",
+      "DSM2 Delta Boundary",
       "Channels"
     )
     
@@ -5258,12 +5550,12 @@ server <- function(input, output, session) {
       m <- m %>%
         addCircleMarkers(
           data = display_nodes,
-          radius = ~4 + entrainment / 100 * 8,
-          color = scenario_color,
-          fillColor = scenario_color,
-          fillOpacity = 0.75,
+          radius = 7,
+          color = "#2B2B2B",
+          fillColor = ~ifelse(entrainment >= threshold, "#D96B6B", "#6FAED3"),
+          fillOpacity = 0.95,
           stroke = TRUE,
-          weight = 1,
+          weight = 2,
           popup = ~paste0(
             "<div style='font-size:15px;line-height:1.45;min-width:280px;'>",
             "<b>Scenario:</b> ",
@@ -5411,6 +5703,7 @@ server <- function(input, output, session) {
           collapsed = FALSE
         )
       ) %>%
+      add_reset_view_control(zoom = 9) %>%
       leaflet::setView(
         lng = -121.60,
         lat = 38.05,
@@ -5453,12 +5746,12 @@ server <- function(input, output, session) {
     )
     
     leaflet() %>%
-      addProviderTiles(providers$CartoDB.Positron) %>%
+      add_osm_basemap() %>%
       addPolygons(
         data = st_transform(delta_boundary, 4326),
         fillColor = "#eef7f9", fillOpacity = 0.2,
         color = "#0a7e8c", weight = 1,
-        group = "Delta Boundary"
+        group = "DSM2 Delta Boundary"
       ) %>%
       addPolylines(
         data = st_transform(delta_channels, 4326),
@@ -5479,12 +5772,12 @@ server <- function(input, output, session) {
       ) %>%
       addCircleMarkers(
         data = display_nodes,
-        radius = ~4 + entrainment / 100 * 10,
-        color = ~pal(entrainment),
-        fillColor = ~pal(entrainment),
-        fillOpacity = 0.9,
+        radius = 7,
+        color = "#2B2B2B",
+        fillColor = ~ifelse(entrainment >= threshold, "#D96B6B", "#6FAED3"),
+        fillOpacity = 0.95,
         stroke = TRUE,
-        weight = 1,
+        weight = 2,
         popup = popup_html,
         group = "Nodes"
       ) %>%
@@ -5510,29 +5803,23 @@ server <- function(input, output, session) {
         group = "Entrainment Labels"
       ) %>%
       addLegend(
-        position = "bottomright",
-        pal = pal,
-        values = display_nodes$entrainment,
-        title = "Entrainment (%)",
-        opacity = 1
-      ) %>%
-      addLegend(
         position = "topright",
         colors = c("#e8b5b5", "#a9d4e6"),
         labels = c(
-          paste0("High Risk Zone: > ", threshold, "%"),
-          paste0("Low Risk Zone: < ", threshold, "%")
+          paste0("High Risk Zone / Node: >= ", threshold, "%"),
+          paste0("Low Risk Zone / Node: < ", threshold, "%")
         ),
-        title = "Entrainment Risk Zones",
+        title = "Entrainment Risk",
         opacity = 0.8
       ) %>%
       addLayersControl(
         overlayGroups = c(
-          "Delta Boundary", "Channels", "Low Risk Zone",
+          "DSM2 Delta Boundary", "Channels", "Low Risk Zone",
           "High Risk Zone", "Nodes", "Entrainment Labels"
         ),
         options = layersControlOptions(collapsed = FALSE)
       ) %>%
+      add_reset_view_control(zoom = 9) %>%
       leaflet::setView(
         lng = -121.60,
         lat = 38.05,
@@ -5605,9 +5892,7 @@ server <- function(input, output, session) {
     )
     
     leaflet() %>%
-      addProviderTiles(
-        providers$CartoDB.Positron
-      ) %>%
+      add_osm_basemap() %>%
       
       addPolygons(
         data = st_transform(
@@ -5618,7 +5903,7 @@ server <- function(input, output, session) {
         fillOpacity = 0.2,
         color = "#0a7e8c",
         weight = 1,
-        group = "Delta Boundary"
+        group = "DSM2 Delta Boundary"
       ) %>%
       
       addPolylines(
@@ -5652,12 +5937,12 @@ server <- function(input, output, session) {
       
       addCircleMarkers(
         data = display_nodes,
-        radius = ~4 + entrainment / 100 * 10,
-        color = ~pal(entrainment),
-        fillColor = ~pal(entrainment),
-        fillOpacity = 0.9,
+        radius = 7,
+        color = "#2B2B2B",
+        fillColor = ~ifelse(entrainment >= threshold, "#D96B6B", "#6FAED3"),
+        fillOpacity = 0.95,
         stroke = TRUE,
-        weight = 1,
+        weight = 2,
         
         popup = ~paste0(
           "<div style='font-size:16px;line-height:1.55;min-width:280px;'>",
@@ -5718,14 +6003,6 @@ server <- function(input, output, session) {
       ) %>%
       
       addLegend(
-        position = "bottomright",
-        pal = pal,
-        values = display_nodes$entrainment,
-        title = "PTM Entrainment (%)",
-        opacity = 1
-      ) %>%
-      
-      addLegend(
         position = "topright",
         
         colors = c(
@@ -5736,12 +6013,12 @@ server <- function(input, output, session) {
         
         labels = c(
           paste0(
-            "High Risk Zone: > ",
+            "High Risk Zone / Node: >= ",
             threshold,
             "%"
           ),
           paste0(
-            "Low Risk Zone: < ",
+            "Low Risk Zone / Node: < ",
             threshold,
             "%"
           ),
@@ -5761,7 +6038,7 @@ server <- function(input, output, session) {
       
       addLayersControl(
         overlayGroups = c(
-          "Delta Boundary",
+          "DSM2 Delta Boundary",
           "Channels",
           "Low Risk Zone",
           "High Risk Zone",
@@ -5775,6 +6052,7 @@ server <- function(input, output, session) {
         )
       ) %>%
       
+      add_reset_view_control(zoom = 9) %>%
       leaflet::setView(
         lng = -121.60,
         lat = 38.05,
@@ -5863,9 +6141,7 @@ server <- function(input, output, session) {
     )
     
     m <- leaflet() %>%
-      addProviderTiles(
-        providers$CartoDB.Positron
-      ) %>%
+      add_osm_basemap() %>%
       addPolylines(
         data = channels_display,
         color = "#9ECAE1",
@@ -5979,6 +6255,7 @@ server <- function(input, output, session) {
           collapsed = FALSE
         )
       ) %>%
+      add_reset_view_control(zoom = 10) %>%
       leaflet::setView(
         lng = -121.60,
         lat = 38.05,
@@ -6004,7 +6281,7 @@ server <- function(input, output, session) {
     nodes_display <- st_transform(dsm2_nodes, 4326)
     
     leaflet() |>
-      addProviderTiles(providers$CartoDB.Positron) |>
+      add_osm_basemap() |>
       
       addPolylines(
         data = channels_display,
@@ -6056,14 +6333,15 @@ server <- function(input, output, session) {
         options = layersControlOptions(collapsed = FALSE)
       ) |>
       
-    leaflet::setView(
+    add_reset_view_control(zoom = 10) |>
+      leaflet::setView(
       lng = -121.60,
       lat = 38.05,
       zoom = 10
     )
   }
   
-  make_eh_scatter <- function(df) {
+  make_eh_scatter <- function(df, compact_title_below_legend = FALSE) {
     
     validate(
       need(
@@ -6378,13 +6656,20 @@ server <- function(input, output, session) {
       ) +
       
       labs(
-        title = paste0(
-          "Historical Event Horizon Conditions > ",
-          risk,
-          "% Risk"
-        ),
-        subtitle =
-          "The selected emulator result(s) are highlighted in red.",
+        title = if (isTRUE(compact_title_below_legend)) {
+          NULL
+        } else {
+          paste0(
+            "Historical Event Horizon Conditions > ",
+            risk,
+            "% Risk"
+          )
+        },
+        subtitle = if (isTRUE(compact_title_below_legend)) {
+          NULL
+        } else {
+          "The selected emulator result(s) are highlighted in red."
+        },
         x = "Combined Export, EXP (cfs)",
         y = "Vernalis Flow, VER (cfs)"
       ) +
@@ -6451,13 +6736,62 @@ server <- function(input, output, session) {
           color = "#1F1F1F"
         ),
         
-        legend = list(
-          font = list(
-            family = "Arial, Segoe UI, sans-serif",
-            size = 12,
-            color = "#1F1F1F"
+        legend = if (isTRUE(compact_title_below_legend)) {
+          list(
+            orientation = "h",
+            x = 0,
+            xanchor = "left",
+            y = 1.18,
+            yanchor = "bottom",
+            font = list(
+              family = "Arial, Segoe UI, sans-serif",
+              size = 12,
+              color = "#1F1F1F"
+            )
           )
-        )
+        } else {
+          list(
+            font = list(
+              family = "Arial, Segoe UI, sans-serif",
+              size = 12,
+              color = "#1F1F1F"
+            )
+          )
+        },
+        annotations = if (isTRUE(compact_title_below_legend)) {
+          list(
+            list(
+              text = paste0(
+                "Historical Event Horizon Conditions &gt; ",
+                risk,
+                "% Risk"
+              ),
+              x = 0.5,
+              xref = "paper",
+              xanchor = "center",
+              y = 1.03,
+              yref = "paper",
+              yanchor = "bottom",
+              showarrow = FALSE,
+              bgcolor = "#F7F9FB",
+              bordercolor = "#C7D3DD",
+              borderwidth = 1,
+              borderpad = 5,
+              font = list(
+                family = "Arial, Segoe UI, sans-serif",
+                size = 11,
+                color = "#404040"
+              )
+            )
+          )
+        } else {
+          list()
+        },
+        margin = if (isTRUE(compact_title_below_legend)) {
+          list(t = 120)
+        } else {
+          list()
+        }
       ) %>%
       
       config(
@@ -6735,43 +7069,39 @@ server <- function(input, output, session) {
   
   
   output$forecast_archive_date_ui <- renderUI({
-    
     choices <- available_archive_dates()
-    
     selectInput(
       "forecast_archive_date",
-      "Archive Run Date:",
-      choices = choices,
-      selected = if (length(choices) > 0) choices[1] else NULL
+      "Archive Week:",
+      choices = c(
+        "Select an archive week..." = "",
+        stats::setNames(choices, choices)
+      ),
+      selected = ""
     )
   })
-  
-  
+
+
   output$forecast_archive_scenario_ui <- renderUI({
-    
     req(
-      input$forecast_archive_date
+      identical(input$forecast_flow_source, "forecast"),
+      nzchar(input$forecast_archive_date)
     )
-    
-    scenarios <- archive_scenario_choices(
-      input$forecast_archive_date
-    )
-    
+    scenarios <- archive_scenario_choices(input$forecast_archive_date)
     selectInput(
       "forecast_archive_scenario",
       "OMRI Forecast Scenario:",
-      choices = stats::setNames(scenarios, paste0("OMRI ", scenarios)),
-      selected = if (length(scenarios) > 0) scenarios[1] else NULL
+      choices = c(
+        "Select an OMRI scenario..." = "",
+        stats::setNames(scenarios, paste0("OMRI ", scenarios))
+      ),
+      selected = ""
     )
   })
-  
-  
+
+
   output$current_ptm_archive_summary <- renderUI({
-    
-    req(
-      input$current_archive_date
-    )
-    
+    req(input$current_archive_date)
     tags$div(
       class = "alert alert-light",
       tags$b("Selected archive: "),
@@ -6780,26 +7110,74 @@ server <- function(input, output, session) {
       "Measured rows will be used."
     )
   })
-  
-  
-  output$forecast_ptm_archive_summary <- renderUI({
-    
-    req(
-      input$forecast_archive_date,
-      input$forecast_archive_scenario
-    )
-    
-    tags$div(
-      class = "alert alert-light",
-      tags$b("Selected archive: "),
-      input$forecast_archive_date,
-      tags$br(),
-      tags$b("OMRI scenario: "),
-      input$forecast_archive_scenario
-    )
+
+
+  weekly_selected_inputs <- reactive({
+    req(nzchar(input$forecast_archive_date))
+    flow_source <- input$forecast_flow_source
+
+    if (is.null(flow_source) || identical(flow_source, "observed")) {
+      source_file <- archive_csv_files(input$forecast_archive_date)[1]
+      validate(need(length(source_file) > 0, "No archive CSV file was found for the selected week."))
+      weekly_measured_7day_inputs(read_archive_csv(source_file))
+    } else {
+      req(nzchar(input$forecast_archive_scenario))
+      source_file <- archive_file_for_scenario(
+        input$forecast_archive_date,
+        input$forecast_archive_scenario
+      )
+      forecast_7day_inputs(read_archive_csv(source_file))
+    }
   })
-  
-  
+
+
+  format_weekly_flow <- function(value) {
+    if (is.null(value) || length(value) == 0 || !is.finite(as.numeric(value)[1])) return("")
+    format(round(as.numeric(value)[1]), big.mark = ",", scientific = FALSE, trim = TRUE)
+  }
+
+
+  output$forecast_ptm_exp_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$EXP) })
+  output$forecast_ptm_ver_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$VER) })
+  output$forecast_ptm_sac_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$SAC) })
+  output$forecast_ptm_east_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$EAST) })
+  output$forecast_ptm_xgeo_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$XGEO) })
+  output$forecast_eco_sac_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$SAC) })
+  output$forecast_eco_yol_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$YOL) })
+  output$forecast_eco_moke_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$MOKE) })
+  output$forecast_eco_dcc_value <- renderText({
+    dcc <- weekly_selected_inputs()$DCC
+    if (is.null(dcc) || length(dcc) == 0 || !is.finite(as.numeric(dcc)[1])) return("")
+    if (as.numeric(dcc)[1] >= 0.5) "Open" else "Closed"
+  })
+
+
+  observeEvent(
+    list(
+      input$forecast_archive_date,
+      input$forecast_flow_source,
+      input$forecast_archive_scenario
+    ),
+    {
+      flow_source <- input$forecast_flow_source
+      scenario_name <- if (
+        !is.null(flow_source) &&
+        identical(flow_source, "forecast") &&
+        !is.null(input$forecast_archive_date) &&
+        nzchar(input$forecast_archive_date)
+      ) {
+        week_token <- gsub("[^0-9A-Za-z]+", "", input$forecast_archive_date)
+        paste0(format(Sys.Date(), "%m%d%Y"), "_Week_", week_token, "_01")
+      } else {
+        paste0(format(Sys.Date(), "%m%d%Y"), "_Week_Obs_01")
+      }
+      updateTextInput(session, "forecast_ptm_archive_name", value = scenario_name)
+      updateTextInput(session, "forecast_eco_archive_name", value = scenario_name)
+    },
+    ignoreInit = FALSE
+  )
+
+
   register_condition <- function(
     prefix,
     condition_label
@@ -6832,26 +7210,36 @@ server <- function(input, output, session) {
               prefix,
               "_ptm_name"
             )]],
-            exp = input[[paste0(
+            exp = parse_flow_input(
+              input[[paste0(
               prefix,
               "_ptm_exp"
-            )]],
-            ver = input[[paste0(
+            )]]
+            ),
+            ver = parse_flow_input(
+              input[[paste0(
               prefix,
               "_ptm_ver"
-            )]],
-            sac = input[[paste0(
+            )]]
+            ),
+            sac = parse_flow_input(
+              input[[paste0(
               prefix,
               "_ptm_sac"
-            )]],
-            east = input[[paste0(
+            )]]
+            ),
+            east = parse_flow_input(
+              input[[paste0(
               prefix,
               "_ptm_east"
-            )]],
-            xgeo = input[[paste0(
+            )]]
+            ),
+            xgeo = parse_flow_input(
+              input[[paste0(
               prefix,
               "_ptm_xgeo"
             )]]
+            )
           )
           
           run_name <- input[[paste0(
@@ -6879,23 +7267,32 @@ server <- function(input, output, session) {
           )]]
           
           if (is_current) {
-            
+
             result <- make_archive_ptm_current(
               archive_date = archive_date,
               scenario_name = run_name
             )
-            
+
           } else {
-            
-            req(
-              input$forecast_archive_scenario
-            )
-            
-            result <- make_archive_ptm_forecast(
-              archive_date = archive_date,
-              omri_scenario = input$forecast_archive_scenario,
-              scenario_name = run_name
-            )
+
+            req(nzchar(archive_date))
+
+            if (
+              is.null(input$forecast_flow_source) ||
+              identical(input$forecast_flow_source, "observed")
+            ) {
+              result <- make_weekly_ptm_observed(
+                archive_date = archive_date,
+                scenario_name = run_name
+              )
+            } else {
+              req(nzchar(input$forecast_archive_scenario))
+              result <- make_weekly_ptm_forecast(
+                archive_date = archive_date,
+                omri_scenario = input$forecast_archive_scenario,
+                scenario_name = run_name
+              )
+            }
           }
         }
         
@@ -6932,18 +7329,24 @@ server <- function(input, output, session) {
               prefix,
               "_eco_name"
             )]],
-            sac = input[[paste0(
+            sac = parse_flow_input(
+              input[[paste0(
               prefix,
               "_eco_sac"
-            )]],
-            yol = input[[paste0(
+            )]]
+            ),
+            yol = parse_flow_input(
+              input[[paste0(
               prefix,
               "_eco_yol"
-            )]],
-            moke = input[[paste0(
+            )]]
+            ),
+            moke = parse_flow_input(
+              input[[paste0(
               prefix,
               "_eco_moke"
-            )]],
+            )]]
+            ),
             dcc = as.numeric(
               input[[paste0(
                 prefix,
@@ -6959,30 +7362,41 @@ server <- function(input, output, session) {
           
         } else {
           
-          validate(
-            need(
-              is_current,
-              paste(
-                "ECO-PTM archive-folder runs are available",
-                "only for Observed Conditions."
-              )
-            )
-          )
-          
           archive_date <- input[[paste0(
             prefix,
             "_archive_date"
           )]]
-          
+
           run_name <- input[[paste0(
             prefix,
             "_eco_archive_name"
           )]]
-          
-          result <- make_archive_eco_current(
-            archive_date = archive_date,
-            scenario_name = run_name
-          )
+
+          if (is_current) {
+            result <- make_archive_eco_current(
+              archive_date = archive_date,
+              scenario_name = run_name
+            )
+          } else {
+            req(nzchar(archive_date))
+
+            if (
+              is.null(input$forecast_flow_source) ||
+              identical(input$forecast_flow_source, "observed")
+            ) {
+              result <- make_weekly_eco_observed(
+                archive_date = archive_date,
+                scenario_name = run_name
+              )
+            } else {
+              req(nzchar(input$forecast_archive_scenario))
+              result <- make_weekly_eco_forecast(
+                archive_date = archive_date,
+                omri_scenario = input$forecast_archive_scenario,
+                scenario_name = run_name
+              )
+            }
+          }
         }
         
         add_saved_run(
@@ -7025,22 +7439,30 @@ server <- function(input, output, session) {
               prefix,
               "_ptm_name"
             )]],
-            exp = input[[paste0(
+            exp = parse_flow_input(
+              input[[paste0(
               prefix,
               "_ptm_exp"
-            )]],
-            ver = input[[paste0(
+            )]]
+            ),
+            ver = parse_flow_input(
+              input[[paste0(
               prefix,
               "_ptm_ver"
-            )]],
-            east = input[[paste0(
+            )]]
+            ),
+            east = parse_flow_input(
+              input[[paste0(
               prefix,
               "_ptm_east"
-            )]],
-            xgeo = input[[paste0(
+            )]]
+            ),
+            xgeo = parse_flow_input(
+              input[[paste0(
               prefix,
               "_ptm_xgeo"
-            )]],
+            )]]
+            ),
             risk = risk
           )
           
@@ -7062,25 +7484,35 @@ server <- function(input, output, session) {
           )]]
           
           if (is_current) {
-            
+
             result <- make_archive_eh_current(
               archive_date = archive_date,
               scenario_name = run_name,
               risk = risk
             )
-            
+
           } else {
-            
-            req(
-              input$forecast_archive_scenario
-            )
-            
-            result <- make_archive_eh_forecast(
-              archive_date = archive_date,
-              omri_scenario = input$forecast_archive_scenario,
-              scenario_name = run_name,
-              risk = risk
-            )
+
+            req(nzchar(archive_date))
+
+            if (
+              is.null(input$forecast_flow_source) ||
+              identical(input$forecast_flow_source, "observed")
+            ) {
+              result <- make_weekly_eh_observed(
+                archive_date = archive_date,
+                scenario_name = run_name,
+                risk = risk
+              )
+            } else {
+              req(nzchar(input$forecast_archive_scenario))
+              result <- make_weekly_eh_forecast(
+                archive_date = archive_date,
+                omri_scenario = input$forecast_archive_scenario,
+                scenario_name = run_name,
+                risk = risk
+              )
+            }
           }
         }
         
@@ -7140,7 +7572,7 @@ server <- function(input, output, session) {
           prefix,
           "_ptm7_map_date"
         ),
-        "Map Window End Date:",
+        NULL,
         min = min(dates),
         max = max(dates),
         value = max(dates),
@@ -7298,7 +7730,8 @@ server <- function(input, output, session) {
         paste(
           condition_label,
           ": PTM Emulator 7-Day Entrainment"
-        )
+        ),
+        show_plot_title = FALSE
       )
     })
     
@@ -7318,7 +7751,8 @@ server <- function(input, output, session) {
         paste(
           condition_label,
           ": PTM Emulator 30-Day Entrainment"
-        )
+        ),
+        show_plot_title = FALSE
       )
     })
     
@@ -7495,24 +7929,8 @@ server <- function(input, output, session) {
         "PTM Emulator 7-Day Entrainment"
       ) %>%
         transmute(
-          Window_End_Date = if (
-            "Window_End_Date" %in% names(.)
-          ) {
-            format(
-              as.Date(
-                Window_End_Date,
-                origin = "1970-01-01"
-              ),
-              "%m/%d/%Y"
-            )
-          } else {
-            NA_character_
-          },
-          
           DSM2_Node,
           Location,
-          
-          
           Entrainment_Percentage = fmt_int(
             Prediction_Final
           )
@@ -7538,24 +7956,8 @@ server <- function(input, output, session) {
         "PTM Emulator 30-Day Entrainment"
       ) %>%
         transmute(
-          Window_End_Date = if (
-            "Window_End_Date" %in% names(.)
-          ) {
-            format(
-              as.Date(
-                Window_End_Date,
-                origin = "1970-01-01"
-              ),
-              "%m/%d/%Y"
-            )
-          } else {
-            NA_character_
-          },
-          
           DSM2_Node,
           Location,
-          Region,
-          
           Entrainment_Percentage = fmt_int(
             Prediction_Final
           )
@@ -7582,43 +7984,6 @@ server <- function(input, output, session) {
       
       eco_result() %>%
         transmute(
-          Archive_Date = if (
-            "Archive_Date" %in% names(.)
-          ) {
-            Archive_Date
-          } else {
-            NA_character_
-          },
-          
-          Window = if (
-            all(
-              c(
-                "Window_Start_Date",
-                "Window_End_Date"
-              ) %in% names(.)
-            )
-          ) {
-            paste(
-              format(
-                as.Date(
-                  Window_Start_Date,
-                  origin = "1970-01-01"
-                ),
-                "%m/%d/%Y"
-              ),
-              "to",
-              format(
-                as.Date(
-                  Window_End_Date,
-                  origin = "1970-01-01"
-                ),
-                "%m/%d/%Y"
-              )
-            )
-          } else {
-            NA_character_
-          },
-          
           Model,
           
           Predicted_Population_Percentage = fmt_int(
@@ -7735,7 +8100,7 @@ server <- function(input, output, session) {
         
         tags$div(
           class = "event-horizon-summary-title",
-          "Event Horizon Emulator"
+          "Event Horizon"
         ),
         
         tags$div(
@@ -7979,10 +8344,23 @@ server <- function(input, output, session) {
       )]]
 
       scatter_data <- if (
-        is_current &&
-        identical(
-          input_method,
-          "folder"
+        (
+          is_current &&
+          identical(
+            input_method,
+            "folder"
+          )
+        ) ||
+        (
+          !is_current &&
+          identical(
+            input_method,
+            "folder"
+          ) &&
+          (
+            is.null(input$forecast_flow_source) ||
+            identical(input$forecast_flow_source, "observed")
+          )
         )
       ) {
         eh_result()
@@ -7991,7 +8369,8 @@ server <- function(input, output, session) {
       }
 
       make_eh_scatter(
-        scatter_data
+        scatter_data,
+        compact_title_below_legend = TRUE
       )
     })
     
@@ -8198,23 +8577,75 @@ server <- function(input, output, session) {
       )
     }
     
+    runs <- saved_runs()
+    display_labels <- vapply(
+      available,
+      function(key) {
+        run_data <- runs[[key]]
+        if (!is.null(run_data) && "Scenario_Name" %in% names(run_data) && length(run_data$Scenario_Name) > 0 && !is.na(run_data$Scenario_Name[1]) && nzchar(as.character(run_data$Scenario_Name[1]))) {
+          as.character(run_data$Scenario_Name[1])
+        } else {
+          key
+        }
+      },
+      character(1)
+    )
     checkboxGroupInput(
       inputId = "comparison_runs",
       label = "Select Two or More Runs:",
-      choices = available,
-      selected = available
+      choices = stats::setNames(available, display_labels),
+      selected = available,
+      inline = TRUE
     )
   })
   
   comparison_data <- reactive({
-    req(input$comparison_runs)
+    req(input$comparison_runs, input$comparison_model)
     runs <- saved_runs()
-    
-    selected <- lapply(input$comparison_runs, function(name) runs[[name]])
+
+    selected <- lapply(
+      input$comparison_runs,
+      function(name) {
+        run_data <- runs[[name]]
+
+        if (is.null(run_data) || !is.data.frame(run_data)) {
+          return(NULL)
+        }
+
+        required_columns <- c(
+          "Saved_Run_ID",
+          "Scenario_Name",
+          "Condition",
+          "Model",
+          "DSM2_Node",
+          "Location",
+          "Region",
+          "Prediction_Final",
+          "Output_Unit",
+          "Window_Start_Date",
+          "Window_End_Date"
+        )
+
+        for (column_name in required_columns) {
+          if (!column_name %in% names(run_data)) {
+            run_data[[column_name]] <- NA
+          }
+        }
+
+        run_data
+      }
+    )
+
+    selected <- selected[!vapply(selected, is.null, logical(1))]
+
+    validate(
+      need(length(selected) > 0, "No saved runs are available for comparison.")
+    )
+
     bind_rows(selected) %>%
       filter(Model == input$comparison_model)
   })
-  
+
   output$comparison_table <- renderTable({
     comparison_table_data <- format_comparison_table(
       comparison_data()
@@ -8246,14 +8677,39 @@ server <- function(input, output, session) {
   
   output$comparison_plot <- renderPlotly({
     df <- comparison_data()
-    validate(need(nrow(df) > 0, "Select compatible runs to compare."))
-    
+
+    validate(
+      need(
+        nrow(df) > 0,
+        "Select saved runs that contain results for the selected model."
+      )
+    )
+
+    optional_character_columns <- c(
+      "DSM2_Node",
+      "Location",
+      "Saved_Run_ID",
+      "Scenario_Name",
+      "Condition",
+      "Output_Unit"
+    )
+
+    for (column_name in optional_character_columns) {
+      if (!column_name %in% names(df)) {
+        df[[column_name]] <- NA_character_
+      }
+    }
+
     plot_df <- df %>%
       mutate(
         Run_Label = ifelse(
-          is.na(Saved_Run_ID),
-          paste(Condition, Scenario_Name, sep = " - "),
-          Saved_Run_ID
+          !is.na(Scenario_Name) & nzchar(as.character(Scenario_Name)),
+          as.character(Scenario_Name),
+          ifelse(
+            !is.na(Saved_Run_ID) & nzchar(as.character(Saved_Run_ID)),
+            as.character(Saved_Run_ID),
+            paste(Condition, "Run")
+          )
         ),
         hover_text = paste0(
           "<b>Run:</b> ", Run_Label,
@@ -8263,12 +8719,18 @@ server <- function(input, output, session) {
             paste0("<br><b>DSM2 Node:</b> ", DSM2_Node),
             ""
           ),
+          ifelse(
+            !is.na(Location) & nzchar(as.character(Location)),
+            paste0("<br><b>Location:</b> ", Location),
+            ""
+          ),
           "<br><b>Prediction:</b> ",
           sprintf("%.0f", Prediction_Final),
-          " ", Output_Unit
+          " ",
+          ifelse(is.na(Output_Unit), "", Output_Unit)
         )
       )
-    
+
     if (
       input$comparison_model %in%
       c(
@@ -8276,57 +8738,23 @@ server <- function(input, output, session) {
         "PTM Emulator 30-Day Entrainment"
       )
     ) {
-      
-      if (!"Location" %in% names(plot_df)) {
-        plot_df$Location <- NA_character_
-      }
-      
       plot_df <- plot_df %>%
         mutate(
-          DSM2_Node_Num = suppressWarnings(
-            as.numeric(
-              DSM2_Node
-            )
-          ),
-          
-          Node_Label = ifelse(
-            is.na(Location) | Location == "",
-            as.character(DSM2_Node),
-            paste0(
-              DSM2_Node,
-              " - ",
-              Location
-            )
-          ),
-          
+          DSM2_Node_Num = suppressWarnings(as.numeric(DSM2_Node)),
+          Node_Label = as.character(DSM2_Node),
           Legend_Label = vapply(
             Run_Label,
-            function(x) {
-              paste(
-                strwrap(
-                  x,
-                  width = 28
-                ),
-                collapse = "<br>"
-              )
-            },
+            function(x) paste(strwrap(x, width = 28), collapse = "<br>"),
             character(1)
           )
         ) %>%
-        arrange(
-          DSM2_Node_Num,
-          DSM2_Node
-        )
-      
+        arrange(DSM2_Node_Num, DSM2_Node)
+
       plot_df$Node_Label <- factor(
         plot_df$Node_Label,
-        levels = rev(
-          unique(
-            plot_df$Node_Label
-          )
-        )
+        levels = rev(unique(plot_df$Node_Label))
       )
-      
+
       p <- plot_ly(
         plot_df,
         x = ~Prediction_Final,
@@ -8334,10 +8762,7 @@ server <- function(input, output, session) {
         color = ~Legend_Label,
         type = "bar",
         orientation = "h",
-        text = ~sprintf(
-          "%.0f",
-          Prediction_Final
-        ),
+        text = ~sprintf("%.0f", Prediction_Final),
         textposition = "auto",
         hovertext = ~hover_text,
         hoverinfo = "text"
@@ -8345,16 +8770,26 @@ server <- function(input, output, session) {
         layout(
           barmode = "group",
           xaxis = list(
-            title = "<b>Predicted Entrainment (%)</b>",
-            tickfont = list(
-              size = 13
-            )
+            title = list(
+              text = "<b>Predicted Entrainment (%)</b>",
+              font = list(
+                family = "Arial, Segoe UI, sans-serif",
+                size = 14,
+                color = "#1F1F1F"
+              )
+            ),
+            tickfont = list(size = 12)
           ),
           yaxis = list(
-            title = "<b>DSM2 Node and Location</b>",
-            tickfont = list(
-              size = 12
+            title = list(
+              text = "<b>DSM2 Node</b>",
+              font = list(
+                family = "Arial, Segoe UI, sans-serif",
+                size = 14,
+                color = "#1F1F1F"
+              )
             ),
+            tickfont = list(size = 12),
             automargin = TRUE
           ),
           legend = list(
@@ -8363,18 +8798,10 @@ server <- function(input, output, session) {
             xanchor = "left",
             y = -0.18,
             yanchor = "top",
-            font = list(
-              size = 11
-            )
+            font = list(size = 11)
           ),
-          margin = list(
-            l = 300,
-            r = 60,
-            t = 80,
-            b = 220
-          )
+          margin = list(l = 100, r = 60, t = 70, b = 180)
         )
-      
     } else {
       p <- plot_ly(
         plot_df,
@@ -8402,37 +8829,22 @@ server <- function(input, output, session) {
             } else {
               "<b>Prediction (%)</b>"
             },
-            tickfont = list(size = 13)
+            tickfont = list(size = 12)
           ),
-          showlegend = FALSE
+          showlegend = FALSE,
+          margin = list(l = 100, r = 60, t = 70, b = 120)
         )
     }
-    
+
     p %>%
       layout(
-        title = list(
-          text = paste0("<b>", input$comparison_model, " Comparison</b>"),
-          x = 0.02,
-          xanchor = "left"
-        ),
         plot_bgcolor = "#FFFFFF",
         paper_bgcolor = "#FFFFFF",
         font = list(
           family = "Arial, Segoe UI, sans-serif",
           size = 14,
           color = "#1F1F1F"
-        ),
-        margin = if (
-          input$comparison_model %in%
-          c(
-            "PTM Emulator 7-Day Entrainment",
-            "PTM Emulator 30-Day Entrainment"
-          )
-        ) {
-          list(l = 300, r = 60, t = 80, b = 220)
-        } else {
-          list(l = 100, r = 60, t = 80, b = 120)
-        }
+        )
       ) %>%
       config(
         displaylogo = FALSE,
@@ -8445,7 +8857,8 @@ server <- function(input, output, session) {
         )
       )
   })
-  
+
+
   output$download_comparison <- downloadHandler(
     filename = function() {
       paste0("scenario_comparison_", Sys.Date(), ".csv")
@@ -8457,6 +8870,58 @@ server <- function(input, output, session) {
   
   
   
+  # ===============================================================
+  # Compare 2 Scenarios - user-defined reruns
+  # ===============================================================
+  observe({
+    state <- observed_flow_state()
+    if (!identical(state$status, "ready")) return()
+    getv <- function(name, fallback) {
+      item <- state[[name]]
+      if (!is.null(item) && isTRUE(item$ok) && is.finite(as.numeric(item$value)[1])) format_observed_value(item$value) else fallback
+    }
+    moke_value <- if (!is.null(state$MOK) && isTRUE(state$MOK$ok) && is.finite(as.numeric(state$MOK$value)[1])) format_observed_value(state$MOK$value) else "800"
+    defaults <- list(exp=getv("EXP","6,000"), ver=getv("VER","3,000"), sac=getv("SAC","18,000"), east=getv("EAST","1,500"), xgeo=getv("XGEO","3,000"), yol=getv("YOL","1,000"), moke=moke_value)
+    for (sid in c("s1","s2")) {
+      for (nm in names(defaults)) updateTextInput(session,paste0("compare_",sid,"_",nm),value=defaults[[nm]])
+    }
+  })
+
+  run_compare_scenario <- function(id) {
+    nm <- input[[paste0("compare_",id,"_name")]]
+    vals <- c(exp=parse_flow_input(input[[paste0("compare_",id,"_exp")]]), ver=parse_flow_input(input[[paste0("compare_",id,"_ver")]]), sac=parse_flow_input(input[[paste0("compare_",id,"_sac")]]), east=parse_flow_input(input[[paste0("compare_",id,"_east")]]), xgeo=parse_flow_input(input[[paste0("compare_",id,"_xgeo")]]), yol=parse_flow_input(input[[paste0("compare_",id,"_yol")]]), moke=parse_flow_input(input[[paste0("compare_",id,"_moke")]]))
+    dcc <- as.numeric(input[[paste0("compare_",id,"_dcc")]])
+    risk <- as.numeric(input[[paste0("compare_",id,"_risk")]])
+    validate(need(!is.null(nm)&&nzchar(trimws(nm)),"Enter a scenario name."), need(all(is.finite(vals)),"Enter valid numeric flow inputs."), need(is.finite(dcc),"Select a Delta Cross Channel status."), need(is.finite(risk),"Select a risk threshold."))
+    ptm <- make_ptm_results("User Defined Comparison",nm,vals["exp"],vals["ver"],vals["sac"],vals["east"],vals["xgeo"])
+    eh <- make_eh_result("User Defined Comparison",nm,vals["exp"],vals["ver"],vals["east"],vals["xgeo"],risk)
+    eco <- make_eco_results("User Defined Comparison",nm,vals["sac"],vals["yol"],vals["moke"],dcc)
+    bind_rows(ptm,eh,eco) %>% mutate(Saved_Run_ID=nm)
+  }
+
+  compare_s1_result <- eventReactive(input$run_compare_s1,{run_compare_scenario("s1")})
+  compare_s2_result <- eventReactive(input$run_compare_s2,{run_compare_scenario("s2")})
+  compare_two_data <- reactive({req(compare_s1_result(),compare_s2_result(),input$compare_two_model); bind_rows(compare_s1_result(),compare_s2_result()) %>% filter(Model==input$compare_two_model)})
+  output$compare_two_table <- renderTable({format_comparison_table(compare_two_data())})
+  output$compare_two_spatial_map <- renderLeaflet({
+    df <- compare_two_data(); model <- input$compare_two_model
+    threshold <- suppressWarnings(as.numeric(input$compare_two_map_threshold))[1]; if (is.na(threshold)) threshold <- 25
+    if (model %in% c("PTM Emulator 7-Day Entrainment","PTM Emulator 30-Day Entrainment")) make_ptm_spatial_comparison_map(df,threshold) else if (identical(model,"Event Horizon")) make_eh_spatial_comparison_map(df) else make_empty_comparison_map("<b>Spatial comparison is not available for this ECO-PTM output.</b><br>Review the chart and table for the two scenario results.")
+  })
+  output$compare_two_plot <- renderPlotly({
+    df <- compare_two_data(); validate(need(nrow(df)>0,"Run both scenarios to compare results."))
+    if (!"Location" %in% names(df)) df$Location <- NA_character_
+    if (!"DSM2_Node" %in% names(df)) df$DSM2_Node <- NA_character_
+    plot_df <- df %>% mutate(Run_Label=Scenario_Name, hover_text=paste0("<b>Scenario:</b> ",Scenario_Name,"<br><b>Model:</b> ",Model,ifelse(!is.na(DSM2_Node),paste0("<br><b>DSM2 Node:</b> ",DSM2_Node),""),ifelse(!is.na(Location),paste0("<br><b>Location:</b> ",Location),""),"<br><b>Prediction:</b> ",sprintf("%.0f",Prediction_Final)," ",Output_Unit))
+    if (input$compare_two_model %in% c("PTM Emulator 7-Day Entrainment","PTM Emulator 30-Day Entrainment")) {
+      plot_df <- plot_df %>% mutate(DSM2_Node_Num=suppressWarnings(as.numeric(DSM2_Node)),Node_Label=as.character(DSM2_Node)) %>% arrange(DSM2_Node_Num,DSM2_Node); plot_df$Node_Label <- factor(plot_df$Node_Label,levels=rev(unique(plot_df$Node_Label)))
+      p <- plot_ly(plot_df,x=~Prediction_Final,y=~Node_Label,color=~Run_Label,type="bar",orientation="h",text=~sprintf("%.0f",Prediction_Final),textposition="auto",hovertext=~hover_text,hoverinfo="text") %>% layout(barmode="group",xaxis=list(title=list(text="<b>Predicted Entrainment (%)</b>",font=list(family="Arial, Segoe UI, sans-serif",size=14,color="#1F1F1F")),tickfont=list(size=12)),yaxis=list(title=list(text="<b>DSM2 Node</b>",font=list(family="Arial, Segoe UI, sans-serif",size=14,color="#1F1F1F")),tickfont=list(size=12),automargin=TRUE),legend=list(orientation="h",x=0,xanchor="left",y=-0.18,yanchor="top"),margin=list(l=100,r=60,t=70,b=150))
+    } else {
+      p <- plot_ly(plot_df,x=~Run_Label,y=~Prediction_Final,color=~Run_Label,type="bar",text=~sprintf("%.0f",Prediction_Final),textposition="outside",hovertext=~hover_text,hoverinfo="text") %>% layout(xaxis=list(title="<b>Scenario</b>",tickfont=list(size=12)),yaxis=list(title=if(identical(input$compare_two_model,"Event Horizon")) "<b>Event Horizon Distance (River Miles)</b>" else "<b>Prediction (%)</b>",tickfont=list(size=12)),showlegend=FALSE,margin=list(l=100,r=60,t=70,b=100))
+    }
+    p %>% layout(title=list(text=paste0("<b>",input$compare_two_model," Comparison</b>"),x=0.02,xanchor="left"),plot_bgcolor="#FFFFFF",paper_bgcolor="#FFFFFF",font=list(family="Arial, Segoe UI, sans-serif",size=14,color="#1F1F1F")) %>% config(displaylogo=FALSE)
+  })
+
   # ===============================================================
   # Automatic OMRI archive comparison
   # ===============================================================
@@ -9674,10 +10139,7 @@ server <- function(input, output, session) {
   create_node_map <- function(data, marker_color) {
     
     leaflet::leaflet(data) %>%
-      leaflet::addProviderTiles(
-        leaflet::providers$Esri.WorldImagery,
-        group = "Esri World Imagery"
-      ) %>%
+      add_osm_basemap() %>%
       add_delta_background_layers() %>%
       
       leaflet::addAwesomeMarkers(
@@ -9718,10 +10180,10 @@ server <- function(input, output, session) {
       
       leaflet::addLayersControl(
         baseGroups = c(
-          "Esri World Imagery"
+          "OpenStreetMap"
         ),
         overlayGroups = c(
-          "Delta Boundary",
+          "DSM2 Delta Boundary",
           "Delta Channels",
           "DSM2 Nodes",
           "Node Labels"
@@ -9731,6 +10193,7 @@ server <- function(input, output, session) {
         )
       ) %>%
       
+      add_reset_view_control(zoom = 9) %>%
       leaflet::setView(
         lng = -121.60,
         lat = 38.05,
