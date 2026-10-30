@@ -21,7 +21,7 @@ library(rvest)
 # -------------------------------------------------------------------------
 
 # Permanent master file used by the Shiny app.
-# The GitHub Action runs this script with STN_ShinyApp as its working directory.
+# The GitHub Action runs this script with ShinyApp as its working directory.
 master_csv <- file.path("data", "MOKE_daily.csv")
 
 if (!file.exists(master_csv)) {
