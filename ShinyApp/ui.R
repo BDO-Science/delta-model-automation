@@ -5,13 +5,13 @@ library(leaflet)
 library(plotly)
 library(gt)
 
-app_version <- "1.2.2"
+app_version <- "1.1.0"
 
 run_page <- function(prefix, title, theme_class) {
   
   is_current <- identical(prefix, "current")
   status_name <- "warning"
-
+  
   flow_input <- function(input_id, label, value) {
     if (is_current) {
       textInput(
@@ -23,7 +23,7 @@ run_page <- function(prefix, title, theme_class) {
       numericInput(input_id, label, value)
     }
   }
-
+  
   flow_info <- function(
     text = "Default value is based on the latest available 7-day average flow.",
     note_output_id = NULL
@@ -31,7 +31,7 @@ run_page <- function(prefix, title, theme_class) {
     if (!is_current) {
       return(NULL)
     }
-
+    
     tags$div(
       class = "flow-info-hover",
       tags$span(
@@ -53,7 +53,7 @@ run_page <- function(prefix, title, theme_class) {
       )
     )
   }
-
+  
   info_heading <- function(title, text, heading_class = NULL) {
     tags$div(
       class = "section-heading-with-info",
@@ -106,13 +106,13 @@ run_page <- function(prefix, title, theme_class) {
       )
     )
   }
-
+  
   tabItem(
     tabName = paste0("run_", prefix),
     
     div(
       class = theme_class,
-
+      
       if (is_current) {
         tagList(
           conditionalPanel(
@@ -166,14 +166,14 @@ run_page <- function(prefix, title, theme_class) {
           )
         )
       },
-
+      
       fluidRow(
         box(
           width = 12,
           title = "Input Methods",
           status = status_name,
           solidHeader = TRUE,
-
+          
           if (is_current) {
             tagList(
               radioButtons(
@@ -236,7 +236,7 @@ run_page <- function(prefix, title, theme_class) {
           }
         )
       ),
-
+      
       conditionalPanel(
         condition = if (is_current) {
           sprintf(
@@ -267,9 +267,9 @@ run_page <- function(prefix, title, theme_class) {
                 title = "Inputs",
                 status = status_name,
                 solidHeader = TRUE,
-conditionalPanel(
+                conditionalPanel(
                   condition = sprintf("input.%s_input_method == 'single'", prefix),
-
+                  
                   if (is_current) {
                     tagList(
                       div(
@@ -279,7 +279,7 @@ conditionalPanel(
                           textInput(
                             paste0(prefix, "_ptm_name"),
                             "Scenario Name (User Defined):",
-                            paste0(format(Sys.Date(), "%m%d%Y"), "_EXPLOR_01")
+                            "EXPLOR_01"
                           )
                         ),
                         div(
@@ -297,10 +297,10 @@ conditionalPanel(
                           )
                         )
                       ),
-
+                      
                       div(
                         class = "exploration-input-grid exploration-ptm-grid",
-
+                        
                         div(
                           class = "exploration-input-card",
                           flow_info(
@@ -312,7 +312,7 @@ conditionalPanel(
                             6000
                           )
                         ),
-
+                        
                         div(
                           class = "exploration-input-card",
                           flow_info(
@@ -324,7 +324,7 @@ conditionalPanel(
                             3000
                           )
                         ),
-
+                        
                         div(
                           class = "exploration-input-card",
                           flow_info(
@@ -337,7 +337,7 @@ conditionalPanel(
                             18000
                           )
                         ),
-
+                        
                         div(
                           class = "exploration-input-card",
                           flow_info(
@@ -350,7 +350,7 @@ conditionalPanel(
                             1500
                           )
                         ),
-
+                        
                         div(
                           class = "exploration-input-card",
                           flow_info(
@@ -363,7 +363,7 @@ conditionalPanel(
                             3000
                           )
                         ),
-
+                        
                         div(
                           class = "exploration-input-card exploration-threshold-card",
                           tags$div(class = "input-card-spacer"),
@@ -384,13 +384,13 @@ conditionalPanel(
                     )
                   }
                 ),
-
+                
                 conditionalPanel(
                   condition = sprintf("input.%s_input_method == 'folder'", prefix),
-
+                  
                   if (!is_current) {
                     tagList(
-                                            div(
+                      div(
                         class = "weekly-inputs-info-row",
                         tags$div(
                           class = "flow-info-hover",
@@ -410,7 +410,7 @@ conditionalPanel(
                           )
                         )
                       ),
-
+                      
                       div(
                         class = "exploration-action-row weekly-action-row",
                         div(
@@ -436,7 +436,7 @@ conditionalPanel(
                           )
                         )
                       ),
-
+                      
                       div(
                         class = "exploration-input-grid exploration-ptm-grid weekly-input-grid",
                         weekly_value_card(
@@ -488,14 +488,14 @@ conditionalPanel(
                   }
                 )
               ),
-
+              
               box(
                 width = 12,
                 title = NULL,
                 status = status_name,
                 solidHeader = TRUE,
                 class = "model-results-box",
-
+                
                 tags$div(
                   class = "model-results-loading",
                   tags$div(
@@ -514,7 +514,7 @@ conditionalPanel(
                     uiOutput(
                       paste0(prefix, "_eh_summary")
                     ),
-
+                    
                     info_heading(
                       "7-Day Entrainment Risk Map",
                       if (is_current) {
@@ -750,7 +750,7 @@ conditionalPanel(
                       "input.%s_input_method == 'single'",
                       prefix
                     ),
-
+                    
                     if (is_current) {
                       tagList(
                         div(
@@ -760,7 +760,7 @@ conditionalPanel(
                             textInput(
                               paste0(prefix, "_eco_name"),
                               "Scenario Name (User Defined):",
-                              paste0(format(Sys.Date(), "%m%d%Y"), "_EXPLOR_01")
+                              "EXPLOR_01"
                             )
                           ),
                           div(
@@ -778,10 +778,10 @@ conditionalPanel(
                             )
                           )
                         ),
-
+                        
                         div(
                           class = "exploration-input-grid exploration-eco-grid",
-
+                          
                           div(
                             class = "exploration-input-card",
                             flow_info(
@@ -793,7 +793,7 @@ conditionalPanel(
                               18000
                             )
                           ),
-
+                          
                           div(
                             class = "exploration-input-card",
                             flow_info(
@@ -806,7 +806,7 @@ conditionalPanel(
                               1000
                             )
                           ),
-
+                          
                           div(
                             class = "exploration-input-card",
                             flow_info(
@@ -819,7 +819,7 @@ conditionalPanel(
                               800
                             )
                           ),
-
+                          
                           div(
                             class = "exploration-input-card exploration-dcc-card",
                             tags$div(class = "input-card-spacer"),
@@ -865,16 +865,16 @@ conditionalPanel(
                       )
                     }
                   ),
-
+                  
                   conditionalPanel(
                     condition = sprintf(
                       "input.%s_input_method == 'folder'",
                       prefix
                     ),
-
+                    
                     if (!is_current) {
                       tagList(
-                                                div(
+                        div(
                           class = "weekly-inputs-info-row",
                           tags$div(
                             class = "flow-info-hover",
@@ -894,7 +894,7 @@ conditionalPanel(
                             )
                           )
                         ),
-
+                        
                         div(
                           class = "exploration-action-row weekly-action-row",
                           div(
@@ -920,7 +920,7 @@ conditionalPanel(
                             )
                           )
                         ),
-
+                        
                         div(
                           class = "exploration-input-grid exploration-eco-grid weekly-input-grid",
                           weekly_value_card(
@@ -964,14 +964,14 @@ conditionalPanel(
                     }
                   )
                 ),
-
+                
                 box(
                   width = 12,
                   title = "ECO-PTM Emulator Results",
                   status = status_name,
                   solidHeader = TRUE,
                   class = "model-results-box",
-
+                  
                   tags$div(
                     class = "model-results-loading",
                     tags$div(
@@ -988,9 +988,7 @@ conditionalPanel(
                 )
               )
             )
-          ),
-          
-          
+          )
         )
       )
     )
@@ -1910,7 +1908,7 @@ ui <- dashboardPage(
                            )
                         ),
                         h4("Date Last Updated:", weight = "bold", 
-                           tags$b("2026-07-22")
+                           tags$b("2026-12-01")
                         ),
                         
                         
@@ -1920,237 +1918,210 @@ ui <- dashboardPage(
                         h5(
                           style = "text-align: justify;",
                           tags$b("Data Refresh Schedule: "),
-                          "Default flow values for observed conditions will be retrieved daily through API from public sources and updated daily based on the trailing 7-day average flow. Data within the archive folder on the observed conditions and forecast conditions pages will be uploaded weekly during the OMR entrainment management season. For additional information on data sources please go to the ",
-                          tags$a(
-                            "Data Access page",
-                            href = "#shiny-tab-data"
-                          ),
-                          "."
-                        ),
-                        h5("GitHub Application Repository:",
-                           tags$a("PTM Emulator Dashboard", style = "font-style: italic;",
-                                  href = "https://github.com/lauramanuel/STN_emulator_dashboard")
-                        ),
-                        
-                        h5("Data Sources:", 
-                           tags$a("Historical Results for All PTM Emulator, ECO-PTM Emulator, and Event Horizon models", style = "font-style: italic;",
-                                  href = "https://github.com/lauramanuel/STN_emulator_dashboard/tree/main/STN_EMULATOR/Output")
+                          paste(
+                            "Default flow values for observed conditions will be retrieved daily",
+                            "through APIs from public sources and updated based on the trailing",
+                            "7-day average flow. Data used by the Weekly Assessments page will",
+                            "be updated weekly during the OMR entrainment management season.",
+                            "For additional information on data sources, please go to the",
+                            "Data Access page."
+                          )
                         )
                       )
                     )
-                  )
-                ),
-                fluidRow(
-                  box(
-                    width = 12,
-                    height = 2000,
-                    div(style = "margin-left: 60px;margin-right:120px",
-                        h2("Overview"),
-                        h5(
-                          style = "text-align: justify;",
-                          
-                          "This ShinyApp makes forecast and/or presents hindcast results of particle entrainment and hydraulic footprint metrics within the Sacramento-San Joaquin Delta based on either 7-day or 30-day average flows. The observed conditions simulations and predictions are used for estimating entrainment and hydraulic footprint metrics based on actual conditions, with the option for users to modify flow variables to user-defined values. The forecast conditions simulations are used for estimating entrainment and hydraulic footprint metrics based on previously forecasted conditions during the OMR entrainment management season. The scenario comparison allows users to compare particle entrainment and hydraulic footprint metrics for different scenarios generated using either observed conditions or forecast conditions.",
-                          
-                          tags$br(),
-                          tags$br(),
-                          
-                          "This interactive application is designed based on machine learning models developed by the Contra Costa Water District's (CCWD) ",
-                          
-                          tags$a(
-                            "hydraulic footprint project",
-                            href = "https://github.com/cchang-ccwater/CCWD_Hydraulic_Footprints",
-                            target = "_blank",
-                            rel = "noopener noreferrer"
-                          ),
-                          
-                          ". Further details on the model development, the original training datasets, and the comparative evaluation of model results are available in the CCWD report ",
-                          
-                          tags$sup(
-                            tags$a(
-                              "(1)",
-                              href = "#ref-1"
-                            )
-                          ),
-                          
-                          " and other related studies that are currently being prepared for publication ",
-                          
-                          tags$sup(
-                            tags$a(
-                              "(2)",
-                              href = "#ref-2"
-                            )
-                          ),
-                          
-                          ", ",
-                          
-                          tags$sup(
-                            tags$a(
-                              "(3)",
-                              href = "#ref-3"
-                            )
-                          ),
-                          
-                          "."
-                        ),
-                        
-                        h3("Author & Contact Information"),
-                        gt_output("about_info_table"),
-                        h3("Technical Guidelines:"),
-                        div(style = "margin-left: 60px;",
-                            h4("Visual Identity Compliance:"),
-                            h5(style = "text-align: justify;", "The application framework is built using the ", 
-                               tags$code("shiny"), 
-                               "and ", 
-                               tags$code("shinydashboard"),
-                               "packages. Figures are generated using the", 
-                               tags$code("ggplot"),
-                               "and ", 
-                               tags$code("viridis"),
-                               "packages. Additional packages including",
-                               tags$code("leaflet"),
-                               ", ", 
-                               tags$code("sf"),
-                               ", ",                        
-                               tags$code("lwgeom"),  
-                               ", and ", 
-                               tags$code("dplyr"),                                 
-                               ", are used for interactive mapping, spatial data processing, and geometric calculations. Most interface text uses font sizes between 13px and 16px to ensure good readability under normal viewing conditions. The application primarily uses the Segoe UI font family, with,",
-                               tags$b("Regular", style = "font-family: Segoe UI"),
-                               tags$b(","),
-                               tags$b("Semibold", style = "font-family: Segoe UI Semibold"),
-                               tags$b(","),
-                               tags$b("Italic", style = "font-style: italic"),
-                               "styles applied where appropriate. Additional accessibility features have been implemented or are planned for future releases to further improve accessibility:"
-                            ),
-                            h5(style = "margin-left: 60px; text-align: justify;","	- Adjustable text size: A text size adjustment option is available, allowing users to change the font size from small to large to improve readability. The default text size is Medium."),
-                            p(style = "text-align: center;",
-                              tags$span(style = "font-size: 0.83em;margin-right:20px;","Small"),
-                              tags$span(style = "font-size: 1.17em;margin-right:20px;","Medium"),
-                              tags$span(style = "font-size: 2.00em;","Large")
-                            ),
-                            h5(style = "margin-left: 60px; text-align: justify;","  - Colorblind-friendly color palette: A color palette option is available, allowing users to switch between different plot color schemes. By default, the application uses the Viridis color palette, which is designed to be perceptually uniform and accessible for users with color vision deficiency. Users may also switch to a high-contrast color palette to enhance visibility."),
-                            h4("Browser Compatibility:"),
-                            h5(
-                              "This app can work on Edge, Chrome, Safari, and Firefox, as tested through version ",
-                              tags$code(paste0("v", app_version)),
-                              "."
-                            ),
-                            h4("Performance Standards: "),
-                            h5(style = "text-align: justify;","The application provides reasonable load times under normal operating conditions. The ECO-PTM Emulator page typically loads in less than 1 second; the PTM Emulator page in approximately 2-3 seconds; and the Event Horizon page in approximately 7-9 seconds because it loads Leaflet maps, geo-spatial files, and multiple plots. Standard weekly prediction tasks are generally completed almost immediately, while large prediction requests involving long time series and many input features, e.g., 190k records, may require substantially more processing and rendering time."),
-                            h5(style = "text-align: justify;","Concurrent-user capacity depends on the deployment environment, including available CPU, memory, and the number of Shiny worker processes. The application is expected to support multiple users performing normal navigation, data exploration, and standard predictions, although several simultaneous computationally intensive prediction requests may increase response times. Final concurrent-user capacity should therefore be confirmed through load testing in the production environment."),
-                            h4("Mobile Responsiveness:"),
-                            h5("This application is usable also on mobile devices.")
+                  ),
+                  fluidRow(
+                    box(
+                      width = 12,
+                      height = 2000,
+                      div(style = "margin-left: 60px;margin-right:120px",
+                          h2("Overview"),
+                          h5(
+                            style = "text-align: justify;",
                             
-                        ),
-                        h3(id = "reference",  "References"),                
-                        div(style = "margin-left: 60px;",
-                            h5(style = "text-align: justify;", "Contra Costa Water District.(2026) Intuitive Quantitative Metrics for Rapid Assessment of Entrainment Risks and Salmonid Responses in The Delta.",
-                               tags$a(
-                                 "[Link]",
-                                 href = "https://stantec.sharepoint.com/:w:/r/teams/LTOTechnicalSupport2025-2030/Shared%20Documents/CCWD%20Entrainment%20TM/20260419_CCWD_Entrainment_memo.docx?d=wa6ce67b163e341bd9a8e2767a75736e9&csf=1&web=1&e=b9mjqJ"
-                               )),
-                            h5(style = "text-align: justify;", "Chang, C.-F., et. al., (2026). XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX. Journal of XXXXX: XX-XXXXXXXXXX.",
-                               tags$a(
-                                 "[Link]",
-                                 href = ""
-                               )),
-                            h5(style = "text-align: justify;", "Chang, C.-F., et. al., (2026). XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX. Journal of XXXXX: XX-XXXXXXXXXX.",
-                               tags$a(
-                                 "[Link]",
-                                 href = ""
-                               )),
-                        ),
-                        h3(id = "release-notes", "Release Notes:"),
-                        div(style = "margin-left: 60px;",
-                            tags$div(
-                              style = "margin-bottom: 24px;padding-left: 12px;border-left: 4px solid #3c8dbc;",
-                              h4(style = "margin-bottom: 8px;font-weight: 600;",
-                                 "Version ",
-                                 tags$code("1.2.0", style = "font-weight: 400;margin-left: 10px;"),
-                                 tags$small(style = "margin-left: 10px;color: #777777;font-weight: normal;",
-                                            "July 18, 2026"
-                                 )
-                              ),
-                              h5(style = "line-height: 1.6;margin-top: 6px;margin-bottom: 6px;margin-left: 30px;font-weight: normal;",
-                                 tags$b("-Added: "),
-                                 "A new ",
-                                 tags$code("Event Horizon"),
-                                 " page with interactive ",
+                            "This ShinyApp makes forecast and/or presents hindcast results of particle entrainment and hydraulic footprint metrics within the Sacramento-San Joaquin Delta based on either 7-day or 30-day average flows. The observed conditions simulations and predictions are used for estimating entrainment and hydraulic footprint metrics based on actual conditions, with the option for users to modify flow variables to user-defined values. The forecast conditions simulations are used for estimating entrainment and hydraulic footprint metrics based on previously forecasted conditions during the OMR entrainment management season. The scenario comparison allows users to compare particle entrainment and hydraulic footprint metrics for different scenarios generated using either observed conditions or forecast conditions.",
+                            
+                            tags$br(),
+                            tags$br(),
+                            
+                            "This interactive application is designed based on machine learning models developed by the Contra Costa Water District's (CCWD) ",
+                            
+                            tags$a(
+                              "hydraulic footprint project",
+                              href = "https://github.com/cchang-ccwater/CCWD_Hydraulic_Footprints",
+                              target = "_blank",
+                              rel = "noopener noreferrer"
+                            ),
+                            
+                            ". Further details on the model development, original training datasets, and comparative evaluation of model results are available in the CCWD report ",
+                            tags$sup(
+                              tags$a(
+                                "(1)",
+                                href = "#ref-1"
+                              )
+                            ),
+                            "."
+                          ),
+                          
+                          h3("Author & Contact Information"),
+                          gt_output("about_info_table"),
+                          h3("Technical Guidelines:"),
+                          div(style = "margin-left: 60px;",
+                              h4("Visual Identity Compliance:"),
+                              h5(style = "text-align: justify;", "The application framework is built using the ", 
+                                 tags$code("shiny"), 
+                                 "and ", 
+                                 tags$code("shinydashboard"),
+                                 "packages. Figures are generated using the", 
+                                 tags$code("ggplot"),
+                                 "and ", 
+                                 tags$code("viridis"),
+                                 "packages. Additional packages including",
                                  tags$code("leaflet"),
-                                 " maps and additional visualization tools."
+                                 ", ", 
+                                 tags$code("sf"),
+                                 ", ",                        
+                                 tags$code("lwgeom"),  
+                                 ", and ", 
+                                 tags$code("dplyr"),                                 
+                                 ", are used for interactive mapping, spatial data processing, and geometric calculations. Most interface text uses font sizes between 13px and 16px to ensure good readability under normal viewing conditions. The application primarily uses the Segoe UI font family, with,",
+                                 tags$b("Regular", style = "font-family: Segoe UI"),
+                                 tags$b(","),
+                                 tags$b("Semibold", style = "font-family: Segoe UI Semibold"),
+                                 tags$b(","),
+                                 tags$b("Italic", style = "font-style: italic"),
+                                 "styles applied where appropriate. Additional accessibility features have been implemented or are planned for future releases to further improve accessibility:"
                               ),
-                              h5(style = "line-height: 1.6;margin-top: 6px;margin-bottom: 6px;margin-left: 30px;font-weight: normal;",
-                                 tags$b("-Improved: "),
-                                 "Prediction performance for standard weekly analysis periods."
+                              h5(style = "margin-left: 60px; text-align: justify;","	- Adjustable text size: A text size adjustment option is available, allowing users to change the font size from small to large to improve readability. The default text size is Medium."),
+                              p(style = "text-align: center;",
+                                tags$span(style = "font-size: 0.83em;margin-right:20px;","Small"),
+                                tags$span(style = "font-size: 1.17em;margin-right:20px;","Medium"),
+                                tags$span(style = "font-size: 2.00em;","Large")
                               ),
-                              h5(style = "line-height: 1.6;margin-top: 6px;margin-bottom: 6px;margin-left: 30px;font-weight: normal;",
-                                 tags$b("-Fixed: "),
-                                 "Minor layout and data-loading issues in the ",
-                                 tags$code("PTM"),
-                                 " module."
+                              h5(style = "margin-left: 60px; text-align: justify;","  - Colorblind-friendly color palette: A color palette option is available, allowing users to switch between different plot color schemes. By default, the application uses the Viridis color palette, which is designed to be perceptually uniform and accessible for users with color vision deficiency. Users may also switch to a high-contrast color palette to enhance visibility."),
+                              h4("Browser Compatibility:"),
+                              h5(
+                                "This app can work on Edge, Chrome, Safari, and Firefox, as tested through version ",
+                                tags$code(paste0("v", app_version)),
+                                "."
+                              ),
+                              h4("Performance Standards: "),
+                              h5(style = "text-align: justify;","The application provides reasonable load times under normal operating conditions. The ECO-PTM Emulator page typically loads in less than 1 second; the PTM Emulator page in approximately 2-3 seconds; and the Event Horizon page in approximately 7-9 seconds because it loads Leaflet maps, geo-spatial files, and multiple plots. Standard weekly prediction tasks are generally completed almost immediately, while large prediction requests involving long time series and many input features, e.g., 190k records, may require substantially more processing and rendering time."),
+                              h5(style = "text-align: justify;","Concurrent-user capacity depends on the deployment environment, including available CPU, memory, and the number of Shiny worker processes. The application is expected to support multiple users performing normal navigation, data exploration, and standard predictions, although several simultaneous computationally intensive prediction requests may increase response times. Final concurrent-user capacity should therefore be confirmed through load testing in the production environment."),
+                              h4("Mobile Responsiveness:"),
+                              h5("This application is usable also on mobile devices.")
+                              
+                          ),
+                          h3(
+                            id = "reference",
+                            "References"
+                          ),
+                          
+                          div(
+                            style = "margin-left: 60px;",
+                            
+                            h5(
+                              id = "ref-1",
+                              style = "text-align: justify; line-height: 1.6;",
+                              
+                              "Contra Costa Water District. (2026). ",
+                              
+                              tags$em(
+                                paste(
+                                  "Intuitive Quantitative Metrics for Rapid Assessment",
+                                  "of Entrainment Risks and Salmonid Responses in The Delta."
+                                )
+                              ),
+                              
+                              " ",
+                              
+                              tags$a(
+                                "[View PDF]",
+                                href = "20260512_CCWD_Entrainment_TM_Final.pdf",
+                                target = "_blank",
+                                rel = "noopener noreferrer"
                               )
                             )
-                        ),
-                        div(style = "margin-left: 60px;",
+                          ),
+                          h3(
+                            id = "release-notes",
+                            "Release Notes:"
+                          ),
+                          
+                          div(
+                            style = "margin-left: 60px;",
+                            
                             tags$div(
-                              style = "margin-bottom: 24px;padding-left: 12px;border-left: 4px solid #3c8dbc;",
-                              h4(style = "margin-bottom: 8px;font-weight: 600;",
-                                 "Version ",
-                                 tags$code("1.2.1", style = "font-weight: 400;margin-left: 10px;"),
-                                 tags$small(style = "margin-left: 10px;color: #777777;font-weight: normal;",
-                                            "July 22, 2026"
-                                 )
+                              style = paste(
+                                "margin-bottom: 24px;",
+                                "padding-left: 12px;",
+                                "border-left: 4px solid #3c8dbc;"
                               ),
-                              h5(style = "line-height: 1.6;margin-top: 6px;margin-bottom: 6px;margin-left: 30px;font-weight: normal;",
-                                 tags$b("-Added: "),
-                                 "A new ",
-                                 tags$code("Event Horizon"),
-                                 " page with interactive ",
-                                 tags$code("leaflet"),
-                                 " maps and additional visualization tools."
+                              
+                              h4(
+                                style = paste(
+                                  "margin-bottom: 8px;",
+                                  "font-weight: 600;"
+                                ),
+                                
+                                "Version ",
+                                
+                                tags$code(
+                                  "1.1.0",
+                                  style = paste(
+                                    "font-weight: 400;",
+                                    "margin-left: 10px;"
+                                  )
+                                ),
+                                
+                                tags$small(
+                                  style = paste(
+                                    "margin-left: 10px;",
+                                    "color: #777777;",
+                                    "font-weight: normal;"
+                                  ),
+                                  "December 1, 2026"
+                                )
                               ),
-                              h5(style = "line-height: 1.6;margin-top: 6px;margin-bottom: 6px;margin-left: 30px;font-weight: normal;",
-                                 tags$b("-Improved: "),
-                                 "Prediction performance for standard weekly analysis periods."
+                              
+                              h5(
+                                style = paste(
+                                  "line-height: 1.6;",
+                                  "margin-top: 6px;",
+                                  "margin-bottom: 6px;",
+                                  "margin-left: 30px;",
+                                  "font-weight: normal;"
+                                ),
+                                tags$b("-Added: "),
+                                "First installment of Shiny app"
                               ),
-                              h5(style = "line-height: 1.6;margin-top: 6px;margin-bottom: 6px;margin-left: 30px;font-weight: normal;",
-                                 tags$b("-Fixed: "),
-                                 "Minor layout and data-loading issues in the ",
-                                 tags$code("PTM"),
-                                 " module."
+                              
+                              h5(
+                                style = paste(
+                                  "line-height: 1.6;",
+                                  "margin-top: 6px;",
+                                  "margin-bottom: 6px;",
+                                  "margin-left: 30px;",
+                                  "font-weight: normal;"
+                                ),
+                                tags$b("-Improved: "),
+                                "NA"
+                              ),
+                              
+                              h5(
+                                style = paste(
+                                  "line-height: 1.6;",
+                                  "margin-top: 6px;",
+                                  "margin-bottom: 6px;",
+                                  "margin-left: 30px;",
+                                  "font-weight: normal;"
+                                ),
+                                tags$b("-Fixed: "),
+                                "NA"
                               )
                             )
-                        ),
-                        div(style = "margin-left: 60px;",
-                            tags$div(
-                              style = "margin-bottom: 24px;padding-left: 12px;border-left: 4px solid #3c8dbc;",
-                              h4(style = "margin-bottom: 8px;font-weight: 600;",
-                                 "Version ",
-                                 tags$code("1.2.2", style = "font-weight: 400;margin-left: 10px;"),
-                                 tags$small(style = "margin-left: 10px;color: #777777;font-weight: normal;",
-                                            "July 24, 2026"
-                                 )
-                              ),
-                              h5(style = "line-height: 1.6;margin-top: 6px;margin-bottom: 6px;margin-left: 30px;font-weight: normal;",
-                                 tags$b("-Added: "),
-                                 "A new ",
-                                 tags$code("Event Horizon"),
-                                 " page with interactive ",
-                                 tags$code("leaflet"),
-                                 " maps and additional visualization tools."
-                              ),
-                              h5(style = "line-height: 1.6;margin-top: 6px;margin-bottom: 6px;margin-left: 30px;font-weight: normal;",
-                                 tags$b("-Improved: "),
-                                 "Prediction performance for standard weekly analysis periods."
-                              ),
-                              h5(style = "line-height: 1.6;margin-top: 6px;margin-bottom: 6px;margin-left: 30px;font-weight: normal;",
-                                 tags$b("-Fixed: "),
-                                 "Minor layout and data-loading issues in the ",
-                                 tags$code("PTM"),
-                                 " module."
-                              )
-                            )
-                        )
+                          )
+                      )
                     )
                   )
                 )
@@ -2163,7 +2134,7 @@ ui <- dashboardPage(
       
       tabItem(
         tabName = "comparison",
-
+        
         tags$div(
           class = "exploration-workflow-guide comparison-global-guide",
           icon("info-circle"),
@@ -2172,13 +2143,13 @@ ui <- dashboardPage(
             "Select a model and two or more compatible saved runs from this Shiny session. Review the comparison chart, spatial map, and detailed table below. PTM and Event Horizon runs support spatial comparison; ECO-PTM results are compared in the chart and table."
           )
         ),
-
+        
         tabsetPanel(
           id = "comparison_sections",
           
           tabPanel(
             "Library of runs",
-
+            
             fluidRow(
               box(
                 width = 12,
@@ -2228,7 +2199,7 @@ ui <- dashboardPage(
                 )
               )
             ),
-
+            
             fluidRow(
               box(
                 width = 12,
@@ -2258,7 +2229,7 @@ ui <- dashboardPage(
                 plotlyOutput("comparison_plot", height = 700)
               )
             ),
-
+            
             fluidRow(
               box(
                 width = 12,
@@ -2288,7 +2259,7 @@ ui <- dashboardPage(
                 leafletOutput("comparison_spatial_map", height = 650)
               )
             ),
-
+            
             fluidRow(
               box(
                 width = 12,
@@ -2322,10 +2293,10 @@ ui <- dashboardPage(
               )
             )
           ),
-
+          
           tabPanel(
             "OMRI Comparison",
-
+            
             fluidRow(
               box(
                 width = 12,
@@ -2391,7 +2362,7 @@ ui <- dashboardPage(
                 )
               )
             ),
-
+            
             fluidRow(
               box(
                 width = 12,
@@ -2422,7 +2393,7 @@ ui <- dashboardPage(
                 plotlyOutput("omri_comparison_plot", height = 750)
               )
             ),
-
+            
             fluidRow(
               box(
                 width = 12,
@@ -2452,7 +2423,7 @@ ui <- dashboardPage(
                 leafletOutput("omri_comparison_spatial_map", height = 650)
               )
             ),
-
+            
             fluidRow(
               box(
                 width = 12,
@@ -2486,7 +2457,7 @@ ui <- dashboardPage(
               )
             )
           ),
-
+          
           tabPanel(
             "Compare 2 Scenarios",
             fluidRow(
@@ -2501,17 +2472,21 @@ ui <- dashboardPage(
                     tags$div(class = "flow-info-popover", tags$div(class = "flow-info-static", "Scenario 1 is initialized with the same latest observed 7-day average flows used by the Exploration page. Edit any input to create a user-defined scenario, then click Run Scenario 1."))
                   )
                 ),
-                textInput("compare_s1_name", "Scenario Name:", paste0(format(Sys.Date(), "%m%d%Y"), "_COMPARE_01")),
+                textInput(
+                  "compare_s1_name",
+                  "Scenario Name:",
+                  "COMPARE_01"
+                ),
                 div(class = "compare-input-grid",
-                  textInput("compare_s1_exp", "EXP: Combined CVP and SWP Export (cfs):", "6,000"),
-                  textInput("compare_s1_ver", "VER: San Joaquin River Flow at Vernalis (cfs):", "3,000"),
-                  textInput("compare_s1_sac", "SAC: Sacramento River Flow at Freeport (cfs):", "18,000"),
-                  textInput("compare_s1_east", "EAST: East-Side River Flow (cfs):", "1,500"),
-                  textInput("compare_s1_xgeo", "XGEO: Interior Delta Flow (cfs):", "3,000"),
-                  textInput("compare_s1_yol", "YOL: Yolo Bypass Flow (cfs):", "1,000"),
-                  textInput("compare_s1_moke", "MOKE: Mokelumne Flow (cfs):", "800"),
-                  radioButtons("compare_s1_dcc", "Delta Cross Channel Status:", choices = c("Closed" = 0, "Open" = 1), selected = 0, inline = TRUE),
-                  selectInput("compare_s1_risk", "Entrainment / Event Horizon Risk Threshold (%):", choices = seq(15,80,by=5), selected = 25)
+                    textInput("compare_s1_exp", "EXP: Combined CVP and SWP Export (cfs):", "6,000"),
+                    textInput("compare_s1_ver", "VER: San Joaquin River Flow at Vernalis (cfs):", "3,000"),
+                    textInput("compare_s1_sac", "SAC: Sacramento River Flow at Freeport (cfs):", "18,000"),
+                    textInput("compare_s1_east", "EAST: East-Side River Flow (cfs):", "1,500"),
+                    textInput("compare_s1_xgeo", "XGEO: Interior Delta Flow (cfs):", "3,000"),
+                    textInput("compare_s1_yol", "YOL: Yolo Bypass Flow (cfs):", "1,000"),
+                    textInput("compare_s1_moke", "MOKE: Mokelumne Flow (cfs):", "800"),
+                    radioButtons("compare_s1_dcc", "Delta Cross Channel Status:", choices = c("Closed" = 0, "Open" = 1), selected = 0, inline = TRUE),
+                    selectInput("compare_s1_risk", "Entrainment / Event Horizon Risk Threshold (%):", choices = seq(15,80,by=5), selected = 25)
                 ),
                 actionButton("run_compare_s1", "Run Scenario 1", icon = icon("play"), class = "btn-success", width = "100%")
               ),
@@ -2526,52 +2501,56 @@ ui <- dashboardPage(
                     tags$div(class = "flow-info-popover", tags$div(class = "flow-info-static", "Scenario 2 starts from the same current-condition baseline as Scenario 1. Change only the variables you want to test, then click Run Scenario 2."))
                   )
                 ),
-                textInput("compare_s2_name", "Scenario Name:", paste0(format(Sys.Date(), "%m%d%Y"), "_COMPARE_02")),
+                textInput(
+                  "compare_s2_name",
+                  "Scenario Name:",
+                  "COMPARE_02"
+                ),
                 div(class = "compare-input-grid",
-                  textInput("compare_s2_exp", "EXP: Combined CVP and SWP Export (cfs):", "6,000"),
-                  textInput("compare_s2_ver", "VER: San Joaquin River Flow at Vernalis (cfs):", "3,000"),
-                  textInput("compare_s2_sac", "SAC: Sacramento River Flow at Freeport (cfs):", "18,000"),
-                  textInput("compare_s2_east", "EAST: East-Side River Flow (cfs):", "1,500"),
-                  textInput("compare_s2_xgeo", "XGEO: Interior Delta Flow (cfs):", "3,000"),
-                  textInput("compare_s2_yol", "YOL: Yolo Bypass Flow (cfs):", "1,000"),
-                  textInput("compare_s2_moke", "MOKE: Mokelumne Flow (cfs):", "800"),
-                  radioButtons("compare_s2_dcc", "Delta Cross Channel Status:", choices = c("Closed" = 0, "Open" = 1), selected = 0, inline = TRUE),
-                  selectInput("compare_s2_risk", "Entrainment / Event Horizon Risk Threshold (%):", choices = seq(15,80,by=5), selected = 25)
+                    textInput("compare_s2_exp", "EXP: Combined CVP and SWP Export (cfs):", "6,000"),
+                    textInput("compare_s2_ver", "VER: San Joaquin River Flow at Vernalis (cfs):", "3,000"),
+                    textInput("compare_s2_sac", "SAC: Sacramento River Flow at Freeport (cfs):", "18,000"),
+                    textInput("compare_s2_east", "EAST: East-Side River Flow (cfs):", "1,500"),
+                    textInput("compare_s2_xgeo", "XGEO: Interior Delta Flow (cfs):", "3,000"),
+                    textInput("compare_s2_yol", "YOL: Yolo Bypass Flow (cfs):", "1,000"),
+                    textInput("compare_s2_moke", "MOKE: Mokelumne Flow (cfs):", "800"),
+                    radioButtons("compare_s2_dcc", "Delta Cross Channel Status:", choices = c("Closed" = 0, "Open" = 1), selected = 0, inline = TRUE),
+                    selectInput("compare_s2_risk", "Entrainment / Event Horizon Risk Threshold (%):", choices = seq(15,80,by=5), selected = 25)
                 ),
                 actionButton("run_compare_s2", "Run Scenario 2", icon = icon("play"), class = "btn-success", width = "100%")
               )
             ),
             fluidRow(
               box(width=12, title="Comparison Controls", status="primary", solidHeader=TRUE,
-                tags$div(class="section-heading-with-info", tags$h4("Select Output"),
-                  tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Comparison output information", icon("info-circle")),
-                    tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "After both scenarios have been run, choose which emulator output to compare. PTM and Event Horizon outputs include a spatial comparison map; ECO-PTM outputs are compared in the chart and table."))
+                  tags$div(class="section-heading-with-info", tags$h4("Select Output"),
+                           tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Comparison output information", icon("info-circle")),
+                                    tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "After both scenarios have been run, choose which emulator output to compare. PTM and Event Horizon outputs include a spatial comparison map; ECO-PTM outputs are compared in the chart and table."))
+                           )
+                  ),
+                  selectInput("compare_two_model", "Model:", choices=c("PTM Emulator 7-Day Entrainment","PTM Emulator 30-Day Entrainment","ECO-PTM Emulator Survival","ECO-PTM Emulator Interior Routing","Event Horizon"), selected="PTM Emulator 7-Day Entrainment"),
+                  conditionalPanel(condition="input.compare_two_model == 'PTM Emulator 7-Day Entrainment' || input.compare_two_model == 'PTM Emulator 30-Day Entrainment'",
+                                   selectInput("compare_two_map_threshold", "Map Risk Threshold (%):", choices=seq(15,80,by=5), selected=25)
                   )
-                ),
-                selectInput("compare_two_model", "Model:", choices=c("PTM Emulator 7-Day Entrainment","PTM Emulator 30-Day Entrainment","ECO-PTM Emulator Survival","ECO-PTM Emulator Interior Routing","Event Horizon"), selected="PTM Emulator 7-Day Entrainment"),
-                conditionalPanel(condition="input.compare_two_model == 'PTM Emulator 7-Day Entrainment' || input.compare_two_model == 'PTM Emulator 30-Day Entrainment'",
-                  selectInput("compare_two_map_threshold", "Map Risk Threshold (%):", choices=seq(15,80,by=5), selected=25)
-                )
               )
             ),
             fluidRow(box(width=12,status="primary",solidHeader=FALSE,
-              tags$div(class="section-heading-with-info", tags$h4("Scenario Comparison Chart"),
-                tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Comparison chart information", icon("info-circle")),
-                  tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "The chart compares Scenario 1 and Scenario 2 for the selected emulator output."))
-                )
-              ), plotlyOutput("compare_two_plot",height=700))),
+                         tags$div(class="section-heading-with-info", tags$h4("Scenario Comparison Chart"),
+                                  tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Comparison chart information", icon("info-circle")),
+                                           tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "The chart compares Scenario 1 and Scenario 2 for the selected emulator output."))
+                                  )
+                         ), plotlyOutput("compare_two_plot",height=700))),
             fluidRow(box(width=12,status="primary",solidHeader=FALSE,
-              tags$div(class="section-heading-with-info", tags$h4("Scenario Spatial Comparison Map"),
-                tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Spatial comparison information", icon("info-circle")),
-                  tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "For PTM outputs, the map compares the two scenarios using the selected risk threshold. For Event Horizon, the predicted channel-path reaches are compared. ECO-PTM outputs do not have map geometry."))
-                )
-              ), leafletOutput("compare_two_spatial_map",height=650))),
+                         tags$div(class="section-heading-with-info", tags$h4("Scenario Spatial Comparison Map"),
+                                  tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Spatial comparison information", icon("info-circle")),
+                                           tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "For PTM outputs, the map compares the two scenarios using the selected risk threshold. For Event Horizon, the predicted channel-path reaches are compared. ECO-PTM outputs do not have map geometry."))
+                                  )
+                         ), leafletOutput("compare_two_spatial_map",height=650))),
             fluidRow(box(width=12,status="primary",solidHeader=FALSE,
-              tags$div(class="section-heading-with-info", tags$h4("Detailed Scenario Comparison Results"),
-                tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Comparison table information", icon("info-circle")),
-                  tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "The table provides the detailed emulator outputs and input values for Scenario 1 and Scenario 2."))
-                )
-              ), div(class="wide-table-scroll", tableOutput("compare_two_table"))))
+                         tags$div(class="section-heading-with-info", tags$h4("Detailed Scenario Comparison Results"),
+                                  tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Comparison table information", icon("info-circle")),
+                                           tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "The table provides the detailed emulator outputs and input values for Scenario 1 and Scenario 2."))
+                                  )
+                         ), div(class="wide-table-scroll", tableOutput("compare_two_table"))))
           )
         )
       ),
@@ -2627,13 +2606,22 @@ ui <- dashboardPage(
                       tags$h4("PTM Emulator GitHub Repository"),
                       
                       p(
-                        "Access source code, model workflow documentation, emulator development resources, and supporting scripts."
+                        paste(
+                          "Access the DSM2 weekly modeling workflow, PTM and ECO-PTM",
+                          "post-processing tools, SacPAS reporting code, model documentation,",
+                          "and the Emulator/Event Horizon Shiny application."
+                        )
                       ),
                       
                       tags$a(
                         class = "btn btn-success",
-                        href = "https://github.com/rojkv/PTM_Emulator_Workflow",
+                        href = "https://github.com/BDO-Science/delta-model-automation",
                         target = "_blank",
+                        rel = "noopener noreferrer",
+                        title = paste(
+                          "Open the BDO-Science delta-model-automation",
+                          "repository in a new browser tab"
+                        ),
                         icon("github"),
                         " View on GitHub"
                       )
@@ -2729,7 +2717,7 @@ ui <- dashboardPage(
                                )
                         )
                       )
-                  ),  
+                  )  
                 )
             )
         )

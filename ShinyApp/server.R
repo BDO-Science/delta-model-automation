@@ -5691,7 +5691,250 @@ server <- function(input, output, session) {
         )
       )
   }
-  
+  make_entrainment_risk_surface <- function(
+    nodes,
+    grid_cell_size = 300,
+    idp = 2,
+    nmax = 6,
+    maximum_distance = 300000
+  ) {
+    
+    validate(
+      need(
+        inherits(nodes, "sf"),
+        "PTM node data must be an sf object."
+      ),
+      need(
+        "entrainment" %in% names(nodes),
+        "PTM node data are missing the entrainment field."
+      )
+    )
+    
+    # ------------------------------------------------------------
+    # 1. Prepare supported DSM2 node predictions
+    # ------------------------------------------------------------
+    
+    nodes_valid <- nodes %>%
+      dplyr::filter(
+        !is.na(entrainment),
+        is.finite(entrainment)
+      ) %>%
+      sf::st_make_valid() %>%
+      sf::st_transform(26910)
+    
+    validate(
+      need(
+        nrow(nodes_valid) >= 3,
+        paste0(
+          "At least three valid DSM2 node predictions are ",
+          "required to interpolate risk."
+        )
+      )
+    )
+    
+    nodes_valid$entrainment <- pmax(
+      0,
+      pmin(
+        100,
+        as.numeric(nodes_valid$entrainment)
+      )
+    )
+    
+    # ------------------------------------------------------------
+    # 2. Prepare the Delta boundary in projected coordinates
+    # ------------------------------------------------------------
+    
+    boundary_utm <- delta_boundary %>%
+      sf::st_make_valid() %>%
+      sf::st_transform(26910) %>%
+      sf::st_union()
+    
+    # ------------------------------------------------------------
+    # 3. Build a regular polygon grid in EPSG:26910
+    # ------------------------------------------------------------
+    
+    grid_polygons <- sf::st_make_grid(
+      boundary_utm,
+      cellsize = grid_cell_size,
+      what = "polygons",
+      square = TRUE
+    )
+    
+    grid_sf <- sf::st_sf(
+      grid_id = seq_along(grid_polygons),
+      geometry = grid_polygons
+    )
+    
+    # Keep cells whose centers fall inside the Delta boundary.
+    grid_centers <- sf::st_centroid(
+      grid_sf
+    )
+    
+    inside_delta <- lengths(
+      sf::st_intersects(
+        grid_centers,
+        boundary_utm
+      )
+    ) > 0
+    
+    grid_sf <- grid_sf[
+      inside_delta,
+      ,
+      drop = FALSE
+    ]
+    
+    grid_centers <- grid_centers[
+      inside_delta,
+      ,
+      drop = FALSE
+    ]
+    
+    validate(
+      need(
+        nrow(grid_sf) > 0,
+        "The Delta interpolation grid could not be created."
+      )
+    )
+    
+    # ------------------------------------------------------------
+    # 4. Interpolate at the polygon centers
+    # ------------------------------------------------------------
+    
+    node_sp <- methods::as(
+      nodes_valid,
+      "Spatial"
+    )
+    
+    center_sp <- methods::as(
+      grid_centers,
+      "Spatial"
+    )
+    
+    idw_result <- gstat::idw(
+      formula = entrainment ~ 1,
+      locations = node_sp,
+      newdata = center_sp,
+      idp = idp,
+      nmax = min(
+        nmax,
+        nrow(nodes_valid)
+      ),
+      maxdist = maximum_distance,
+      debug.level = 0
+    )
+    
+    interpolated_values <- as.numeric(
+      idw_result$var1.pred
+    )
+    
+    grid_sf$risk <- interpolated_values
+    
+    grid_sf <- grid_sf %>%
+      dplyr::filter(
+        !is.na(risk),
+        is.finite(risk)
+      )
+    
+    validate(
+      need(
+        nrow(grid_sf) > 0,
+        "No supported PTM interpolation cells were generated."
+      )
+    )
+    
+    grid_sf$risk <- pmax(
+      0,
+      pmin(
+        100,
+        grid_sf$risk
+      )
+    )
+    
+    # ------------------------------------------------------------
+    # 5. Transform the completed grid for Leaflet
+    #
+    # sf performs the vector transformation before the layer is
+    # sent to Leaflet. No RasterLayer reprojection is needed.
+    # ------------------------------------------------------------
+    
+    grid_display <- grid_sf %>%
+      sf::st_transform(4326)
+    
+    list(
+      grid = grid_display,
+      nodes = sf::st_transform(
+        nodes_valid,
+        4326
+      ),
+      boundary = sf::st_transform(
+        sf::st_as_sf(boundary_utm),
+        4326
+      )
+    )
+  }
+  make_entrainment_threshold_contour <- function(
+    risk_raster,
+    threshold
+  ) {
+    
+    threshold <- suppressWarnings(
+      as.numeric(threshold)[1]
+    )
+    
+    if (!is.finite(threshold)) {
+      threshold <- 25
+    }
+    
+    raster_values <- raster::values(
+      risk_raster
+    )
+    
+    raster_values <- raster_values[
+      is.finite(raster_values)
+    ]
+    
+    if (
+      length(raster_values) == 0 ||
+      threshold < min(raster_values) ||
+      threshold > max(raster_values)
+    ) {
+      return(NULL)
+    }
+    
+    contour_sp <- tryCatch(
+      {
+        raster::rasterToContour(
+          risk_raster,
+          levels = threshold
+        )
+      },
+      error = function(error_condition) {
+        NULL
+      }
+    )
+    
+    if (
+      is.null(contour_sp) ||
+      length(contour_sp) == 0
+    ) {
+      return(NULL)
+    }
+    
+    contour_sf <- sf::st_as_sf(
+      contour_sp
+    )
+    
+    if (nrow(contour_sf) == 0) {
+      return(NULL)
+    }
+    
+    contour_sf$threshold <- threshold
+    
+    sf::st_transform(
+      contour_sf,
+      4326
+    )
+  }
   make_entrainment_zones <- function(
     nodes,
     threshold,
@@ -6294,115 +6537,263 @@ server <- function(input, output, session) {
       )
   }
   make_ptm_map <- function(df, threshold) {
-    validate(need(nrow(df) > 0, "Run the model to display results."))
+    
+    validate(
+      need(
+        nrow(df) > 0,
+        "Run the model to display results."
+      )
+    )
+    
+    threshold <- suppressWarnings(
+      as.numeric(threshold)[1]
+    )
+    
+    if (!is.finite(threshold)) {
+      threshold <- 25
+    }
+    
+    # ------------------------------------------------------------
+    # Prepare mapped PTM nodes
+    # ------------------------------------------------------------
     
     sf_nodes <- df %>%
-      filter(!is.na(X), !is.na(Y)) %>%
-      transmute(
+      dplyr::filter(
+        !is.na(X),
+        !is.na(Y),
+        !is.na(Prediction_Final),
+        is.finite(Prediction_Final)
+      ) %>%
+      dplyr::transmute(
         DSM2_Node,
         Location,
         Region,
-        entrainment = Prediction_Final,
-        X,
-        Y
+        entrainment = as.numeric(Prediction_Final),
+        X = as.numeric(X),
+        Y = as.numeric(Y)
       ) %>%
-      st_as_sf(coords = c("X", "Y"), crs = 4326, remove = FALSE) %>%
-      st_transform(26910)
+      sf::st_as_sf(
+        coords = c("X", "Y"),
+        crs = 4326,
+        remove = FALSE
+      ) %>%
+      sf::st_transform(26910)
     
-    zones <- make_entrainment_zones(sf_nodes, threshold)
-    display_nodes <- st_transform(sf_nodes, 4326)
-    
-    pal <- colorNumeric(
-      "viridis",
-      domain = range(display_nodes$entrainment, na.rm = TRUE)
+    validate(
+      need(
+        nrow(sf_nodes) >= 3,
+        "At least three mapped PTM node predictions are required."
+      )
     )
+    
+    # ------------------------------------------------------------
+    # Create the continuous IDW surface and threshold contour
+    # ------------------------------------------------------------
+    
+    risk_surface <- make_entrainment_risk_surface(
+      nodes = sf_nodes,
+      grid_cell_size = 300,
+      idp = 2,
+      nmax = 6,
+      maximum_distance = 300000
+    )
+    
+    # threshold_contour <- make_entrainment_threshold_contour(
+    #   risk_raster = risk_surface,
+    #   threshold = threshold
+    # )
+    
+    display_nodes <- sf::st_transform(
+      sf_nodes,
+      4326
+    )
+    
+    # A fixed 0-100 domain ensures that the same color means the
+    # same entrainment percentage in every scenario.
+    risk_palette <- leaflet::colorNumeric(
+      palette = grDevices::colorRampPalette(
+        c(
+          "#2166AC",
+          "#4393C3",
+          "#92C5DE",
+          "#D1E5F0",
+          "#F7F7F7",
+          "#FDDBC7",
+          "#F4A582",
+          "#D6604D",
+          "#B2182B"
+        ),
+        space = "Lab"
+      )(256),
+      domain = c(0, 100),
+      na.color = "transparent"
+    )
+    
     
     popup_html <- ~paste0(
       "<div style='font-size:16px;line-height:1.55;min-width:300px;'>",
-      "<div style='font-size:20px;font-weight:700;color:#075f6d;margin-bottom:8px;'>DSM2 Node ", DSM2_Node, "</div>",
-      "<div><b>Node:</b> ", DSM2_Node, "</div>",
-      "<div><b>Location:</b> ", Location, "</div>",
-      "<div><b>Region:</b> ", Region, "</div>",
-      "<div style='font-size:18px;font-weight:800;margin-top:8px;color:#8b1e1e;'>Entrainment: ",
-      sprintf("%.0f", entrainment), "%</div>",
+      "<div style='font-size:20px;font-weight:700;color:#075f6d;",
+      "margin-bottom:8px;'>DSM2 Node ",
+      DSM2_Node,
+      "</div>",
+      "<div><b>Node:</b> ",
+      DSM2_Node,
+      "</div>",
+      "<div><b>Location:</b> ",
+      Location,
+      "</div>",
+      "<div><b>Region:</b> ",
+      Region,
+      "</div>",
+      "<div style='font-size:18px;font-weight:800;margin-top:8px;",
+      "color:#8b1e1e;'>Predicted entrainment: ",
+      sprintf("%.0f", entrainment),
+      "%</div>",
       "</div>"
     )
     
-    leaflet() %>%
+    # ------------------------------------------------------------
+    # Start map
+    # ------------------------------------------------------------
+    
+    map <- leaflet::leaflet() %>%
       add_osm_basemap() %>%
-      addPolygons(
-        data = st_transform(delta_boundary, 4326),
-        fillColor = "#eef7f9", fillOpacity = 0.2,
-        color = "#0a7e8c", weight = 1,
+      leaflet::addPolygons(
+        data = sf::st_transform(
+          delta_boundary,
+          4326
+        ),
+        fillColor = "#eef7f9",
+        fillOpacity = 0.10,
+        color = "#0a7e8c",
+        weight = 1,
         group = "DSM2 Delta Boundary"
       ) %>%
-      addPolylines(
-        data = st_transform(delta_channels, 4326),
-        color = "#2b8cbe", weight = 1, opacity = 0.6,
+      leaflet::addPolygons(
+        data = risk_surface$grid,
+        fillColor = ~risk_palette(risk),
+        fillOpacity = 0.68,
+        stroke = FALSE,
+        smoothFactor = 0,
+        group = "Interpolated Entrainment Risk",
+        options = leaflet::pathOptions(
+          interactive = FALSE
+        )
+      )%>%
+      leaflet::addPolylines(
+        data = sf::st_transform(
+          delta_channels,
+          4326
+        ),
+        color = "#285F73",
+        weight = 1,
+        opacity = 0.55,
         group = "Channels"
-      ) %>%
-      addPolygons(
-        data = zones$low,
-        fillColor = "#a9d4e6", fillOpacity = 0.45,
-        color = "#427799", weight = 1,
-        group = "Low Risk Zone"
-      ) %>%
-      addPolygons(
-        data = zones$high,
-        fillColor = "#e8b5b5", fillOpacity = 0.6,
-        color = "#a74a4a", weight = 1,
-        group = "High Risk Zone"
-      ) %>%
-      addCircleMarkers(
+      )
+    
+    # ------------------------------------------------------------
+    # Add the selected threshold as a contour line when it exists
+    # ------------------------------------------------------------
+    
+    # if (!is.null(threshold_contour)) {
+    #   
+    #   map <- map %>%
+    #     leaflet::addPolylines(
+    #       data = threshold_contour,
+    #       color = "#202020",
+    #       weight = 3,
+    #       opacity = 0.95,
+    #       dashArray = "8,6",
+    #       label = paste0(
+    #         threshold,
+    #         "% interpolated entrainment threshold"
+    #       ),
+    #       popup = paste0(
+    #         "<b>Risk threshold contour</b><br>",
+    #         "Interpolated entrainment = ",
+    #         threshold,
+    #         "%"
+    #       ),
+    #       group = "Risk Threshold"
+    #     )
+    # }
+    
+    # ------------------------------------------------------------
+    # Add actual PTM node predictions above the surface
+    # ------------------------------------------------------------
+    
+    map <- map %>%
+      leaflet::addCircleMarkers(
         data = display_nodes,
         radius = 7,
-        color = "#2B2B2B",
-        fillColor = ~ifelse(entrainment >= threshold, "#D96B6B", "#6FAED3"),
-        fillOpacity = 0.95,
+        color = "#252525",
+        fillColor = ~risk_palette(entrainment),
+        fillOpacity = 1,
         stroke = TRUE,
         weight = 2,
         popup = popup_html,
-        group = "Nodes"
+        group = "PTM Node Predictions"
       ) %>%
-      addLabelOnlyMarkers(
+      leaflet::addLabelOnlyMarkers(
         data = display_nodes,
-        
         label = ~paste0(
-          round(
-            entrainment,
-            0
-          ),
+          round(entrainment, 0),
           "%"
         ),
-        
-        labelOptions = labelOptions(
+        labelOptions = leaflet::labelOptions(
           noHide = TRUE,
           direction = "top",
           textOnly = FALSE,
           offset = c(0, -10),
           className = "entrainment-permanent-label"
         ),
-        
         group = "Entrainment Labels"
       ) %>%
-      addLegend(
+      leaflet::addLegend(
         position = "topright",
-        colors = c("#e8b5b5", "#a9d4e6"),
-        labels = c(
-          paste0("High Risk Zone / Node: >= ", threshold, "%"),
-          paste0("Low Risk Zone / Node: < ", threshold, "%")
-        ),
-        title = "Entrainment Risk",
-        opacity = 0.8
+        pal = risk_palette,
+        values = c(0, 100),
+        title = "Predicted entrainment (%)",
+        opacity = 0.85,
+        group = "Interpolated Entrainment Risk"
       ) %>%
-      addLayersControl(
-        overlayGroups = c(
-          "DSM2 Delta Boundary", "Channels", "Low Risk Zone",
-          "High Risk Zone", "Nodes", "Entrainment Labels"
+      leaflet::addControl(
+        html = paste0(
+          "<div style='background:rgba(255,255,255,0.94);",
+          "padding:9px 11px;border:1px solid #999;",
+          "border-radius:5px;font-size:12px;",
+          "line-height:1.4;max-width:290px;'>",
+          "<b>Map interpretation</b><br>",
+          "Circles are PTM emulator predictions at supported DSM2 nodes.",
+          "<br>The faded surface is inverse-distance interpolation ",
+          "between nearby nodes.",
+          "</div>"
         ),
-        options = layersControlOptions(collapsed = FALSE)
+        position = "bottomleft"
+      )
+    
+    overlay_groups <- c(
+      "DSM2 Delta Boundary",
+      "Interpolated Entrainment Risk",
+      "Channels"
+    )
+    
+    overlay_groups <- c(
+      overlay_groups,
+      "PTM Node Predictions",
+      "Entrainment Labels"
+    )
+    
+    map %>%
+      leaflet::addLayersControl(
+        overlayGroups = overlay_groups,
+        options = leaflet::layersControlOptions(
+          collapsed = FALSE
+        )
       ) %>%
-      add_reset_view_control(zoom = 9) %>%
+      add_reset_view_control(
+        zoom = 9
+      ) %>%
       leaflet::setView(
         lng = -121.60,
         lat = 38.05,
@@ -6417,230 +6808,325 @@ server <- function(input, output, session) {
     
     validate(
       need(
-        nrow(ptm_df) > 0,
-        "Run the PTM and Event Horizon emulators to display results."
+        !is.null(ptm_df) && nrow(ptm_df) > 0,
+        "Run the PTM emulator to display the risk map."
       ),
       need(
-        nrow(eh_df) > 0,
+        !is.null(eh_df) && nrow(eh_df) > 0,
         "No Event Horizon emulator result is available."
       )
     )
     
+    threshold <- suppressWarnings(
+      as.numeric(threshold)[1]
+    )
+    
+    if (!is.finite(threshold)) {
+      threshold <- 25
+    }
+    
+    # ------------------------------------------------------------
+    # Prepare PTM node predictions
+    # ------------------------------------------------------------
+    
     sf_nodes <- ptm_df %>%
-      filter(
+      dplyr::filter(
         !is.na(X),
-        !is.na(Y)
+        !is.na(Y),
+        !is.na(Prediction_Final),
+        is.finite(Prediction_Final)
       ) %>%
-      transmute(
+      dplyr::transmute(
         DSM2_Node,
         Location,
         Region,
-        entrainment = Prediction_Final,
-        X,
-        Y
+        entrainment = as.numeric(Prediction_Final),
+        X = as.numeric(X),
+        Y = as.numeric(Y)
       ) %>%
-      st_as_sf(
+      sf::st_as_sf(
         coords = c("X", "Y"),
         crs = 4326,
         remove = FALSE
       ) %>%
-      st_transform(26910)
+      sf::st_transform(26910)
     
-    zones <- make_entrainment_zones(
-      sf_nodes,
-      threshold
-    )
-    
-    display_nodes <- st_transform(
-      sf_nodes,
-      4326
-    )
-    
-    eh_lines <- make_event_horizon_path_geometry(
-      distance_miles = eh_df$Prediction_Final[1],
-      regions = c("OMR")
-    )
-    
-    eh_lines_display <- st_transform(
-      eh_lines,
-      4326
-    )
-    
-    pal <- colorNumeric(
-      "viridis",
-      domain = range(
-        display_nodes$entrainment,
-        na.rm = TRUE
+    validate(
+      need(
+        nrow(sf_nodes) >= 3,
+        "At least three mapped PTM node predictions are required."
       )
     )
     
-    leaflet() %>%
+    # ------------------------------------------------------------
+    # Build the new continuous vector-grid risk surface
+    # ------------------------------------------------------------
+    
+    risk_surface <- make_entrainment_risk_surface(
+      nodes = sf_nodes,
+      grid_cell_size = 300,
+      idp = 2,
+      nmax = 6,
+      maximum_distance = 300000
+    )
+    
+    display_nodes <- sf::st_transform(
+      sf_nodes,
+      4326
+    )
+    
+    # ------------------------------------------------------------
+    # Prepare Event Horizon geometry
+    # ------------------------------------------------------------
+    
+    eh_distance <- suppressWarnings(
+      as.numeric(eh_df$Prediction_Final[1])
+    )
+    
+    validate(
+      need(
+        is.finite(eh_distance) && eh_distance > 0,
+        "The Event Horizon result does not contain a valid distance."
+      )
+    )
+    
+    eh_lines <- make_event_horizon_path_geometry(
+      distance_miles = eh_distance,
+      regions = c("OMR")
+    )
+    
+    validate(
+      need(
+        !is.null(eh_lines) &&
+          inherits(eh_lines, "sf") &&
+          nrow(eh_lines) > 0,
+        "The Event Horizon channel geometry could not be created."
+      )
+    )
+    
+    eh_lines_display <- eh_lines %>%
+      sf::st_make_valid() %>%
+      sf::st_transform(4326)
+    
+    eh_lines_display$Event_Horizon_miles <- eh_distance
+    
+    # ------------------------------------------------------------
+    # Continuous blue-to-red palette
+    # ------------------------------------------------------------
+    
+    risk_palette <- leaflet::colorNumeric(
+      palette = grDevices::colorRampPalette(
+        c(
+          "#2166AC",
+          "#4393C3",
+          "#92C5DE",
+          "#D1E5F0",
+          "#F7F7F7",
+          "#FDDBC7",
+          "#F4A582",
+          "#D6604D",
+          "#B2182B"
+        ),
+        space = "Lab"
+      )(256),
+      domain = c(0, 100),
+      na.color = "transparent"
+    )
+    
+    popup_html <- ~paste0(
+      "<div style='font-size:16px;line-height:1.55;min-width:280px;'>",
+      "<div><b>DSM2 Node:</b> ",
+      DSM2_Node,
+      "</div>",
+      "<div><b>Location:</b> ",
+      Location,
+      "</div>",
+      "<div><b>Region:</b> ",
+      Region,
+      "</div>",
+      "<div style='font-size:18px;font-weight:800;color:#8b1e1e;'>",
+      "Entrainment: ",
+      sprintf("%.0f", entrainment),
+      "%",
+      "</div>",
+      "</div>"
+    )
+    
+    # ------------------------------------------------------------
+    # Start map and explicitly control layer order
+    # ------------------------------------------------------------
+    
+    map <- leaflet::leaflet() %>%
+      leaflet::addMapPane(
+        name = "riskSurfacePane",
+        zIndex = 410
+      ) %>%
+      leaflet::addMapPane(
+        name = "channelPane",
+        zIndex = 420
+      ) %>%
+      leaflet::addMapPane(
+        name = "eventHorizonPane",
+        zIndex = 650
+      ) %>%
+      leaflet::addMapPane(
+        name = "nodePane",
+        zIndex = 660
+      ) %>%
       add_osm_basemap() %>%
       
-      addPolygons(
-        data = st_transform(
+      leaflet::addPolygons(
+        data = sf::st_transform(
           delta_boundary,
           4326
         ),
         fillColor = "#eef7f9",
-        fillOpacity = 0.2,
+        fillOpacity = 0.10,
         color = "#0a7e8c",
         weight = 1,
         group = "DSM2 Delta Boundary"
       ) %>%
       
-      addPolylines(
-        data = st_transform(
+      leaflet::addPolygons(
+        data = risk_surface$grid,
+        fillColor = ~risk_palette(risk),
+        fillOpacity = 0.68,
+        stroke = FALSE,
+        smoothFactor = 0,
+        group = "Interpolated Entrainment Risk",
+        options = leaflet::pathOptions(
+          pane = "riskSurfacePane",
+          interactive = FALSE
+        )
+      ) %>%
+      
+      leaflet::addPolylines(
+        data = sf::st_transform(
           delta_channels,
           4326
         ),
-        color = "#2b8cbe",
+        color = "#285F73",
         weight = 1,
-        opacity = 0.6,
-        group = "Channels"
+        opacity = 0.55,
+        group = "Channels",
+        options = leaflet::pathOptions(
+          pane = "channelPane"
+        )
       ) %>%
       
-      addPolygons(
-        data = zones$low,
-        fillColor = "#a9d4e6",
-        fillOpacity = 0.45,
-        color = "#427799",
-        weight = 1,
-        group = "Low Risk Zone"
-      ) %>%
-      
-      addPolygons(
-        data = zones$high,
-        fillColor = "#e8b5b5",
-        fillOpacity = 0.6,
-        color = "#a74a4a",
-        weight = 1,
-        group = "High Risk Zone"
-      ) %>%
-      
-      addCircleMarkers(
+      leaflet::addCircleMarkers(
         data = display_nodes,
         radius = 7,
-        color = "#2B2B2B",
-        fillColor = ~ifelse(entrainment >= threshold, "#D96B6B", "#6FAED3"),
-        fillOpacity = 0.95,
+        color = "#252525",
+        fillColor = ~risk_palette(entrainment),
+        fillOpacity = 1,
         stroke = TRUE,
         weight = 2,
-        
-        popup = ~paste0(
-          "<div style='font-size:16px;line-height:1.55;min-width:280px;'>",
-          "<div><b>DSM2 Node:</b> ", DSM2_Node, "</div>",
-          "<div><b>Location:</b> ", Location, "</div>",
-          "<div><b>Region:</b> ", Region, "</div>",
-          "<div style='font-size:18px;font-weight:800;color:#8b1e1e;'>",
-          "Entrainment: ",
-          sprintf("%.0f", entrainment),
-          "%",
-          "</div>",
-          "</div>"
-        ),
-        
-        group = "PTM Nodes"
+        popup = popup_html,
+        group = "PTM Node Predictions",
+        options = leaflet::pathOptions(
+          pane = "nodePane"
+        )
       ) %>%
       
-      addLabelOnlyMarkers(
+      leaflet::addLabelOnlyMarkers(
         data = display_nodes,
-        
         label = ~paste0(
-          round(
-            entrainment,
-            0
-          ),
+          round(entrainment, 0),
           "%"
         ),
-        
-        labelOptions = labelOptions(
+        labelOptions = leaflet::labelOptions(
           noHide = TRUE,
           direction = "top",
+          textOnly = FALSE,
           offset = c(0, -10),
-          className = "entrainment-permanent-label"
+          className = "entrainment-permanent-label",
+          pane = "nodePane"
         ),
-        
         group = "Entrainment Labels"
       ) %>%
       
-      addPolylines(
+      # Event Horizon must be added after the risk grid.
+      leaflet::addPolylines(
         data = eh_lines_display,
-        color = "#B2182B",
-        weight = 5,
-        opacity = 0.95,
-        
+        color = "#65000B",
+        weight = 4,
+        opacity = 1,
+        label = ~paste0(
+          "Event Horizon: ",
+          sprintf("%.1f", Event_Horizon_miles),
+          " river miles"
+        ),
         popup = ~paste0(
-          "<b>Event Horizon:</b> ",
-          sprintf(
-            "%.1f",
-            Event_Horizon_miles
-          ),
+          "<div style='font-size:15px;line-height:1.5;'>",
+          "<b>Event Horizon</b><br>",
+          "Upstream extent: ",
+          sprintf("%.1f", Event_Horizon_miles),
           " river miles",
-          "<br><b>Risk level:</b> ",
-          threshold,
-          "%"
+          "<br>Selected entrainment risk: ",
+          sprintf("%.0f", threshold),
+          "%",
+          "</div>"
         ),
-        
-        group = "Event Horizon Reach"
+        group = "Event Horizon Reach",
+        options = leaflet::pathOptions(
+          pane = "eventHorizonPane"
+        )
       ) %>%
       
-      addLegend(
+      leaflet::addLegend(
         position = "topright",
-        
-        colors = c(
-          "#e8b5b5",
-          "#a9d4e6",
-          "#B2182B"
-        ),
-        
-        labels = c(
-          paste0(
-            "High Risk Zone / Node: >= ",
-            threshold,
-            "%"
-          ),
-          paste0(
-            "Low Risk Zone / Node: < ",
-            threshold,
-            "%"
-          ),
-          paste0(
-            "Event Horizon: ",
-            sprintf(
-              "%.1f",
-              eh_df$Prediction_Final[1]
-            ),
-            " miles"
-          )
-        ),
-        
-        title = "Map Key",
-        opacity = 0.85
+        pal = risk_palette,
+        values = c(0, 100),
+        title = "Predicted entrainment (%)",
+        opacity = 0.88,
+        group = "Interpolated Entrainment Risk"
       ) %>%
       
-      addLayersControl(
+      leaflet::addControl(
+        html = paste0(
+          "<div style='background:rgba(255,255,255,0.94);",
+          "padding:9px 11px;border:1px solid #999;",
+          "border-radius:5px;font-size:12px;",
+          "line-height:1.4;max-width:300px;'>",
+          "<b>Map interpretation</b><br>",
+          "Circles are PTM emulator predictions at supported DSM2 nodes.",
+          "<br>The faded surface is inverse-distance interpolation ",
+          "between nearby nodes.",
+          "<br>The dark-red channel line is the predicted Event Horizon ",
+          "at the selected ",
+          sprintf("%.0f", threshold),
+          "% risk level.",
+          "</div>"
+        ),
+        position = "bottomleft"
+      ) %>%
+      
+      leaflet::addLayersControl(
         overlayGroups = c(
           "DSM2 Delta Boundary",
+          "Interpolated Entrainment Risk",
           "Channels",
-          "Low Risk Zone",
-          "High Risk Zone",
-          "PTM Nodes",
+          "PTM Node Predictions",
           "Entrainment Labels",
           "Event Horizon Reach"
         ),
-        
-        options = layersControlOptions(
+        options = leaflet::layersControlOptions(
           collapsed = FALSE
         )
       ) %>%
       
-      add_reset_view_control(zoom = 9) %>%
+      add_reset_view_control(
+        zoom = 9
+      ) %>%
+      
       leaflet::setView(
         lng = -121.60,
         lat = 38.05,
         zoom = 9
       )
+    
+    map
   }
   
    
@@ -7382,26 +7868,174 @@ server <- function(input, output, session) {
       )
     
   }
-  
-  make_ptm_png_plot <- function(df, threshold, title) {
+  normalize_leaflet_bounds <- function(
+    bounds,
+    fallback_geometry
+  ) {
     
-    if (is.null(df) || nrow(df) == 0) {
-      stop("No PTM results are available. Run the PTM models before downloading.")
+    fallback_geometry <- sf::st_transform(
+      fallback_geometry,
+      4326
+    )
+    
+    fallback_bbox <- sf::st_bbox(
+      fallback_geometry
+    )
+    
+    fallback <- list(
+      west = as.numeric(fallback_bbox["xmin"]),
+      east = as.numeric(fallback_bbox["xmax"]),
+      south = as.numeric(fallback_bbox["ymin"]),
+      north = as.numeric(fallback_bbox["ymax"])
+    )
+    
+    if (
+      is.null(bounds) ||
+      !is.list(bounds) ||
+      !all(
+        c(
+          "west",
+          "east",
+          "south",
+          "north"
+        ) %in% names(bounds)
+      )
+    ) {
+      return(fallback)
     }
     
-    threshold <- as.numeric(threshold)
+    normalized <- list(
+      west = suppressWarnings(
+        as.numeric(bounds$west)[1]
+      ),
+      east = suppressWarnings(
+        as.numeric(bounds$east)[1]
+      ),
+      south = suppressWarnings(
+        as.numeric(bounds$south)[1]
+      ),
+      north = suppressWarnings(
+        as.numeric(bounds$north)[1]
+      )
+    )
     
-    if (is.na(threshold)) {
+    bounds_are_valid <- (
+      all(
+        is.finite(
+          unlist(normalized)
+        )
+      ) &&
+        normalized$west < normalized$east &&
+        normalized$south < normalized$north &&
+        normalized$west >= -180 &&
+        normalized$east <= 180 &&
+        normalized$south >= -90 &&
+        normalized$north <= 90
+    )
+    
+    if (!bounds_are_valid) {
+      return(fallback)
+    }
+    
+    normalized
+  }
+  ptm_png_dimensions <- function(
+    map_bounds,
+    fallback_geometry
+  ) {
+    
+    bounds <- normalize_leaflet_bounds(
+      bounds = map_bounds,
+      fallback_geometry = fallback_geometry
+    )
+    
+    center_latitude <- (
+      bounds$south +
+        bounds$north
+    ) / 2
+    
+    longitude_span <- (
+      bounds$east -
+        bounds$west
+    ) * cos(
+      center_latitude * pi / 180
+    )
+    
+    latitude_span <- (
+      bounds$north -
+        bounds$south
+    )
+    
+    geographic_ratio <- (
+      longitude_span /
+        latitude_span
+    )
+    
+    geographic_ratio <- max(
+      1.25,
+      min(
+        geographic_ratio,
+        3.5
+      )
+    )
+    
+    width_inches <- 13
+    
+    # Map-panel height plus room for title, subtitle and caption.
+    height_inches <- max(
+      5.2,
+      min(
+        8.5,
+        width_inches / geographic_ratio + 1.75
+      )
+    )
+    
+    list(
+      width = width_inches,
+      height = height_inches
+    )
+  }
+  make_ptm_png_plot <- function(
+    df,
+    threshold,
+    title,
+    map_bounds = NULL,
+    eh_df = NULL
+  ) {
+    
+    if (
+      is.null(df) ||
+      !is.data.frame(df) ||
+      nrow(df) == 0
+    ) {
+      stop(
+        paste(
+          "No PTM results are available.",
+          "Run the PTM models before downloading."
+        )
+      )
+    }
+    
+    threshold <- suppressWarnings(
+      as.numeric(threshold)[1]
+    )
+    
+    if (!is.finite(threshold)) {
       threshold <- 25
     }
     
+    # ------------------------------------------------------------
+    # Prepare the selected PTM node predictions
+    # ------------------------------------------------------------
+    
     nodes_utm <- df %>%
-      filter(
+      dplyr::filter(
         !is.na(X),
         !is.na(Y),
-        !is.na(Prediction_Final)
+        !is.na(Prediction_Final),
+        is.finite(Prediction_Final)
       ) %>%
-      transmute(
+      dplyr::transmute(
         DSM2_Node = as.character(DSM2_Node),
         Location,
         Region,
@@ -7409,164 +8043,531 @@ server <- function(input, output, session) {
         X = as.numeric(X),
         Y = as.numeric(Y)
       ) %>%
-      st_as_sf(
+      sf::st_as_sf(
         coords = c("X", "Y"),
         crs = 4326,
         remove = FALSE
       ) %>%
-      st_transform(26910)
+      sf::st_transform(26910)
     
-    if (nrow(nodes_utm) == 0) {
-      stop("PTM node coordinates are missing, so the PNG map cannot be created.")
+    if (nrow(nodes_utm) < 3) {
+      stop(
+        paste(
+          "At least three mapped PTM node predictions",
+          "are required to create the PNG."
+        )
+      )
     }
     
-    # Create plain coordinate columns for reliable Entrainment Labels.
-    node_xy <- st_coordinates(nodes_utm)
+    # ------------------------------------------------------------
+    # Recreate the same interpolation used by the Leaflet map
+    # ------------------------------------------------------------
     
-    node_labels <- nodes_utm %>%
-      st_drop_geometry() %>%
-      mutate(
-        map_x = node_xy[, 1],
-        map_y = node_xy[, 2]
-      )
-    
-    # Risk polygons are added when interpolation succeeds. The PNG still
-    # downloads with nodes and boundaries if a particular threshold cannot
-    # produce a valid interpolated polygon.
-    zones <- tryCatch(
-      make_entrainment_zones(nodes_utm, threshold),
-      error = function(e) NULL,
-      shiny.silent.error = function(e) NULL
+    risk_surface <- make_entrainment_risk_surface(
+      nodes = nodes_utm,
+      grid_cell_size = 300,
+      idp = 2,
+      nmax = 6,
+      maximum_distance = 300000
     )
     
-    p <- ggplot() +
-      geom_sf(
-        data = st_make_valid(delta_boundary),
-        fill = "#F7FBFC",
-        color = "#2B6573",
-        linewidth = 0.55
-      ) +
-      geom_sf(
-        data = st_make_valid(delta_channels),
-        color = "#6BAED6",
-        linewidth = 0.28,
-        alpha = 0.65
-      )
+    risk_grid <- risk_surface$grid %>%
+      sf::st_make_valid() %>%
+      sf::st_transform(4326)
     
-    if (!is.null(zones)) {
+    nodes_wgs84 <- sf::st_transform(
+      nodes_utm,
+      4326
+    )
+    
+    channels_wgs84 <- delta_channels %>%
+      sf::st_make_valid() %>%
+      sf::st_transform(4326)
+    
+    boundary_wgs84 <- delta_boundary %>%
+      sf::st_make_valid() %>%
+      sf::st_transform(4326)
+    
+    # ------------------------------------------------------------
+    # Use the visible Leaflet frame
+    # ------------------------------------------------------------
+    
+    bounds <- normalize_leaflet_bounds(
+      bounds = map_bounds,
+      fallback_geometry = delta_boundary
+    )
+    
+    viewport_bbox <- sf::st_bbox(
+      c(
+        xmin = bounds$west,
+        xmax = bounds$east,
+        ymin = bounds$south,
+        ymax = bounds$north
+      ),
+      crs = sf::st_crs(4326)
+    )
+    
+    viewport_polygon <- sf::st_as_sfc(
+      viewport_bbox
+    )
+    
+    # Crop the large grid before plotting to reduce PNG render time.
+    risk_grid_visible <- suppressWarnings(
+      sf::st_crop(
+        risk_grid,
+        viewport_bbox
+      )
+    )
+    
+    channels_visible <- suppressWarnings(
+      sf::st_crop(
+        channels_wgs84,
+        viewport_bbox
+      )
+    )
+    
+    boundary_visible <- suppressWarnings(
+      sf::st_crop(
+        boundary_wgs84,
+        viewport_bbox
+      )
+    )
+    
+    node_is_visible <- lengths(
+      sf::st_intersects(
+        nodes_wgs84,
+        viewport_polygon
+      )
+    ) > 0
+    
+    nodes_visible <- nodes_wgs84[
+      node_is_visible,
+      ,
+      drop = FALSE
+    ]
+    
+    # ------------------------------------------------------------
+    # Prepare percentage-label coordinates
+    # ------------------------------------------------------------
+    
+    if (nrow(nodes_visible) > 0) {
       
-      low_zone <- st_transform(st_make_valid(zones$low), 26910) %>%
-        mutate(Risk_Zone = paste0("Low risk: < ", threshold, "%"))
+      node_coordinates <- sf::st_coordinates(
+        nodes_visible
+      )
       
-      high_zone <- st_transform(st_make_valid(zones$high), 26910) %>%
-        mutate(Risk_Zone = paste0("High risk: > ", threshold, "%"))
+      node_labels <- nodes_visible %>%
+        sf::st_drop_geometry() %>%
+        dplyr::mutate(
+          longitude = node_coordinates[, "X"],
+          latitude = node_coordinates[, "Y"],
+          Entrainment_Label = paste0(
+            round(entrainment, 0),
+            "%"
+          )
+        )
       
-      zone_values <- stats::setNames(
-        c("#A9D4E6", "#E8B5B5"),
-        c(
-          paste0("Low risk: < ", threshold, "%"),
-          paste0("High risk: > ", threshold, "%")
+    } else {
+      
+      node_labels <- data.frame(
+        longitude = numeric(),
+        latitude = numeric(),
+        Entrainment_Label = character()
+      )
+    }
+    
+    # ------------------------------------------------------------
+    # Prepare Event Horizon geometry for the 7-day export
+    # ------------------------------------------------------------
+    
+    event_horizon_visible <- NULL
+    event_horizon_distance <- NA_real_
+    
+    if (
+      !is.null(eh_df) &&
+      is.data.frame(eh_df) &&
+      nrow(eh_df) > 0 &&
+      "Prediction_Final" %in% names(eh_df)
+    ) {
+      
+      event_horizon_distance <- suppressWarnings(
+        as.numeric(
+          eh_df$Prediction_Final[1]
         )
       )
       
-      p <- p +
-        geom_sf(
-          data = low_zone,
-          aes(fill = Risk_Zone),
-          color = "#427799",
-          alpha = 0.48,
-          linewidth = 0.4
-        ) +
-        geom_sf(
-          data = high_zone,
-          aes(fill = Risk_Zone),
-          color = "#9B2C2C",
-          alpha = 0.62,
-          linewidth = 0.4
-        ) +
-        scale_fill_manual(
-          name = "Entrainment risk zones",
-          values = zone_values,
-          drop = FALSE
+      if (
+        is.finite(event_horizon_distance) &&
+        event_horizon_distance > 0
+      ) {
+        
+        event_horizon <- make_event_horizon_path_geometry(
+          distance_miles = event_horizon_distance,
+          regions = c("OMR")
+        ) %>%
+          sf::st_make_valid() %>%
+          sf::st_transform(4326)
+        
+        event_horizon_visible <- suppressWarnings(
+          sf::st_crop(
+            event_horizon,
+            viewport_bbox
+          )
+        )
+        
+        if (nrow(event_horizon_visible) == 0) {
+          event_horizon_visible <- NULL
+        }
+      }
+    }
+    
+    # ------------------------------------------------------------
+    # Extract figure metadata
+    # ------------------------------------------------------------
+    
+    first_nonempty_value <- function(
+    data,
+    column_name,
+    fallback = NA_character_
+    ) {
+      
+      if (
+        is.null(data) ||
+        !column_name %in% names(data)
+      ) {
+        return(fallback)
+      }
+      
+      values <- as.character(
+        data[[column_name]]
+      )
+      
+      values <- values[
+        !is.na(values) &
+          nzchar(trimws(values))
+      ]
+      
+      if (length(values) == 0) {
+        return(fallback)
+      }
+      
+      values[1]
+    }
+    
+    scenario_name <- first_nonempty_value(
+      df,
+      "Scenario_Name",
+      "Unnamed scenario"
+    )
+    
+    archive_date <- first_nonempty_value(
+      df,
+      "Archive_Date"
+    )
+    
+    omri_scenario <- first_nonempty_value(
+      df,
+      "OMRI_Scenario"
+    )
+    
+    window_end_date <- NA_character_
+    
+    if (
+      "Window_End_Date" %in% names(df) &&
+      any(!is.na(df$Window_End_Date))
+    ) {
+      
+      parsed_window_date <- as.Date(
+        df$Window_End_Date,
+        origin = "1970-01-01"
+      )
+      
+      parsed_window_date <- parsed_window_date[
+        !is.na(parsed_window_date)
+      ]
+      
+      if (length(parsed_window_date) > 0) {
+        window_end_date <- format(
+          parsed_window_date[1],
+          "%B %d, %Y"
+        )
+      }
+    }
+    
+    subtitle_parts <- c(
+      paste0(
+        "Scenario: ",
+        scenario_name
+      ),
+      if (!is.na(window_end_date)) {
+        paste0(
+          "Assessment/window end: ",
+          window_end_date
+        )
+      } else {
+        NULL
+      },
+      if (
+        !is.na(archive_date) &&
+        nzchar(archive_date)
+      ) {
+        paste0(
+          "Archive: ",
+          archive_date
+        )
+      } else {
+        NULL
+      },
+      if (
+        !is.na(omri_scenario) &&
+        nzchar(omri_scenario)
+      ) {
+        paste0(
+          "OMRI: ",
+          omri_scenario
+        )
+      } else {
+        NULL
+      },
+      paste0(
+        "Selected risk level: ",
+        sprintf("%.0f", threshold),
+        "%"
+      ),
+      if (is.finite(event_horizon_distance)) {
+        paste0(
+          "Event Horizon: ",
+          sprintf(
+            "%.1f",
+            event_horizon_distance
+          ),
+          " river miles"
+        )
+      } else {
+        NULL
+      }
+    )
+    
+    subtitle_text <- paste(
+      subtitle_parts,
+      collapse = "  |  "
+    )
+    
+    # ------------------------------------------------------------
+    # Use the same continuous blue-to-red scale as Leaflet
+    # ------------------------------------------------------------
+    
+    risk_colors <- grDevices::colorRampPalette(
+      c(
+        "#2166AC",
+        "#4393C3",
+        "#92C5DE",
+        "#D1E5F0",
+        "#F7F7F7",
+        "#FDDBC7",
+        "#F4A582",
+        "#D6604D",
+        "#B2182B"
+      ),
+      space = "Lab"
+    )(256)
+    
+    # ------------------------------------------------------------
+    # Build the static publication-style image
+    # ------------------------------------------------------------
+    
+    plot <- ggplot2::ggplot() +
+      
+      ggplot2::geom_sf(
+        data = boundary_visible,
+        fill = "#F3F7F8",
+        color = "#477A87",
+        linewidth = 0.45
+      ) +
+      
+      ggplot2::geom_sf(
+        data = risk_grid_visible,
+        ggplot2::aes(
+          fill = risk
+        ),
+        color = NA,
+        alpha = 0.72
+      ) +
+      
+      ggplot2::geom_sf(
+        data = channels_visible,
+        color = "#285F73",
+        linewidth = 0.30,
+        alpha = 0.75
+      )
+    
+    # Event Horizon is deliberately added after the interpolation
+    # and channels so the line remains visible.
+    if (!is.null(event_horizon_visible)) {
+      
+      plot <- plot +
+        ggplot2::geom_sf(
+          data = event_horizon_visible,
+          color = "#65000B",
+          linewidth = 1.05,
+          alpha = 0.95
         )
     }
     
-    p +
-      geom_sf(
-        data = nodes_utm,
-        aes(color = entrainment),
-        size = 3.4
-      ) +
-      geom_text(
-        data = node_labels,
-        aes(
-          x = map_x,
-          y = map_y,
-          label = DSM2_Node
-        ),
-        nudge_y = 2800,
-        size = 3.7,
-        fontface = "bold",
-        color = "#1F1F1F",
-        check_overlap = TRUE
-      ) +
-      scale_color_viridis_c(
-        option = "D",
-        name = "Predicted entrainment (%)",
+    if (nrow(nodes_visible) > 0) {
+      
+      plot <- plot +
+
+        ggplot2::geom_point(
+          data = node_labels,
+          ggplot2::aes(
+            x = longitude,
+            y = latitude,
+            fill = entrainment
+          ),
+          shape = 21,
+          size = 4.0,
+          color = "#252525",
+          stroke = 0.9
+        ) +
+        
+        ggrepel::geom_label_repel(
+          data = node_labels,
+          ggplot2::aes(
+            x = longitude,
+            y = latitude,
+            label = Entrainment_Label
+          ),
+          size = 3.2,
+          fontface = "bold",
+          color = "#1F1F1F",
+          fill = grDevices::adjustcolor(
+            "white",
+            alpha.f = 0.88
+          ),
+          box.padding = 0.35,
+          point.padding = 0.30,
+          min.segment.length = 0,
+          segment.color = "#606060",
+          segment.linewidth = 0.25,
+          max.overlaps = Inf,
+          seed = 123,
+          label.size = 0.25,
+          show.legend = FALSE
+        )
+    }
+    caption_text <- paste0(
+      "Circles represent PTM emulator predictions at supported DSM2 nodes. ",
+      "Background colors are inverse-distance interpolation between nearby nodes. ",
+      if (is.finite(event_horizon_distance)) {
+        "The dark-red channel reach represents the predicted Event Horizon. "
+      } else {
+        ""
+      },
+      "Exported ",
+      format(
+        Sys.time(),
+        "%B %d, %Y at %I:%M %p"
+      ),
+      "."
+    )
+    
+    caption_text <- paste(
+      strwrap(
+        caption_text,
+        width = 175
+      ),
+      collapse = "\n"
+    )
+    plot +
+      ggplot2::scale_fill_gradientn(
+        colours = risk_colors,
         limits = c(0, 100),
-        breaks = c(0, 25, 50, 75, 100)
-      ) +
-      coord_sf(datum = NA) +
-      labs(
-        title = title,
-        subtitle = paste0(
-          "PTM predictions for all supported DSM2 nodes; risk threshold = ",
-          threshold,
-          "%"
+        breaks = c(
+          0,
+          20,
+          40,
+          60,
+          80,
+          100
         ),
-        caption = if (is.null(zones)) {
-          paste0(
-            "Node values are shown. Interpolated risk zones could not be ",
-            "generated for this result and threshold."
-          )
-        } else {
-          paste0(
-            "Red shading indicates entrainment > ",
-            threshold,
-            "%; blue shading indicates entrainment < ",
-            threshold,
-            "%."
-          )
-        }
+        name = "Predicted\nentrainment (%)",
+        oob = scales::squish
       ) +
-      theme_minimal(base_size = 14) +
-      theme(
-        plot.title = element_text(
+
+      ggplot2::coord_sf(
+        xlim = c(
+          bounds$west,
+          bounds$east
+        ),
+        ylim = c(
+          bounds$south,
+          bounds$north
+        ),
+        expand = FALSE,
+        datum = NA,
+        crs = sf::st_crs(4326)
+      ) +
+      ggplot2::labs(
+        title = title,
+        subtitle = subtitle_text,
+        caption = caption_text
+      ) +
+      ggplot2::theme_void(
+        base_size = 13
+      ) +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(
           size = 19,
           face = "bold",
-          color = "#1F1F1F"
+          color = "#1F1F1F",
+          margin = ggplot2::margin(
+            b = 5
+          )
         ),
-        plot.subtitle = element_text(
-          size = 13,
-          color = "#333333"
+        plot.subtitle = ggplot2::element_text(
+          size = 11.5,
+          color = "#333333",
+          lineheight = 1.15,
+          margin = ggplot2::margin(
+            b = 10
+          )
         ),
-        plot.caption = element_text(
-          size = 11,
+        plot.caption = ggplot2::element_text(
+          size = 9.5,
           hjust = 0,
-          color = "#404040"
+          color = "#404040",
+          lineheight = 1.15,
+          margin = ggplot2::margin(
+            t = 9
+          )
         ),
-        axis.text = element_blank(),
-        axis.title = element_blank(),
-        panel.grid = element_blank(),
         legend.position = "right",
-        legend.title = element_text(face = "bold"),
-        plot.background = element_rect(
+        legend.title = ggplot2::element_text(
+          face = "bold",
+          size = 10.5
+        ),
+        legend.text = ggplot2::element_text(
+          size = 9.5
+        ),
+        legend.key.height = grid::unit(
+          0.55,
+          "in"
+        ),
+        plot.background = ggplot2::element_rect(
           fill = "white",
           color = NA
         ),
-        panel.background = element_rect(
-          fill = "white",
-          color = NA
+        panel.background = ggplot2::element_rect(
+          fill = "#F8FAFB",
+          color = "#AAB8BF",
+          linewidth = 0.5
+        ),
+        plot.margin = ggplot2::margin(
+          t = 16,
+          r = 18,
+          b = 12,
+          l = 18
         )
       )
   }
@@ -7628,7 +8629,47 @@ server <- function(input, output, session) {
       )
   }
   
+  # ===============================================================
+  # Weekly Assessment scenario-name helpers
+  # ===============================================================
   
+  clean_scenario_component <- function(value) {
+    
+    value <- trimws(
+      as.character(value)[1]
+    )
+    
+    if (
+      is.na(value) ||
+      !nzchar(value)
+    ) {
+      return("")
+    }
+    
+    # Keep letters, numbers, underscores, and minus signs.
+    value <- gsub(
+      "[^A-Za-z0-9_-]+",
+      "_",
+      value
+    )
+    
+    # Collapse repeated underscores.
+    value <- gsub(
+      "_+",
+      "_",
+      value
+    )
+    
+    # Remove leading/trailing underscores while preserving a
+    # leading minus sign in scenarios such as -2000.
+    value <- gsub(
+      "^_+|_+$",
+      "",
+      value
+    )
+    
+    value
+  }
   # ===============================================================
   # Archive selector controls
   # ===============================================================
@@ -7681,7 +8722,84 @@ server <- function(input, output, session) {
       selected = ""
     )
   })
-
+  weekly_assessment_default_name <- reactive({
+    
+    archive_date <- input$forecast_archive_date
+    
+    if (
+      is.null(archive_date) ||
+      !nzchar(trimws(archive_date))
+    ) {
+      return("")
+    }
+    
+    archive_date <- clean_scenario_component(
+      archive_date
+    )
+    
+    flow_source <- input$forecast_flow_source
+    
+    # ------------------------------------------------------------
+    # Observed-flow Weekly Assessment
+    # ------------------------------------------------------------
+    
+    if (
+      is.null(flow_source) ||
+      identical(flow_source, "observed")
+    ) {
+      
+      return(
+        paste0(
+          archive_date,
+          "_OBS_01"
+        )
+      )
+    }
+    
+    # ------------------------------------------------------------
+    # Forecast-OMRI Weekly Assessment
+    # ------------------------------------------------------------
+    
+    omri_scenario <- input$forecast_archive_scenario
+    
+    if (
+      is.null(omri_scenario) ||
+      !nzchar(trimws(omri_scenario))
+    ) {
+      return("")
+    }
+    
+    omri_scenario <- clean_scenario_component(
+      omri_scenario
+    )
+    
+    paste0(
+      archive_date,
+      "_OMRI_",
+      omri_scenario,
+      "_01"
+    )
+  })
+  observeEvent(
+    weekly_assessment_default_name(),
+    {
+      
+      default_name <- weekly_assessment_default_name()
+      
+      updateTextInput(
+        session = session,
+        inputId = "forecast_ptm_archive_name",
+        value = default_name
+      )
+      
+      updateTextInput(
+        session = session,
+        inputId = "forecast_eco_archive_name",
+        value = default_name
+      )
+    },
+    ignoreInit = FALSE
+  )
 
   output$current_ptm_archive_summary <- renderUI({
     req(input$current_archive_date)
@@ -8357,7 +9475,6 @@ server <- function(input, output, session) {
       make_combined_ptm_eh_map(
         ptm_df = ptm_data,
         eh_df = selected_eh_result(),
-        
         threshold = as.numeric(
           input[[paste0(
             prefix,
@@ -8400,7 +9517,7 @@ server <- function(input, output, session) {
         
         paste0(
           prefix,
-          "_PTM_7day_map_",
+          "_PTM_7day_Event_Horizon_map_",
           format(
             Sys.Date(),
             "%Y-%m-%d"
@@ -8413,7 +9530,7 @@ server <- function(input, output, session) {
       
       content = function(file) {
         
-        data <- selected_result_window(
+        ptm_data <- selected_result_window(
           ptm_result(),
           "PTM Emulator 7-Day Entrainment",
           input[[paste0(
@@ -8422,27 +9539,38 @@ server <- function(input, output, session) {
           )]]
         )
         
+        current_bounds <- input[[paste0(
+          prefix,
+          "_ptm7_map_bounds"
+        )]]
+        
         plot <- make_ptm_png_plot(
-          df = data,
+          df = ptm_data,
           threshold = input[[paste0(
             prefix,
             "_ptm_threshold"
           )]],
           title = paste(
             condition_label,
-            ": PTM Emulator 7-Day Entrainment Risk Map"
-          )
+            ": 7-Day PTM Entrainment and Event Horizon"
+          ),
+          map_bounds = current_bounds,
+          eh_df = selected_eh_result()
         )
-        
-        ggsave(
+        export_dimensions <- ptm_png_dimensions(
+          map_bounds = current_bounds,
+          fallback_geometry = delta_boundary
+        )
+        ggplot2::ggsave(
           filename = file,
           plot = plot,
           device = "png",
-          width = 13,
-          height = 9,
+          width = export_dimensions$width,
+          height = export_dimensions$height,
           units = "in",
           dpi = 300,
-          bg = "white"
+          bg = "white",
+          limitsize = FALSE
         )
       }
     )
@@ -8471,32 +9599,40 @@ server <- function(input, output, session) {
       
       content = function(file) {
         
-        data <- latest_result_window(
+        ptm_data <- latest_result_window(
           ptm_result(),
           "PTM Emulator 30-Day Entrainment"
         )
         
+        current_bounds <- input[[paste0(
+          prefix,
+          "_ptm30_map_bounds"
+        )]]
+        
         plot <- make_ptm_png_plot(
-          df = data,
+          df = ptm_data,
           threshold = input[[paste0(
             prefix,
             "_ptm_threshold"
           )]],
           title = paste(
             condition_label,
-            ": PTM Emulator 30-Day Entrainment Risk Map"
-          )
+            ": 30-Day PTM Entrainment Risk Map"
+          ),
+          map_bounds = current_bounds,
+          eh_df = NULL
         )
         
-        ggsave(
+        ggplot2::ggsave(
           filename = file,
           plot = plot,
           device = "png",
-          width = 13,
-          height = 9,
+          width = export_dimensions$width,
+          height = export_dimensions$height,
           units = "in",
           dpi = 300,
-          bg = "white"
+          bg = "white",
+          limitsize = FALSE
         )
       }
     )
@@ -8982,14 +10118,27 @@ server <- function(input, output, session) {
         
         write_csv(
           ptm_result() %>%
-            mutate(
-              across(
-                where(
-                  is.numeric
+            dplyr::mutate(
+              dplyr::across(
+                -dplyr::all_of(
+                  c(
+                    "X",
+                    "Y"
+                  )
                 ),
-                ~ round(
+                ~ if (is.numeric(.x)) {
+                  round(.x)
+                } else {
                   .x
-                )
+                }
+              ),
+              X = round(
+                as.numeric(X),
+                digits = 6
+              ),
+              Y = round(
+                as.numeric(Y),
+                digits = 6
               )
             ),
           file
