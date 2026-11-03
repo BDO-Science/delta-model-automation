@@ -22,7 +22,36 @@ library (ps)
 MODEL_DIR <- "STN_EMULATOR/models"
 OUTPUT_DIR <- "STN_EMULATOR/Output"
 SHAPE_DIR <- "STN_EMULATOR/shapefiles"
-ARCHIVE_DIR <- "STN_EMULATOR/Archive_Folder"
+# ------------------------------------------------------------------
+# Public GitHub archive configuration
+# ------------------------------------------------------------------
+
+GITHUB_OWNER <- "BDO-Science"
+GITHUB_REPO <- "delta-model-automation"
+GITHUB_BRANCH <- "main"
+GITHUB_ARCHIVE_PATH <- "DSM2/Model/DataExternal"
+
+GITHUB_API_BASE <- paste0(
+  "https://api.github.com/repos/",
+  GITHUB_OWNER,
+  "/",
+  GITHUB_REPO,
+  "/contents"
+)
+
+# Remote files are downloaded here before being parsed.
+# The cache lasts for the lifetime of the running R process.
+GITHUB_ARCHIVE_CACHE_DIR <- file.path(
+  tempdir(),
+  "delta-model-automation",
+  "DataExternal"
+)
+
+dir.create(
+  GITHUB_ARCHIVE_CACHE_DIR,
+  recursive = TRUE,
+  showWarnings = FALSE
+)
 DSM2_NODE_SHP <- file.path( SHAPE_DIR,  "i12_DSM2_Grid_V2025-05-28_Hist_nodes.shp")
 DSM2_CHANNEL_SHP <- file.path(  SHAPE_DIR,  "i12_DSM2_Grid_V2025-05-28_Hist_channels_centerlines.shp")
 DSM2_CHANNEL_DEF <- file.path(  "STN_EMULATOR",  "channel_std_delta_grid_NAVD_20121214.txt")
@@ -2442,44 +2471,352 @@ server <- function(input, output, session) {
   # Archive-folder workflow helpers
   # ===============================================================
   
-  list_archive_dates <- function() {
+  # ===============================================================
+  # GitHub archive workflow helpers
+  # ===============================================================
+  
+  .github_api_cache <- new.env(parent = emptyenv())
+  
+  github_contents_url <- function(path = "") {
+    path <- gsub("^/+|/+$", "", path)
     
-    if (!dir.exists(ARCHIVE_DIR)) {
+    base_url <- if (nzchar(path)) {
+      paste0(
+        GITHUB_API_BASE,
+        "/",
+        paste(
+          vapply(
+            strsplit(path, "/", fixed = TRUE)[[1]],
+            utils::URLencode,
+            character(1),
+            reserved = TRUE
+          ),
+          collapse = "/"
+        )
+      )
+    } else {
+      GITHUB_API_BASE
+    }
+    
+    paste0(
+      base_url,
+      "?ref=",
+      utils::URLencode(GITHUB_BRANCH, reserved = TRUE)
+    )
+  }
+  
+  github_read_json <- function(url, cache_seconds = 300) {
+    
+    cache_key <- url
+    
+    # ------------------------------------------------------------
+    # Return cached result when it is still fresh
+    # ------------------------------------------------------------
+    
+    if (exists(
+      cache_key,
+      envir = .github_api_cache,
+      inherits = FALSE
+    )) {
+      
+      cached <- get(
+        cache_key,
+        envir = .github_api_cache,
+        inherits = FALSE
+      )
+      
+      cache_age <- as.numeric(
+        difftime(
+          Sys.time(),
+          cached$retrieved_at,
+          units = "secs"
+        )
+      )
+      
+      if (
+        is.finite(cache_age) &&
+        cache_age <= cache_seconds
+      ) {
+        return(cached$value)
+      }
+    }
+    
+    
+    # ------------------------------------------------------------
+    # Read GitHub API response
+    #
+    # Using url() here rather than download.file(..., libcurl)
+    # because this connection method works reliably in the
+    # Windows/R environment used by this application.
+    # ------------------------------------------------------------
+    
+    json_text <- tryCatch(
+      
+      {
+        connection <- url(
+          url,
+          open = "rt"
+        )
+        
+        on.exit(
+          close(connection),
+          add = TRUE
+        )
+        
+        paste(
+          readLines(
+            connection,
+            warn = FALSE,
+            encoding = "UTF-8"
+          ),
+          collapse = "\n"
+        )
+      },
+      
+      error = function(error_condition) {
+        
+        stop(
+          paste0(
+            "The GitHub archive could not be reached. ",
+            conditionMessage(error_condition)
+          ),
+          call. = FALSE
+        )
+      }
+    )
+    
+    
+    # ------------------------------------------------------------
+    # Make sure GitHub actually returned something
+    # ------------------------------------------------------------
+    
+    if (
+      is.null(json_text) ||
+      length(json_text) == 0 ||
+      !nzchar(json_text)
+    ) {
+      
+      stop(
+        "GitHub returned an empty response while reading the archive.",
+        call. = FALSE
+      )
+    }
+    
+    
+    # ------------------------------------------------------------
+    # Parse JSON
+    # ------------------------------------------------------------
+    
+    result <- tryCatch(
+      
+      {
+        jsonlite::fromJSON(
+          json_text,
+          simplifyDataFrame = TRUE
+        )
+      },
+      
+      error = function(error_condition) {
+        
+        stop(
+          paste0(
+            "The GitHub archive response could not be parsed. ",
+            conditionMessage(error_condition)
+          ),
+          call. = FALSE
+        )
+      }
+    )
+    
+    
+    # ------------------------------------------------------------
+    # GitHub error responses contain a message field
+    # ------------------------------------------------------------
+    
+    if (
+      is.list(result) &&
+      !is.data.frame(result) &&
+      !is.null(result$message)
+    ) {
+      
+      stop(
+        paste0(
+          "GitHub archive request failed: ",
+          result$message
+        ),
+        call. = FALSE
+      )
+    }
+    
+    
+    # ------------------------------------------------------------
+    # Cache successful response
+    # ------------------------------------------------------------
+    
+    assign(
+      cache_key,
+      list(
+        retrieved_at = Sys.time(),
+        value = result
+      ),
+      envir = .github_api_cache
+    )
+    
+    
+    result
+  }
+  
+  github_directory_contents <- function(path, cache_seconds = 300) {
+    contents <- github_read_json(
+      github_contents_url(path),
+      cache_seconds = cache_seconds
+    )
+    
+    if (!is.data.frame(contents)) {
+      stop(
+        paste0(
+          "GitHub did not return a directory listing for: ",
+          path
+        ),
+        call. = FALSE
+      )
+    }
+    
+    required_columns <- c(
+      "name",
+      "path",
+      "type"
+    )
+    
+    missing_columns <- setdiff(
+      required_columns,
+      names(contents)
+    )
+    
+    if (length(missing_columns) > 0) {
+      stop(
+        paste0(
+          "The GitHub directory response is missing: ",
+          paste(missing_columns, collapse = ", "),
+          "."
+        ),
+        call. = FALSE
+      )
+    }
+    
+    contents
+  }
+  
+  list_archive_dates <- function() {
+    contents <- tryCatch(
+      {
+        github_directory_contents(
+          GITHUB_ARCHIVE_PATH,
+          cache_seconds = 300
+        )
+      },
+      error = function(error_condition) {
+        warning(
+          conditionMessage(error_condition),
+          call. = FALSE
+        )
+        
+        return(NULL)
+      }
+    )
+    
+    if (is.null(contents) || nrow(contents) == 0) {
       return(character(0))
     }
     
-    folders <- list.dirs(
-      ARCHIVE_DIR,
-      full.names = FALSE,
-      recursive = FALSE
+    archive_dates <- contents$name[
+      contents$type == "dir" &
+        grepl("^[0-9]{8}$", contents$name)
+    ]
+    
+    sort(
+      unique(archive_dates),
+      decreasing = TRUE
     )
-    
-    folders <- folders[grepl("^[0-9]{8}$", folders)]
-    
-    folders[order(folders, decreasing = TRUE)]
   }
-  
   
   archive_csv_files <- function(archive_date) {
-    
     req(archive_date)
     
-    folder_path <- file.path(
-      ARCHIVE_DIR,
-      archive_date
+    archive_date <- trimws(
+      as.character(archive_date)[1]
     )
     
-    files <- list.files(
-      folder_path,
-      pattern = "\\.csv$",
-      full.names = TRUE,
-      ignore.case = TRUE
+    validate(
+      need(
+        grepl("^[0-9]{8}$", archive_date),
+        "The selected archive date is not in YYYYMMDD format."
+      )
     )
     
-    files[grepl("OMRI", basename(files), ignore.case = TRUE)]
+    archive_path <- paste(
+      GITHUB_ARCHIVE_PATH,
+      archive_date,
+      sep = "/"
+    )
+    
+    contents <- tryCatch(
+      {
+        github_directory_contents(
+          archive_path,
+          cache_seconds = 300
+        )
+      },
+      error = function(error_condition) {
+        validate(
+          need(
+            FALSE,
+            paste0(
+              "The GitHub archive folder ",
+              archive_date,
+              " could not be read. ",
+              conditionMessage(error_condition)
+            )
+          )
+        )
+      }
+    )
+    
+    if (
+      is.null(contents) ||
+      !is.data.frame(contents) ||
+      nrow(contents) == 0
+    ) {
+      return(character(0))
+    }
+    
+    if (!"download_url" %in% names(contents)) {
+      return(character(0))
+    }
+    
+    matching_files <- contents[
+      contents$type == "file" &
+        grepl("\\.csv$", contents$name, ignore.case = TRUE) &
+        grepl("OMRI", contents$name, ignore.case = TRUE),
+      ,
+      drop = FALSE
+    ]
+    
+    if (nrow(matching_files) == 0) {
+      return(character(0))
+    }
+    
+    download_urls <- as.character(
+      matching_files$download_url
+    )
+    
+    download_urls <- download_urls[
+      !is.na(download_urls) &
+        nzchar(download_urls)
+    ]
+    
+    sort(unique(download_urls))
   }
-  
-  
   extract_omri_scenario <- function(file_path) {
     
     file_name <- tools::file_path_sans_ext(
@@ -3295,9 +3632,255 @@ server <- function(input, output, session) {
       )
   }
 
+  is_remote_archive_file <- function(file_path) {
+    is.character(file_path) &&
+      length(file_path) == 1 &&
+      !is.na(file_path) &&
+      grepl(
+        "^https?://",
+        file_path,
+        ignore.case = TRUE
+      )
+  }
   
+  extract_archive_date_from_url <- function(file_url) {
+    matches <- regmatches(
+      file_url,
+      gregexpr(
+        "(?<![0-9])[0-9]{8}(?![0-9])",
+        file_url,
+        perl = TRUE
+      )
+    )[[1]]
+    
+    if (length(matches) == 0) {
+      return("unknown_date")
+    }
+    
+    tail(matches, 1)
+  }
+  
+  materialize_archive_file <- function(file_path) {
+    
+    # Local files can pass through unchanged.
+    if (!is_remote_archive_file(file_path)) {
+      return(file_path)
+    }
+    
+    archive_date <- extract_archive_date_from_url(
+      file_path
+    )
+    
+    # basename() retains URL encoding, so decode %20 back to a space.
+    file_name <- utils::URLdecode(
+      basename(file_path)
+    )
+    
+    if (
+      is.na(file_name) ||
+      !nzchar(file_name)
+    ) {
+      stop(
+        "The GitHub archive URL does not contain a usable filename.",
+        call. = FALSE
+      )
+    }
+    
+    local_directory <- file.path(
+      GITHUB_ARCHIVE_CACHE_DIR,
+      archive_date
+    )
+    
+    dir.create(
+      local_directory,
+      recursive = TRUE,
+      showWarnings = FALSE
+    )
+    
+    local_file <- file.path(
+      local_directory,
+      file_name
+    )
+    
+    # Reuse a previously downloaded, nonempty CSV.
+    if (
+      file.exists(local_file) &&
+      !is.na(file.info(local_file)$size) &&
+      file.info(local_file)$size > 0
+    ) {
+      return(local_file)
+    }
+    
+    temporary_file <- tempfile(
+      pattern = "github_archive_",
+      tmpdir = local_directory,
+      fileext = ".download"
+    )
+    
+    on.exit(
+      {
+        if (file.exists(temporary_file)) {
+          unlink(temporary_file)
+        }
+      },
+      add = TRUE
+    )
+    
+    # Use url(), which has already been verified to work for
+    # raw.githubusercontent.com in this Windows R environment.
+    tryCatch(
+      {
+        connection <- url(
+          file_path,
+          open = "rb"
+        )
+        
+        on.exit(
+          close(connection),
+          add = TRUE
+        )
+        
+        file_bytes <- readBin(
+          connection,
+          what = "raw",
+          n = 500 * 1024 * 1024
+        )
+        
+        if (length(file_bytes) == 0) {
+          stop(
+            "GitHub returned an empty response."
+          )
+        }
+        
+        writeBin(
+          file_bytes,
+          temporary_file
+        )
+      },
+      error = function(error_condition) {
+        stop(
+          paste0(
+            "The selected GitHub archive CSV could not be downloaded: ",
+            file_name,
+            ". ",
+            conditionMessage(error_condition)
+          ),
+          call. = FALSE
+        )
+      }
+    )
+    
+    if (
+      !file.exists(temporary_file) ||
+      is.na(file.info(temporary_file)$size) ||
+      file.info(temporary_file)$size <= 0
+    ) {
+      stop(
+        paste0(
+          "GitHub returned an empty archive CSV for: ",
+          file_name,
+          "."
+        ),
+        call. = FALSE
+      )
+    }
+    
+    # Confirm that the downloaded object appears to be text data,
+    # rather than an HTML error page or JSON error response.
+    first_lines <- tryCatch(
+      {
+        readLines(
+          temporary_file,
+          n = 5,
+          warn = FALSE,
+          encoding = "UTF-8"
+        )
+      },
+      error = function(error_condition) {
+        character(0)
+      }
+    )
+    
+    response_preview <- paste(
+      first_lines,
+      collapse = " "
+    )
+    
+    if (
+      grepl(
+        "^\\s*<!DOCTYPE html|^\\s*<html|\"message\"\\s*:",
+        response_preview,
+        ignore.case = TRUE
+      )
+    ) {
+      stop(
+        paste0(
+          "GitHub returned an error page instead of the requested CSV: ",
+          file_name,
+          "."
+        ),
+        call. = FALSE
+      )
+    }
+    
+    moved_successfully <- file.rename(
+      temporary_file,
+      local_file
+    )
+    
+    # file.rename() can occasionally fail across Windows filesystem
+    # boundaries. Fall back to copying the file.
+    if (!isTRUE(moved_successfully)) {
+      copied_successfully <- file.copy(
+        temporary_file,
+        local_file,
+        overwrite = TRUE
+      )
+      
+      if (!isTRUE(copied_successfully)) {
+        stop(
+          paste0(
+            "The downloaded archive CSV could not be placed in ",
+            "the local cache: ",
+            file_name,
+            "."
+          ),
+          call. = FALSE
+        )
+      }
+      
+      unlink(temporary_file)
+    }
+    
+    if (
+      !file.exists(local_file) ||
+      is.na(file.info(local_file)$size) ||
+      file.info(local_file)$size <= 0
+    ) {
+      stop(
+        paste0(
+          "The local cached archive CSV is missing or empty: ",
+          file_name,
+          "."
+        ),
+        call. = FALSE
+      )
+    }
+    
+    local_file
+  }
   
   read_archive_csv <- function(file_path) {
+    
+    source_url <- if (is_remote_archive_file(file_path)) {
+      file_path
+    } else {
+      NA_character_
+    }
+    
+    file_path <- materialize_archive_file(
+      file_path
+    )
     
     raw <- readr::read_csv(
       file_path,
@@ -4289,7 +4872,7 @@ server <- function(input, output, session) {
   
   make_weekly_ptm_observed <- function(archive_date, scenario_name) {
     source_file <- archive_csv_files(archive_date)[1]
-    validate(need(length(source_file) > 0, "No archive CSV file was found for the selected week."))
+    validate(need(length(source_file) > 0, "No OMRI CSV file was found for the selected week."))
     archive_data <- read_archive_csv(source_file)
 
     rolling_7 <- rolling_measured_7day_inputs(archive_data)
