@@ -80,3 +80,11 @@ override.tf.json
 .terraformrc
 terraform.rc
 
+
+ShinyApp/STN_EMULATOR/models/delta_locations_coordinates.csv
+ShinyApp/STN_EMULATOR/models/ECOPTM_interior_lightgbm.txt
+ShinyApp/STN_EMULATOR/models/ECOPTM_survival_lightgbm.txt
+ShinyApp/STN_EMULATOR/models/Entrainment_Scale_Membership.csv
+ShinyApp/STN_EMULATOR/models/PTM_Entrainment30d_lightgbm.txt
+ShinyApp/STN_EMULATOR/models/PTM_Entrainment7d_lightgbm.txt
+ShinyApp/STN_EMULATOR/models/Region_Location_Node_Path.csv
