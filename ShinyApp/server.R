@@ -17,6 +17,8 @@ library(xgboost)
 library(metR)
 library(mgcv)
 library (ps)
+APP_NAME <- "Entrainment Dashboard"
+APP_VERSION <- "1.1.0"
 
 
 MODEL_DIR <- "STN_EMULATOR/models"
@@ -1144,6 +1146,59 @@ parse_flow_input <- function(value) {
 
 
 server <- function(input, output, session) {
+
+
+  app_name_value <- if (exists("APP_NAME", inherits = TRUE)) APP_NAME else "Entrainment Dashboard"
+  app_version_value <- if (exists("APP_VERSION", inherits = TRUE)) APP_VERSION else "1.1.0"
+
+  add_export_metadata <- function(data) {
+    data %>%
+      dplyr::mutate(
+        Application_Name = app_name_value,
+        Application_Version = app_version_value,
+        Application_Version_Label = paste(app_name_value, "version", app_version_value),
+        Export_Date = format(Sys.Date(), "%Y-%m-%d"),
+        Export_Timestamp_UTC = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+      ) %>%
+      dplyr::relocate(
+        Application_Name, Application_Version, Application_Version_Label,
+        Export_Date, Export_Timestamp_UTC
+      )
+  }
+
+  prepare_ptm_export <- function(data) {
+    data <- data %>%
+      dplyr::mutate(
+        Entrainment_Model_Period = dplyr::case_when(
+          grepl("7-Day", Model, fixed = TRUE) ~ "7-Day",
+          grepl("30-Day", Model, fixed = TRUE) ~ "30-Day",
+          TRUE ~ NA_character_
+        ),
+        Entrainment_7_Day_Percent = dplyr::if_else(
+          Entrainment_Model_Period == "7-Day", as.numeric(Prediction_Final), NA_real_
+        ),
+        Entrainment_30_Day_Percent = dplyr::if_else(
+          Entrainment_Model_Period == "30-Day", as.numeric(Prediction_Final), NA_real_
+        )
+      )
+    add_export_metadata(data)
+  }
+
+  map_export_caption <- function(include_interpolation = TRUE) {
+    lines <- c(paste(app_name_value, "version", app_version_value))
+    if (isTRUE(include_interpolation)) {
+      lines <- c(
+        lines,
+        paste(
+          "Interpolated risk shading is a generalized spatial representation of entrainment",
+          "emulator outputs between supported DSM2 nodes. Boundaries and transitions are",
+          "approximate and should not be interpreted as precise risk-zone limits."
+        )
+      )
+    }
+    c(lines, paste0("Exported ", format(Sys.time(), "%B %d, %Y at %I:%M %p"), ".")) %>%
+      paste(collapse = "\n")
+  }
 
 
   observed_flow_state <- reactiveVal(
@@ -6176,366 +6231,244 @@ server <- function(input, output, session) {
   
   
   
-  make_ptm_spatial_comparison_map <- function(
-    df,
-    threshold
-  ) {
-    
+  make_ptm_spatial_comparison_map <- function(df, threshold) {
     validate(
-      need(
-        nrow(df) > 0,
-        "Select compatible PTM runs to compare."
-      ),
-      need(
-        "Saved_Run_ID" %in% names(df),
-        "PTM comparison data are missing Saved_Run_ID."
-      ),
-      need(
-        "DSM2_Node" %in% names(df),
-        "PTM comparison data are missing DSM2_Node."
-      ),
-      need(
-        "Prediction_Final" %in% names(df),
-        "PTM comparison data are missing Prediction_Final."
-      )
+      need(nrow(df) > 0, "Select compatible PTM runs to compare."),
+      need("Saved_Run_ID" %in% names(df), "PTM comparison data are missing Saved_Run_ID."),
+      need("DSM2_Node" %in% names(df), "PTM comparison data are missing DSM2_Node."),
+      need("Prediction_Final" %in% names(df), "PTM comparison data are missing Prediction_Final.")
     )
-    
-    threshold <- suppressWarnings(
-      as.numeric(
-        threshold
-      )
-    )
-    
-    threshold <- threshold[1]
-    
-    if (is.na(threshold)) {
-      threshold <- 25
-    }
-    
+
     map_df <- df
-    
-    if (!"Location" %in% names(map_df)) {
-      map_df$Location <- NA_character_
+    for (nm in c("Location", "Region", "Scenario_Name")) {
+      if (!nm %in% names(map_df)) map_df[[nm]] <- NA_character_
     }
-    
-    if (!"Region" %in% names(map_df)) {
-      map_df$Region <- NA_character_
+    for (nm in c("X", "Y")) {
+      if (!nm %in% names(map_df)) map_df[[nm]] <- NA_real_
     }
-    
-    if (!"X" %in% names(map_df)) {
-      map_df$X <- NA_real_
-    }
-    
-    if (!"Y" %in% names(map_df)) {
-      map_df$Y <- NA_real_
-    }
-    
-    # For archive-current rolling results, keep the latest window per saved run.
-    if (
-      "Window_End_Date" %in% names(map_df) &&
-      any(!is.na(map_df$Window_End_Date))
-    ) {
-      
+
+    if ("Window_End_Date" %in% names(map_df) && any(!is.na(map_df$Window_End_Date))) {
       map_df <- map_df %>%
-        mutate(
-          Window_End_Date_Map = as.Date(
-            Window_End_Date,
-            origin = "1970-01-01"
-          )
-        ) %>%
-        group_by(
-          Saved_Run_ID
-        ) %>%
-        filter(
-          is.na(Window_End_Date_Map) |
-            Window_End_Date_Map == max(
-              Window_End_Date_Map,
-              na.rm = TRUE
-            )
-        ) %>%
-        ungroup() %>%
-        select(
-          -Window_End_Date_Map
-        )
+        dplyr::mutate(.map_date = as.Date(Window_End_Date, origin = "1970-01-01")) %>%
+        dplyr::group_by(Saved_Run_ID) %>%
+        dplyr::filter(is.na(.map_date) | .map_date == max(.map_date, na.rm = TRUE)) %>%
+        dplyr::ungroup() %>%
+        dplyr::select(-.map_date)
     }
-    
-    run_ids <- unique(
-      map_df$Saved_Run_ID
-    )
-    
-    validate(
-      need(
-        length(run_ids) >= 1,
-        "No selected PTM runs are available for spatial comparison."
-      )
-    )
-    
-    run_colors <- viridisLite::viridis(
-      length(run_ids),
-      option = "D",
-      end = 0.9
-    )
-    
-    names(run_colors) <- run_ids
-    
-    m <- leaflet() %>%
+
+    run_ids <- unique(as.character(map_df$Saved_Run_ID))
+    run_colors <- stats::setNames(viridisLite::viridis(length(run_ids), option = "D"), run_ids)
+    m <- leaflet::leaflet() %>%
+      leaflet::addMapPane("comparisonSurfacePane", zIndex = 410) %>%
+      leaflet::addMapPane("comparisonChannelPane", zIndex = 420) %>%
+      leaflet::addMapPane("comparisonNodePane", zIndex = 660) %>%
       add_osm_basemap() %>%
-      addPolygons(
-        data = st_transform(
-          delta_boundary,
-          4326
-        ),
-        fillColor = "#eef7f9",
-        fillOpacity = 0.2,
-        color = "#0a7e8c",
-        weight = 1,
-        group = "DSM2 Delta Boundary"
+      leaflet::addPolygons(
+        data = sf::st_transform(delta_boundary, 4326),
+        fillColor = "#eef7f9", fillOpacity = 0.06,
+        color = "#0a7e8c", weight = 1, group = "DSM2 Delta Boundary"
       ) %>%
-      addPolylines(
-        data = st_transform(
-          delta_channels,
-          4326
-        ),
-        color = "#2b8cbe",
-        weight = 1,
-        opacity = 0.55,
-        group = "Channels"
+      leaflet::addPolylines(
+        data = sf::st_transform(delta_channels, 4326),
+        color = "#285F73", weight = 1, opacity = 0.55,
+        group = "Channels", options = leaflet::pathOptions(pane = "comparisonChannelPane")
       )
-    
-    overlay_groups <- c(
-      "DSM2 Delta Boundary",
-      "Channels"
-    )
-    
-    skipped_messages <- character(0)
-    
-    for (run_id in run_ids) {
-      
-      scenario_df <- map_df %>%
-        filter(
-          Saved_Run_ID == run_id
-        )
-      
-      scenario_color <- run_colors[[run_id]]
-      
-      sf_nodes <- scenario_df %>%
-        filter(
-          !is.na(X),
-          !is.na(Y),
-          !is.na(Prediction_Final)
+
+    groups <- c("DSM2 Delta Boundary", "Channels")
+    legend_labels <- character(0)
+    for (i in seq_along(run_ids)) {
+      run_id <- run_ids[i]
+      d <- map_df %>% dplyr::filter(as.character(Saved_Run_ID) == run_id)
+      run_label <- d$Scenario_Name[which(!is.na(d$Scenario_Name) & nzchar(d$Scenario_Name))[1]]
+      if (length(run_label) == 0 || is.na(run_label)) run_label <- run_id
+      color <- unname(run_colors[run_id])
+      legend_labels <- c(legend_labels, run_label)
+      nodes <- d %>%
+        dplyr::filter(is.finite(as.numeric(X)), is.finite(as.numeric(Y)), is.finite(as.numeric(Prediction_Final))) %>%
+        dplyr::transmute(
+          DSM2_Node, Location, Region,
+          entrainment = pmax(0, pmin(100, as.numeric(Prediction_Final))),
+          X = as.numeric(X), Y = as.numeric(Y)
         ) %>%
-        transmute(
-          Saved_Run_ID,
-          DSM2_Node,
-          Location,
-          Region,
-          entrainment = Prediction_Final,
-          X,
-          Y
-        )
-      
-      if (nrow(sf_nodes) < 3) {
-        
-        skipped_messages <- c(
-          skipped_messages,
-          paste0(
-            run_id,
-            ": fewer than 3 mapped PTM nodes were available."
-          )
-        )
-        
-        next
-      }
-      
-      sf_nodes <- sf_nodes %>%
-        st_as_sf(
-          coords = c("X", "Y"),
-          crs = 4326,
-          remove = FALSE
-        ) %>%
-        st_transform(
-          26910
-        )
-      
-      display_nodes <- st_transform(
-        sf_nodes,
-        4326
+        sf::st_as_sf(coords = c("X", "Y"), crs = 4326, remove = FALSE) %>%
+        sf::st_transform(26910)
+      if (nrow(nodes) < 3) next
+
+      surface <- make_entrainment_risk_surface(
+        nodes = nodes, grid_cell_size = 500, idp = 2, nmax = 6,
+        maximum_distance = Inf
       )
-      
-      node_group <- paste0(
-        "Nodes - ",
-        run_id
-      )
-      
-      overlay_groups <- c(
-        overlay_groups,
-        node_group
-      )
-      
-      # Add nodes even if polygons fail.
+      surface$grid$Comparison_Opacity <- 0.68 * sqrt(pmax(0, pmin(100, surface$grid$risk)) / 100)
+      group_name <- paste0(run_label, " - Shading and nodes")
+      display_nodes <- sf::st_transform(nodes, 4326)
+      display_nodes$ring_radius <- 4 + 11 * sqrt(display_nodes$entrainment / 100)
+      display_nodes$Scenario_Label <- run_label
+
       m <- m %>%
-        addCircleMarkers(
-          data = display_nodes,
-          radius = 7,
-          color = "#2B2B2B",
-          fillColor = ~ifelse(entrainment >= threshold, "#D96B6B", "#6FAED3"),
-          fillOpacity = 0.95,
-          stroke = TRUE,
-          weight = 2,
+        leaflet::addPolygons(
+          data = surface$grid, fillColor = color,
+          fillOpacity = ~Comparison_Opacity, stroke = FALSE,
+          smoothFactor = 0, group = group_name,
+          options = leaflet::pathOptions(pane = "comparisonSurfacePane", interactive = FALSE)
+        ) %>%
+        leaflet::addCircleMarkers(
+          data = display_nodes, radius = ~ring_radius,
+          color = color, opacity = 1, weight = 3,
+          fill = FALSE, fillOpacity = 0,
           popup = ~paste0(
-            "<div style='font-size:15px;line-height:1.45;min-width:280px;'>",
-            "<b>Scenario:</b> ",
-            Saved_Run_ID,
-            "<br><b>DSM2 Node:</b> ",
-            DSM2_Node,
-            "<br><b>Location:</b> ",
-            Location,
-            "<br><b>Region:</b> ",
-            Region,
-            "<br><b>Entrainment:</b> ",
-            sprintf(
-              "%.0f",
-              entrainment
-            ),
-            "%",
-            "</div>"
+            "<b>Scenario:</b> ", Scenario_Label,
+            "<br><b>DSM2 Node:</b> ", DSM2_Node,
+            "<br><b>Location:</b> ", Location,
+            "<br><b>Predicted entrainment:</b> ", sprintf("%.1f%%", entrainment)
           ),
-          group = node_group
+          group = group_name,
+          options = leaflet::pathOptions(pane = "comparisonNodePane")
         )
-      
-      zones <- tryCatch(
-        make_entrainment_zones(
-          sf_nodes,
-          threshold
-        ),
-        error = function(e) {
-          
-          skipped_messages <<- c(
-            skipped_messages,
-            paste0(
-              run_id,
-              ": risk-zone polygons could not be created. ",
-              conditionMessage(e)
-            )
-          )
-          
-          NULL
-        },
-        shiny.silent.error = function(e) {
-          
-          skipped_messages <<- c(
-            skipped_messages,
-            paste0(
-              run_id,
-              ": risk-zone polygons could not be created."
-            )
-          )
-          
-          NULL
-        }
-      )
-      
-      if (is.null(zones)) {
-        next
-      }
-      
-      high_group <- paste0(
-        "High Risk - ",
-        run_id
-      )
-      
-      low_group <- paste0(
-        "Low Risk - ",
-        run_id
-      )
-      
-      overlay_groups <- c(
-        overlay_groups,
-        low_group,
-        high_group
-      )
-      
-      m <- m %>%
-        addPolygons(
-          data = zones$low,
-          fillColor = scenario_color,
-          fillOpacity = 0.08,
-          color = scenario_color,
-          opacity = 0.45,
-          weight = 1,
-          dashArray = "4,4",
-          popup = paste0(
-            "<b>Scenario:</b> ",
-            run_id,
-            "<br><b>Zone:</b> Low Risk",
-            "<br><b>Threshold:</b> < ",
-            threshold,
-            "%"
-          ),
-          group = low_group
-        ) %>%
-        addPolygons(
-          data = zones$high,
-          fillColor = scenario_color,
-          fillOpacity = 0.30,
-          color = scenario_color,
-          opacity = 0.95,
-          weight = 2,
-          popup = paste0(
-            "<b>Scenario:</b> ",
-            run_id,
-            "<br><b>Zone:</b> High Risk",
-            "<br><b>Threshold:</b> >= ",
-            threshold,
-            "%"
-          ),
-          group = high_group
-        )
+      groups <- c(groups, group_name)
     }
-    
-    if (length(skipped_messages) > 0) {
-      
-      m <- m %>%
-        addControl(
-          html = paste0(
-            "<div style='background:white;padding:10px 12px;",
-            "border-radius:6px;border:1px solid #bbb;",
-            "box-shadow:0 2px 6px rgba(0,0,0,0.2);",
-            "font-size:13px;max-width:420px;'>",
-            "<b>PTM spatial comparison note</b><br>",
-            paste(
-              skipped_messages,
-              collapse = "<br>"
-            ),
-            "</div>"
-          ),
-          position = "topleft"
-        )
-    }
-    
+
     m %>%
-      addLegend(
-        position = "bottomright",
-        colors = run_colors,
-        labels = names(run_colors),
-        title = "Compared Scenarios",
-        opacity = 0.85
+      leaflet::addLegend(
+        position = "bottomright", colors = unname(run_colors),
+        labels = legend_labels, title = "Compared scenarios", opacity = 1
       ) %>%
-      addLayersControl(
-        overlayGroups = unique(
-          overlay_groups
-        ),
-        options = layersControlOptions(
-          collapsed = FALSE
-        )
+      leaflet::addControl(
+        html = paste0(
+          "<div style='background:rgba(255,255,255,.94);padding:9px 11px;",
+          "border:1px solid #999;border-radius:5px;font-size:12px;max-width:330px;'>",
+          "<b>Comparison interpretation</b><br>",
+          "Hue identifies the scenario. Shading opacity and hollow-ring size represent predicted entrainment. ",
+          "Interpolated shading is generalized; spatial transitions are approximate.</div>"
+        ), position = "bottomleft"
+      ) %>%
+      leaflet::addLayersControl(
+        overlayGroups = unique(groups),
+        options = leaflet::layersControlOptions(collapsed = FALSE)
       ) %>%
       add_reset_view_control(zoom = 9) %>%
-      leaflet::setView(
-        lng = -121.60,
-        lat = 38.05,
-        zoom = 9
+      leaflet::setView(lng = -121.60, lat = 38.05, zoom = 9)
+  }
+
+  make_ptm_comparison_png_plot <- function(df, map_bounds = NULL, title = "PTM Scenario Comparison") {
+    model_name <- unique(as.character(df$Model))[1]
+    bounds <- normalize_leaflet_bounds(map_bounds, delta_boundary)
+    bbox <- sf::st_bbox(c(xmin = bounds$west, xmax = bounds$east,
+                          ymin = bounds$south, ymax = bounds$north), crs = sf::st_crs(4326))
+    run_ids <- unique(as.character(df$Saved_Run_ID))
+    run_colors <- stats::setNames(viridisLite::viridis(length(run_ids), option = "D"), run_ids)
+    surface_list <- list(); node_list <- list()
+    for (i in seq_along(run_ids)) {
+      run_id <- run_ids[i]
+      d <- df %>% dplyr::filter(as.character(Saved_Run_ID) == run_id)
+      if (!"Scenario_Name" %in% names(d)) d$Scenario_Name <- NA_character_
+      label <- d$Scenario_Name[which(!is.na(d$Scenario_Name) & nzchar(d$Scenario_Name))[1]]
+      if (length(label) == 0 || is.na(label)) label <- run_id
+      nodes <- d %>%
+        dplyr::filter(is.finite(as.numeric(X)), is.finite(as.numeric(Y)), is.finite(as.numeric(Prediction_Final))) %>%
+        dplyr::transmute(DSM2_Node, entrainment = pmax(0, pmin(100, as.numeric(Prediction_Final))), X = as.numeric(X), Y = as.numeric(Y)) %>%
+        sf::st_as_sf(coords = c("X", "Y"), crs = 4326, remove = FALSE) %>%
+        sf::st_transform(26910)
+      if (nrow(nodes) < 3) next
+      surf <- make_entrainment_risk_surface(nodes, grid_cell_size = 500, idp = 2, nmax = 6, maximum_distance = Inf)$grid
+      surf$Scenario <- label; surf$Scenario_Color <- unname(run_colors[run_id]); surf$Alpha <- 0.68 * sqrt(surf$risk / 100)
+      nd <- sf::st_transform(nodes, 4326); nd$Scenario <- label; nd$Scenario_Color <- unname(run_colors[run_id]); nd$Ring_Size <- 2.5 + 8 * sqrt(nd$entrainment / 100)
+      surface_list[[length(surface_list)+1]] <- suppressWarnings(sf::st_crop(surf, bbox))
+      node_list[[length(node_list)+1]] <- nd
+    }
+    surfaces <- do.call(rbind, surface_list); nodes <- do.call(rbind, node_list)
+    channels <- suppressWarnings(sf::st_crop(sf::st_transform(delta_channels, 4326), bbox))
+    boundary <- suppressWarnings(sf::st_crop(sf::st_transform(delta_boundary, 4326), bbox))
+    p <- ggplot2::ggplot() +
+      ggplot2::geom_sf(data = boundary, fill = "#F3F7F8", color = "#477A87", linewidth = .35)
+    for (scenario in unique(surfaces$Scenario)) {
+      z <- surfaces[surfaces$Scenario == scenario,]
+      col <- unique(z$Scenario_Color)[1]
+      p <- p + ggplot2::geom_sf(data = z, ggplot2::aes(alpha = Alpha), fill = col, color = NA, show.legend = FALSE)
+    }
+    p <- p + ggplot2::geom_sf(data = channels, color = "#285F73", linewidth = .25, alpha = .65)
+    scenario_colors <- stats::setNames(
+      vapply(split(nodes$Scenario_Color, nodes$Scenario), function(x) unique(x)[1], character(1)),
+      names(split(nodes$Scenario_Color, nodes$Scenario))
+    )
+    p <- p + ggplot2::geom_sf(
+      data = nodes,
+      ggplot2::aes(color = Scenario, size = Ring_Size),
+      shape = 21, fill = NA, stroke = 1.1, show.legend = TRUE
+    )
+    footer <- map_export_caption(TRUE)
+    p +
+      ggplot2::scale_color_manual(values = scenario_colors, name = "Compared scenarios") +
+      ggplot2::scale_alpha_identity() + ggplot2::scale_size_identity() +
+      ggplot2::coord_sf(xlim = c(bounds$west, bounds$east), ylim = c(bounds$south, bounds$north), expand = FALSE, datum = NA) +
+      ggplot2::labs(title = title, subtitle = model_name, caption = footer) +
+      ggplot2::theme_void(base_size = 12) +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(face = "bold", size = 18),
+        plot.subtitle = ggplot2::element_text(size = 11),
+        plot.caption = ggplot2::element_text(size = 9, hjust = 0, lineheight = 1.1),
+        panel.background = ggplot2::element_rect(fill = "#F8FAFB", color = "#D1D9DD"),
+        plot.background = ggplot2::element_rect(fill = "white", color = NA)
       )
   }
+
+
+  make_eh_comparison_png_plot <- function(df, map_bounds = NULL, title = "Event Horizon Scenario Comparison") {
+    bounds <- normalize_leaflet_bounds(map_bounds, delta_boundary)
+    bbox <- sf::st_bbox(c(
+      xmin = bounds$west, xmax = bounds$east,
+      ymin = bounds$south, ymax = bounds$north
+    ), crs = sf::st_crs(4326))
+
+    if (!"Saved_Run_ID" %in% names(df)) df$Saved_Run_ID <- seq_len(nrow(df))
+    if (!"Scenario_Name" %in% names(df)) df$Scenario_Name <- as.character(df$Saved_Run_ID)
+    rows <- df %>%
+      dplyr::filter(is.finite(as.numeric(Prediction_Final))) %>%
+      dplyr::group_by(Saved_Run_ID) %>%
+      dplyr::slice(1) %>%
+      dplyr::ungroup()
+    scenario_labels <- ifelse(
+      !is.na(rows$Scenario_Name) & nzchar(as.character(rows$Scenario_Name)),
+      as.character(rows$Scenario_Name), as.character(rows$Saved_Run_ID)
+    )
+    colors <- stats::setNames(viridisLite::viridis(nrow(rows), option = "D"), scenario_labels)
+    line_list <- vector("list", nrow(rows))
+    for (i in seq_len(nrow(rows))) {
+      path <- make_event_horizon_path_geometry(
+        distance_miles = as.numeric(rows$Prediction_Final[i]), regions = c("OMR")
+      ) %>% sf::st_transform(4326)
+      path$Scenario <- scenario_labels[i]
+      path$Event_Horizon_miles <- as.numeric(rows$Prediction_Final[i])
+      line_list[[i]] <- suppressWarnings(sf::st_crop(path, bbox))
+    }
+    lines <- do.call(rbind, line_list)
+    channels <- suppressWarnings(sf::st_crop(sf::st_transform(delta_channels, 4326), bbox))
+    boundary <- suppressWarnings(sf::st_crop(sf::st_transform(delta_boundary, 4326), bbox))
+
+    ggplot2::ggplot() +
+      ggplot2::geom_sf(data = boundary, fill = "#F3F7F8", color = "#477A87", linewidth = .35) +
+      ggplot2::geom_sf(data = channels, color = "#285F73", linewidth = .25, alpha = .60) +
+      ggplot2::geom_sf(data = lines, ggplot2::aes(color = Scenario), linewidth = 1.15, alpha = .95) +
+      ggplot2::scale_color_manual(values = colors, name = "Compared scenarios") +
+      ggplot2::coord_sf(
+        xlim = c(bounds$west, bounds$east), ylim = c(bounds$south, bounds$north),
+        expand = FALSE, datum = NA
+      ) +
+      ggplot2::labs(
+        title = title,
+        subtitle = "Predicted upstream Event Horizon reaches",
+        caption = map_export_caption(FALSE)
+      ) +
+      ggplot2::theme_void(base_size = 12) +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(face = "bold", size = 18),
+        plot.subtitle = ggplot2::element_text(size = 11),
+        plot.caption = ggplot2::element_text(size = 9, hjust = 0, lineheight = 1.1),
+        legend.position = "right",
+        panel.background = ggplot2::element_rect(fill = "#F8FAFB", color = "#D1D9DD"),
+        plot.background = ggplot2::element_rect(fill = "white", color = NA)
+      )
+  }
+
   make_ptm_map <- function(df, threshold) {
     
     validate(
@@ -8458,18 +8391,12 @@ server <- function(input, output, session) {
     }
     caption_text <- paste0(
       "Circles represent PTM emulator predictions at supported DSM2 nodes. ",
-      "Background colors are inverse-distance interpolation between nearby nodes. ",
+      "Background colors are inverse-distance interpolation between nearby nodes.",
       if (is.finite(event_horizon_distance)) {
-        "The dark-red channel reach represents the predicted Event Horizon. "
+        " The dark-red channel reach represents the predicted Event Horizon."
       } else {
         ""
-      },
-      "Exported ",
-      format(
-        Sys.time(),
-        "%B %d, %Y at %I:%M %p"
-      ),
-      "."
+      }
     )
     
     caption_text <- paste(
@@ -8511,7 +8438,7 @@ server <- function(input, output, session) {
       ggplot2::labs(
         title = title,
         subtitle = subtitle_text,
-        caption = caption_text
+        caption = paste(caption_text, map_export_caption(TRUE), sep = "\n")
       ) +
       ggplot2::theme_void(
         base_size = 13
@@ -8614,7 +8541,10 @@ server <- function(input, output, session) {
           df$Risk_Level_Percent[1],
           "% risk"
         ),
-        caption = "The red reach represents the predicted upstream Event Horizon distance."
+        caption = paste(
+          "The red reach represents the predicted upstream Event Horizon distance.",
+          map_export_caption(FALSE), sep = "\n"
+        )
       ) +
       theme_minimal(base_size = 14) +
       theme(
@@ -9622,6 +9552,11 @@ server <- function(input, output, session) {
           map_bounds = current_bounds,
           eh_df = NULL
         )
+
+        export_dimensions <- ptm_png_dimensions(
+          map_bounds = current_bounds,
+          fallback_geometry = delta_boundary
+        )
         
         ggplot2::ggsave(
           filename = file,
@@ -10117,7 +10052,7 @@ server <- function(input, output, session) {
       content = function(file) {
         
         write_csv(
-          ptm_result() %>%
+          prepare_ptm_export(ptm_result()) %>%
             dplyr::mutate(
               dplyr::across(
                 -dplyr::all_of(
@@ -10166,7 +10101,7 @@ server <- function(input, output, session) {
       content = function(file) {
         
         write_csv(
-          eco_result() %>%
+          add_export_metadata(eco_result()) %>%
             mutate(
               across(
                 where(
@@ -10202,7 +10137,7 @@ server <- function(input, output, session) {
       content = function(file) {
         
         write_csv(
-          eh_result() %>%
+          add_export_metadata(eh_result()) %>%
             mutate(
               across(
                 where(
@@ -10295,12 +10230,12 @@ server <- function(input, output, session) {
   
   output$comparison_run_selector <- renderUI({
     
-    available <- names(
-      saved_runs()
-    )
+    runs <- saved_runs()
     
-    if (length(available) == 0) {
-      
+    if (
+      length(runs) == 0 ||
+      is.null(input$comparison_model)
+    ) {
       return(
         tags$div(
           class = "alert alert-info",
@@ -10309,23 +10244,98 @@ server <- function(input, output, session) {
       )
     }
     
-    runs <- saved_runs()
+    selected_model <- input$comparison_model
+    
+    # Keep only saved entries that actually contain the model
+    # currently selected in Comparison Controls.
+    model_compatible <- vapply(
+      runs,
+      function(run_data) {
+        
+        is.data.frame(run_data) &&
+          "Model" %in% names(run_data) &&
+          any(
+            as.character(run_data$Model) == selected_model,
+            na.rm = TRUE
+          )
+      },
+      logical(1)
+    )
+    
+    compatible_runs <- runs[model_compatible]
+    available <- names(compatible_runs)
+    
+    if (length(available) == 0) {
+      return(
+        tags$div(
+          class = "alert alert-info",
+          paste(
+            "No saved runs contain results for",
+            selected_model,
+            ". Run additional compatible scenarios first."
+          )
+        )
+      )
+    }
+    
     display_labels <- vapply(
       available,
       function(key) {
-        run_data <- runs[[key]]
-        if (!is.null(run_data) && "Scenario_Name" %in% names(run_data) && length(run_data$Scenario_Name) > 0 && !is.na(run_data$Scenario_Name[1]) && nzchar(as.character(run_data$Scenario_Name[1]))) {
-          as.character(run_data$Scenario_Name[1])
+        
+        run_data <- compatible_runs[[key]]
+        
+        scenario_name <- if (
+          "Scenario_Name" %in% names(run_data) &&
+          length(run_data$Scenario_Name) > 0
+        ) {
+          as.character(
+            run_data$Scenario_Name[
+              which(
+                !is.na(run_data$Scenario_Name) &
+                  nzchar(
+                    trimws(
+                      as.character(
+                        run_data$Scenario_Name
+                      )
+                    )
+                  )
+              )[1]
+            ]
+          )
         } else {
-          key
+          NA_character_
         }
+        
+        if (
+          length(scenario_name) == 0 ||
+          is.na(scenario_name) ||
+          !nzchar(scenario_name)
+        ) {
+          scenario_name <- key
+        }
+        scenario_name
       },
       character(1)
     )
+    
+    # Guarantee unique visible labels if the same scenario name
+    # was deliberately run more than once.
+    display_labels <- make.unique(
+      display_labels,
+      sep = " - Run "
+    )
+    
     checkboxGroupInput(
       inputId = "comparison_runs",
-      label = "Select Two or More Runs:",
-      choices = stats::setNames(available, display_labels),
+      label = paste0(
+        "Select Two or More Runs for ",
+        selected_model,
+        ":"
+      ),
+      choices = stats::setNames(
+        available,
+        display_labels
+      ),
       selected = available,
       inline = TRUE
     )
@@ -10596,7 +10606,37 @@ server <- function(input, output, session) {
       paste0("scenario_comparison_", Sys.Date(), ".csv")
     },
     content = function(file) {
-      write_csv(comparison_data() %>% mutate(across(where(is.numeric), ~round(.x))), file)
+      write_csv(
+        prepare_ptm_export(comparison_data()) %>%
+          dplyr::mutate(dplyr::across(dplyr::where(is.numeric), ~round(.x, 1))),
+        file, na = ""
+      )
+    }
+  )
+
+
+  output$download_comparison_map <- downloadHandler(
+    filename = function() paste0("scenario_comparison_map_", Sys.Date(), ".png"),
+    contentType = "image/png",
+    content = function(file) {
+      df <- comparison_data()
+      validate(need(nrow(df) > 0, "Select compatible runs before downloading the map."))
+      if (input$comparison_model %in% c("PTM Emulator 7-Day Entrainment", "PTM Emulator 30-Day Entrainment")) {
+        plot <- make_ptm_comparison_png_plot(
+          df, input$comparison_spatial_map_bounds,
+          paste0("Scenario Comparison: ", input$comparison_model)
+        )
+      } else if (identical(input$comparison_model, "Event Horizon")) {
+        plot <- make_eh_comparison_png_plot(
+          df, input$comparison_spatial_map_bounds,
+          "Scenario Comparison: Event Horizon"
+        )
+      } else {
+        stop("Spatial PNG export is available for PTM and Event Horizon comparisons.")
+      }
+      dims <- ptm_png_dimensions(input$comparison_spatial_map_bounds, delta_boundary)
+      ggplot2::ggsave(file, plot, width = dims$width, height = dims$height,
+                      units = "in", dpi = 300, bg = "white", limitsize = FALSE)
     }
   )
   
@@ -10640,6 +10680,32 @@ server <- function(input, output, session) {
     threshold <- suppressWarnings(as.numeric(input$compare_two_map_threshold))[1]; if (is.na(threshold)) threshold <- 25
     if (model %in% c("PTM Emulator 7-Day Entrainment","PTM Emulator 30-Day Entrainment")) make_ptm_spatial_comparison_map(df,threshold) else if (identical(model,"Event Horizon")) make_eh_spatial_comparison_map(df) else make_empty_comparison_map("<b>Spatial comparison is not available for this ECO-PTM output.</b><br>Review the chart and table for the two scenario results.")
   })
+
+  output$download_compare_two_map <- downloadHandler(
+    filename = function() paste0("two_scenario_comparison_map_", Sys.Date(), ".png"),
+    contentType = "image/png",
+    content = function(file) {
+      df <- compare_two_data()
+      validate(need(nrow(df) > 0, "Run both scenarios before downloading the map."))
+      if (input$compare_two_model %in% c("PTM Emulator 7-Day Entrainment", "PTM Emulator 30-Day Entrainment")) {
+        plot <- make_ptm_comparison_png_plot(
+          df, input$compare_two_spatial_map_bounds,
+          paste0("Two-Scenario Comparison: ", input$compare_two_model)
+        )
+      } else if (identical(input$compare_two_model, "Event Horizon")) {
+        plot <- make_eh_comparison_png_plot(
+          df, input$compare_two_spatial_map_bounds,
+          "Two-Scenario Comparison: Event Horizon"
+        )
+      } else {
+        stop("Spatial PNG export is available for PTM and Event Horizon comparisons.")
+      }
+      dims <- ptm_png_dimensions(input$compare_two_spatial_map_bounds, delta_boundary)
+      ggplot2::ggsave(file, plot, width = dims$width, height = dims$height,
+                      units = "in", dpi = 300, bg = "white", limitsize = FALSE)
+    }
+  )
+
   output$compare_two_plot <- renderPlotly({
     df <- compare_two_data(); validate(need(nrow(df)>0,"Run both scenarios to compare results."))
     if (!"Location" %in% names(df)) df$Location <- NA_character_
@@ -11233,7 +11299,7 @@ server <- function(input, output, session) {
     content = function(file) {
       
       write_csv(
-        omri_comparison_results() %>%
+        prepare_ptm_export(omri_comparison_results()) %>%
           mutate(
             across(
               where(
@@ -11250,6 +11316,34 @@ server <- function(input, output, session) {
   )
   
   
+
+
+  output$download_omri_comparison_map <- downloadHandler(
+    filename = function() paste0("OMRI_comparison_map_", Sys.Date(), ".png"),
+    contentType = "image/png",
+    content = function(file) {
+      df <- omri_comparison_results()
+      validate(need(nrow(df) > 0, "Run an OMRI comparison before downloading the map."))
+      selected_model <- unique(as.character(df$Model))[1]
+      if (grepl("PTM Emulator", selected_model)) {
+        plot <- make_ptm_comparison_png_plot(
+          df, input$omri_comparison_spatial_map_bounds,
+          "OMRI Forecast Scenario Comparison"
+        )
+      } else if (identical(selected_model, "Event Horizon")) {
+        plot <- make_eh_comparison_png_plot(
+          df, input$omri_comparison_spatial_map_bounds,
+          "OMRI Event Horizon Scenario Comparison"
+        )
+      } else {
+        stop("Spatial PNG export is available for PTM and Event Horizon comparisons.")
+      }
+      dims <- ptm_png_dimensions(input$omri_comparison_spatial_map_bounds, delta_boundary)
+      ggplot2::ggsave(file, plot, width = dims$width, height = dims$height,
+                      units = "in", dpi = 300, bg = "white", limitsize = FALSE)
+    }
+  )
+
   output$about_info_table <- render_gt({
     data <- data.frame(
       Name = c(

@@ -4,8 +4,8 @@ library(shinydashboard)
 library(leaflet)
 library(plotly)
 library(gt)
-
-app_version <- "1.1.0"
+APP_NAME <- "Entrainment Dashboard"
+APP_VERSION <- "1.1.0"
 
 run_page <- function(prefix, title, theme_class) {
   
@@ -1959,7 +1959,7 @@ ui <- dashboardPage(
                         h1("*DRAFT Entrainment Dashboard"),
                         h4("Version:",
                            tags$code(style = "margin-left:20px",
-                                     paste0("  ", app_version, "  ")
+                                     paste0("  ", APP_VERSION, "  ")
                            ),
                            tags$a(style = "font-style:italic;margin-left:20px;",
                                   "[Release Notes]",
@@ -2060,7 +2060,7 @@ ui <- dashboardPage(
                               h4("Browser Compatibility:"),
                               h5(
                                 "This app can work on Edge, Chrome, Safari, and Firefox, as tested through version ",
-                                tags$code(paste0("v", app_version)),
+                                tags$code(paste0("v", APP_VERSION)),
                                 "."
                               ),
                               h4("Performance Standards: "),
@@ -2504,7 +2504,21 @@ ui <- dashboardPage(
                     )
                   )
                 ),
-                leafletOutput("comparison_spatial_map", height = 650)
+                leafletOutput("comparison_spatial_map", height = 650),
+                downloadButton(
+                  "download_comparison_map",
+                  "Download Comparison Map (PNG)",
+                  class = "btn-primary map-download"
+                ),
+                tags$p(
+                  class = "figure-note",
+                  paste(
+                    "Scenario-colored shading is a generalized interpolation of",
+                    "entrainment emulator outputs between supported DSM2 nodes.",
+                    "Opacity represents predicted entrainment percentage;",
+                    "spatial transitions are approximate."
+                  )
+                )
               )
             ),
             
@@ -2668,7 +2682,21 @@ ui <- dashboardPage(
                     )
                   )
                 ),
-                leafletOutput("omri_comparison_spatial_map", height = 650)
+                leafletOutput("omri_comparison_spatial_map", height = 650),
+                downloadButton(
+                  "download_omri_comparison_map",
+                  "Download OMRI Comparison Map (PNG)",
+                  class = "btn-primary map-download"
+                ),
+                tags$p(
+                  class = "figure-note",
+                  paste(
+                    "Scenario-colored shading is a generalized interpolation of",
+                    "entrainment emulator outputs between supported DSM2 nodes.",
+                    "Opacity represents predicted entrainment percentage;",
+                    "spatial transitions are approximate."
+                  )
+                )
               )
             ),
             
@@ -2792,7 +2820,21 @@ ui <- dashboardPage(
                                   tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Spatial comparison information", icon("info-circle")),
                                            tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "For PTM outputs, the map compares the two scenarios using the selected risk threshold. For Event Horizon, the predicted channel-path reaches are compared. ECO-PTM outputs do not have map geometry."))
                                   )
-                         ), leafletOutput("compare_two_spatial_map",height=650))),
+                         ), leafletOutput("compare_two_spatial_map", height = 650),
+              downloadButton(
+                "download_compare_two_map",
+                "Download Two-Scenario Map (PNG)",
+                class = "btn-primary map-download"
+              ),
+              tags$p(
+                class = "figure-note",
+                paste(
+                  "Scenario-colored shading is a generalized interpolation of",
+                  "entrainment emulator outputs between supported DSM2 nodes.",
+                  "Opacity represents predicted entrainment percentage;",
+                  "spatial transitions are approximate."
+                )
+              ))),
             fluidRow(box(width=12,status="primary",solidHeader=FALSE,
                          tags$div(class="section-heading-with-info", tags$h4("Detailed Scenario Comparison Results"),
                                   tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Comparison table information", icon("info-circle")),
