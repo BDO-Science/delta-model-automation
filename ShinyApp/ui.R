@@ -1050,6 +1050,18 @@ ui <- dashboardPage(
           margin-top:10px;
           margin-bottom:0;
         }
+        .about-inline-reference {
+          color: #087784;
+          font-weight: 600;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+        
+        .about-inline-reference:hover,
+        .about-inline-reference:focus {
+          color: #055b65;
+          text-decoration: underline;
+        }
         .observed-flow-note{
           margin-top:-10px;
           margin-bottom:12px;
@@ -1803,6 +1815,53 @@ ui <- dashboardPage(
           margin-left:0 !important;
           flex:0 0 auto;
         }
+        .about-foundation-section {
+          margin: 8px 0 24px 0;
+          padding: 18px 22px;
+          background: #f7fbfc;
+          border: 1px solid #cfe2e6;
+          border-left: 5px solid #0a7e8c;
+          border-radius: 7px;
+        }
+        
+        .about-foundation-section h4 {
+          margin-top: 18px;
+          margin-bottom: 7px;
+          color: #075f6d;
+          font-size: 17px;
+          font-weight: 700;
+        }
+        
+        .about-foundation-section h5 {
+          margin-top: 7px;
+          margin-bottom: 8px;
+          color: #33454d;
+          font-weight: 400;
+        }
+        
+        .about-capability-list {
+          margin: 7px 0 16px 24px;
+          padding-left: 18px;
+          color: #33454d;
+          font-size: 14px;
+          line-height: 1.6;
+        }
+        
+        .about-capability-list li {
+          margin-bottom: 5px;
+        }
+        
+        .about-model-note {
+          margin-top: 16px;
+          padding: 12px 14px;
+          background: #fffaf0;
+          border: 1px solid #ead5a8;
+          border-left: 4px solid #d89b21;
+          border-radius: 5px;
+          color: #4b4436;
+          font-size: 13.5px;
+          line-height: 1.55;
+        }
         @media (max-width:1200px) {
           .comparison-controls-row,
           .omri-controls-row {
@@ -1933,7 +1992,6 @@ ui <- dashboardPage(
                   fluidRow(
                     box(
                       width = 12,
-                      height = 2000,
                       div(style = "margin-left: 60px;margin-right:120px",
                           h2("Overview"),
                           h5(
@@ -2118,6 +2176,196 @@ ui <- dashboardPage(
                                 ),
                                 tags$b("-Fixed: "),
                                 "NA"
+                              )
+                            )
+                          ),
+                          h3(
+                            "Purpose and Scientific Foundation"
+                          ),
+                          
+                          div(
+                            class = "about-foundation-section",
+                            
+                            h5(
+                              style = "text-align: justify; line-height: 1.65;",
+                              
+                              paste(
+                                "The Entrainment Dashboard is an interactive decision-support",
+                                "and exploratory analysis application for assessing how Delta",
+                                "flow conditions and Central Valley Project and State Water",
+                                "Project operations may influence particle entrainment, salmonid",
+                                "routing and survival, and the spatial extent of entrainment risk.",
+                                "The application is intended to make technically rigorous model",
+                                "information easier to explore during current-condition",
+                                "assessments, weekly planning, and comparisons of alternative",
+                                "operational scenarios."
+                              )
+                            ),
+                            
+                            h4(
+                              "Scientific foundation"
+                            ),
+                            
+                            h5(
+                              style = "text-align: justify; line-height: 1.65;",
+                              
+                              paste(
+                                "The application is founded on machine-learning emulators",
+                                "developed from a large dataset of CalSim and Delta Simulation",
+                                "Model II simulations. The underlying study included 191,100",
+                                "Particle Tracking Module simulations and 2,772 Ecological",
+                                "Particle Tracking Module simulations representing a broad range",
+                                "of historical hydrology and alternative Old and Middle River",
+                                "management conditions. Boosted regression-tree models were",
+                                "trained and evaluated using five-fold cross-validation and",
+                                "parsimonious predictor-selection procedures."
+                              ),
+                              
+                              " ",
+                              
+                              tags$a(
+                                "(Contra Costa Water District 2026)",
+                                href = "20260512_CCWD_Entrainment_TM_Final.pdf",
+                                target = "_blank",
+                                rel = "noopener noreferrer",
+                                class = "about-inline-reference",
+                                title = paste(
+                                  "Open Intuitive Quantitative Metrics for Rapid Assessment",
+                                  "of Entrainment Risks and Salmonid Responses in The Delta"
+                                )
+                              ),
+                              
+                              tags$br(),
+                              tags$br(),
+                              
+                              paste(
+                                "The emulators are not intended to replace DSM2. They rapidly",
+                                "estimate selected DSM2-derived responses without requiring the",
+                                "complete model setup, simulation, and post-processing workflow",
+                                "for every scenario."
+                              )
+                            ),
+                            
+                            h4(
+                              "PTM entrainment emulators"
+                            ),
+                            
+                            h5(
+                              style = "text-align: justify; line-height: 1.65;",
+                              
+                              paste(
+                                "The PTM emulators estimate the percentage of particles",
+                                "entrained at the combined CVP and SWP export facilities after",
+                                "7 or 30 days for supported release locations. The 7-day",
+                                "predictions support the weekly time scale of short-term",
+                                "operational assessment, while the 30-day predictions provide",
+                                "a longer-term or quasi-steady-state view of transport and",
+                                "entrainment. Predictions account for location and readily",
+                                "available hydrologic and operational inputs, including combined",
+                                "exports, Vernalis flow, Sacramento River flow, eastside",
+                                "tributary flow, and interior Delta flow."
+                              )
+                            ),
+                            
+                            h4(
+                              "ECO-PTM salmonid-response emulators"
+                            ),
+                            
+                            h5(
+                              style = "text-align: justify; line-height: 1.65;",
+                              
+                              paste(
+                                "The ECO-PTM emulators estimate combined through-Delta survival",
+                                "from Freeport toward Chipps Island and the probability of",
+                                "routing into the interior Delta through Georgiana Slough or",
+                                "the Delta Cross Channel. These outputs provide a rapid",
+                                "representation of modeled relationships among Delta inflows,",
+                                "channel routing, gate operations, and Sacramento-origin",
+                                "juvenile salmonid migration outcomes."
+                              )
+                            ),
+                            
+                            h4(
+                              "Entrainment Event Horizon"
+                            ),
+                            
+                            h5(
+                              style = "text-align: justify; line-height: 1.65;",
+                              
+                              paste(
+                                "The Entrainment Event Horizon converts a spatially complex",
+                                "pattern of entrainment into an intuitive distance-based metric.",
+                                "For a selected entrainment-risk threshold, the Event Horizon",
+                                "represents the shortest channel distance from Clifton Court",
+                                "Forebay to the upstream boundary of the corresponding high-risk",
+                                "zone along the Old and Middle River corridor. A larger Event",
+                                "Horizon indicates that the selected risk level extends farther",
+                                "upstream, while a smaller Event Horizon indicates that the risk",
+                                "is more geographically constrained near the export facilities."
+                              )
+                            ),
+                            
+                            h4(
+                              "What users can do"
+                            ),
+                            
+                            tags$ul(
+                              class = "about-capability-list",
+                              
+                              tags$li(
+                                "Evaluate current and archived weekly Delta conditions."
+                              ),
+                              
+                              tags$li(
+                                paste(
+                                  "Test user-defined combinations of exports, river inflows,",
+                                  "eastside flows, and interior Delta flow."
+                                )
+                              ),
+                              
+                              tags$li(
+                                paste(
+                                  "Compare observed-flow and forecast OMRI alternatives from",
+                                  "weekly assessment archives."
+                                )
+                              ),
+                              
+                              tags$li(
+                                paste(
+                                  "Review node-level 7-day and 30-day entrainment predictions",
+                                  "and interpolated spatial patterns."
+                                )
+                              ),
+                              
+                              tags$li(
+                                paste(
+                                  "Evaluate the predicted Event Horizon at risk thresholds from",
+                                  "15% through 80%."
+                                )
+                              ),
+                              
+                              tags$li(
+                                paste(
+                                  "Compare saved scenarios and download model results and",
+                                  "map figures."
+                                )
+                              )
+                            ),
+                            
+                            tags$div(
+                              class = "about-model-note",
+                              
+                              tags$b(
+                                "Important interpretation note: "
+                              ),
+                              
+                              paste(
+                                "Dashboard values are machine-learning predictions of simulated",
+                                "DSM2 PTM and ECO-PTM responses. They are not direct observations,",
+                                "real-time fish forecasts, or substitutes for complete",
+                                "hydrodynamic, biological, or regulatory analyses. Results should",
+                                "be interpreted with field observations, species information,",
+                                "model limitations, and other available technical evidence."
                               )
                             )
                           )
