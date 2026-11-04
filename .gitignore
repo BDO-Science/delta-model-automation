@@ -90,3 +90,6 @@ ShinyApp/STN_EMULATOR/models/PTM_Entrainment7d_lightgbm.txt
 ShinyApp/STN_EMULATOR/models/Region_Location_Node_Path.csv
 ShinyApp/server.txt
 ShinyApp/ui.txt
+ShinyApp/STN_EMULATOR/models/EH_lightgbm.txt
+ShinyApp/STN_EMULATOR/models/PTM30_lightgbm.txt
+ShinyApp/STN_EMULATOR/models/PTM7_lightgbm.txt
