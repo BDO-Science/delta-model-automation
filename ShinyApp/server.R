@@ -60,60 +60,58 @@ DSM2_CHANNEL_DEF <- file.path(  "STN_EMULATOR",  "channel_std_delta_grid_NAVD_20
 DSM2_PATH_FILE <- file.path(  "STN_EMULATOR",  "Region_Location_Node_Path.csv")
 source("Server_Data_Access.R")
 
-required_model_files <- c(
-  file.path(MODEL_DIR, "PTM_Entrainment7d_lightgbm.txt"),
-  file.path(MODEL_DIR, "PTM_Entrainment30d_lightgbm.txt"),
-  file.path(MODEL_DIR, "ECOPTM_survival_lightgbm.txt"),
-  file.path(MODEL_DIR, "ECOPTM_interior_lightgbm.txt"),
-  file.path(MODEL_DIR, "xgb_event_horizon.json")
+# ------------------------------------------------------------------
+# Updated CCWD public-release models for the Exploration tab.
+# Files are already present directly in STN_EMULATOR/models/.
+# ------------------------------------------------------------------
+NEW_CCWD_MODEL_FILES <- c(
+  PTM7 = "PTM7_lightgbm.txt",
+  PTM30 = "PTM30_lightgbm.txt",
+  ECO_survival = "ECOPTM_survival_lightgbm.txt",
+  ECO_interior = "ECOPTM_interior_lightgbm.txt",
+  EH = "EH_lightgbm.txt"
 )
-
-missing_model_files <- required_model_files[!file.exists(required_model_files)]
-
-if (length(missing_model_files) > 0) {
+NEW_CCWD_MODEL_DIR <- MODEL_DIR
+NEW_CCWD_MODEL_PATHS <- file.path(NEW_CCWD_MODEL_DIR, NEW_CCWD_MODEL_FILES)
+names(NEW_CCWD_MODEL_PATHS) <- names(NEW_CCWD_MODEL_FILES)
+missing_new_models <- NEW_CCWD_MODEL_PATHS[!file.exists(NEW_CCWD_MODEL_PATHS)]
+if (length(missing_new_models)) {
   stop(
-    paste0(
-      "Required emulator model file(s) were not found: ",
-      paste(missing_model_files, collapse = ", "),
-      ". Open the app from the STN_ShinyApp folder."
-    )
+    "Missing new CCWD LightGBM model file(s): ",
+    paste(basename(missing_new_models), collapse = ", "),
+    ". Expected in ", normalizePath(MODEL_DIR, mustWork = FALSE),
+    ". Open the app from the ShinyApp directory."
   )
 }
+message("New Exploration LightGBM models found: ",
+        paste(basename(NEW_CCWD_MODEL_PATHS), collapse = ", "))
 
-cat("Loading PTM7 ")
-ptm7_model <- lgb.load(file.path(MODEL_DIR, "PTM_Entrainment7d_lightgbm.txt"))
-cat("Loading PTM30 ")
-ptm30_model <- lgb.load(file.path(MODEL_DIR, "PTM_Entrainment30d_lightgbm.txt"))
-cat("Loading ECO Survival ")
-eco_survival_model <- lgb.load(file.path(MODEL_DIR, "ECOPTM_survival_lightgbm.txt"))
-cat("Loading ECO Interior ")
-eco_interior_model <- lgb.load(file.path(MODEL_DIR, "ECOPTM_interior_lightgbm.txt"))
-cat("Loading Event Horizon model ")
-#event_horizon_model <- xgb.load(  file.path(MODEL_DIR, "xgb_event_horizon.json"))
+# Old archive prediction functions below still use their original input
+# definitions. We deliberately do NOT pass the revised model files to those
+# legacy functions: their feature schemas differ. The archive migration is
+# separate work. Missing legacy files are not a startup error or warning.
+load_legacy_lightgbm <- function(filename) {
+  path <- file.path(MODEL_DIR, filename)
+  if (!file.exists(path)) return(NULL)
+  lightgbm::lgb.load(path)
+}
+ptm7_model <- load_legacy_lightgbm("PTM_Entrainment7d_lightgbm.txt")
+ptm30_model <- load_legacy_lightgbm("PTM_Entrainment30d_lightgbm.txt")
+eco_survival_model <- load_legacy_lightgbm("ECOPTM_survival_lightgbm.txt")
+eco_interior_model <- load_legacy_lightgbm("ECOPTM_interior_lightgbm.txt")
 event_horizon_model <- NULL
-cat("Finished Event Horizon model ")
-cat("Finished loading models ")
 get_event_horizon_model <- local({
-  
   model <- NULL
-  
   function() {
-    
     if (is.null(model)) {
-      
-      cat("EH STEP 1\n")
-      
-      model <<- xgb.load(
-        file.path(MODEL_DIR, "xgb_event_horizon.json")
+      legacy_path <- file.path(MODEL_DIR, "xgb_event_horizon.json")
+      if (!file.exists(legacy_path)) stop(
+        "Historical/legacy Event Horizon model unavailable. ",
+        "The Exploration tab uses EH_lightgbm.txt. ",
+        "The historical archive workflow has not yet been migrated."
       )
-      
-      cat("EH STEP 2\n")
-      
-      print(gc())
-      
-      cat("EH STEP 3\n")
+      model <<- xgboost::xgb.load(legacy_path)
     }
-    
     model
   }
 })
@@ -291,12 +289,15 @@ find_first_existing_column <- function(data, candidates, label) {
   
   names(data)[match_index[1]]
 }
-eco_survival_features <- read_lgb_features(
-  file.path(MODEL_DIR, "ECOPTM_survival_lightgbm.txt")
-)
-eco_interior_features <- read_lgb_features(
-  file.path(MODEL_DIR, "ECOPTM_interior_lightgbm.txt")
-)
+# Legacy ECO feature sets are only needed by archived / non-Exploration code.
+# Do not fail application startup when only the new models are installed.
+legacy_feature_names <- function(filename) {
+  path <- file.path(MODEL_DIR, filename)
+  if (!file.exists(path)) return(character())
+  read_lgb_features(path)
+}
+eco_survival_features <- legacy_feature_names("ECOPTM_survival_lightgbm.txt")
+eco_interior_features <- legacy_feature_names("ECOPTM_interior_lightgbm.txt")
 
 
 # ------------------------------------------------------------------
@@ -312,6 +313,20 @@ cdec_daily_link <- function(station_id, end_date = Sys.Date()) {
   )
 }
 
+# Historical DCC measurement reference supplied by the project team:
+# CDEC plotter sensor_no=33744. Plot-series IDs are NOT the same as the
+# SensorNums argument of CDEC's JSONDataServlet.
+# DLC / sensor 20 is an API mapping to VERIFY against CDEC metadata.
+# If CDEC metadata show a different station/sensor or reporting duration,
+# update these configuration values before scientific production use.
+DCC_CDEC_PLOT_ID <- 33744L
+DCC_CDEC_STATION <- "DLC"
+DCC_CDEC_SENSOR <- 20L
+DCC_CDEC_PLOT_URL <- paste0(
+  "https://cdec.water.ca.gov/cdecplotter/JspPlotServlet?",
+  "sensor_no=33744&end=&geom=small&interval=2"
+)
+
 observed_source_links <- list(
   CLC = cdec_daily_link("CLC"),
   TRP = cdec_daily_link("TRP"),
@@ -322,7 +337,8 @@ observed_source_links <- list(
   MOK = "https://www.ebmud.com/water/about-your-water/water-supply/water-supply-reports/daily-water-supply-report",
   COS = "https://waterdata.usgs.gov/monitoring-location/USGS-11335000/#dataTypeId=daily-00060-0&period=P1Y&showFieldMeasurements=true",
   XGEO_A = "https://waterdata.usgs.gov/monitoring-location/USGS-11447890/#dataTypeId=daily-72137-0&period=P1Y&showFieldMeasurements=true",
-  XGEO_C = "https://waterdata.usgs.gov/monitoring-location/USGS-11447905/#dataTypeId=daily-72137-0&period=P1Y&showFieldMeasurements=true"
+  XGEO_C = "https://waterdata.usgs.gov/monitoring-location/USGS-11447905/#dataTypeId=daily-72137-0&period=P1Y&showFieldMeasurements=true",
+  DCC = DCC_CDEC_PLOT_URL
 )
 
 download_observed_source_file <- function(
@@ -713,6 +729,114 @@ read_cdec_daily_values <- function(
   attr(result, "sensor_number") <- sensor_number
 
   result
+}
+
+# ------------------------------------------------------------------
+# Exploration ONLY: measured, tidally filtered hourly FLOW at CDEC DLC.
+# Hourly FLOW is sensor 20 (CDEC sensor type, not plot-series ID 33744).
+# Use observed daily means, retaining signed discharge and coverage counts.
+# No CalSim3 regression is used in Exploration.
+# ------------------------------------------------------------------
+read_historical_dcc_hourly <- function(end_date = Sys.Date() - 1L,
+                                       lookback_days = 35L) {
+  end_date <- as.Date(end_date)
+  start_date <- end_date - as.integer(lookback_days) + 1L
+  base <- "https://cdec.water.ca.gov/dynamicapp/req/"
+  args <- paste0("Stations=DLC&SensorNums=20&dur_code=H&Start=",
+                 format(start_date, "%Y-%m-%d"), "&End=",
+                 format(end_date + 1L, "%Y-%m-%d"))
+  urls <- c(paste0(base, "CSVDataServlet?", args),
+            paste0(base, "JSONDataServlet?", args))
+  failures <- character()
+  for (k in seq_along(urls)) {
+    dat <- tryCatch({
+      response <- download_observed_source_file(urls[k],
+                       fileext=if (k == 1L) ".csv" else ".json",
+                       attempts=2L)
+      if (k == 1L) {
+        x <- utils::read.csv(text=paste(response,collapse="\n"),
+                             check.names=FALSE, stringsAsFactors=FALSE)
+      } else {
+        x <- jsonlite::fromJSON(paste(response, collapse="\n"),
+                                flatten=TRUE)
+        x <- as.data.frame(x, check.names=FALSE, stringsAsFactors=FALSE)
+      }
+      if (!nrow(x)) stop("CDEC returned zero hourly rows")
+      nms <- tolower(gsub("[^a-z0-9]", "", names(x)))
+      datetime_col <- match("obsdate", nms)
+      if (is.na(datetime_col)) datetime_col <- match("date", nms)
+      if (is.na(datetime_col)) datetime_col <- match("datetime", nms)
+      value_col <- match("value", nms)
+      if (is.na(value_col)) value_col <- match("obsvalue", nms)
+      if (is.na(datetime_col) || is.na(value_col)) {
+        stop("Unrecognized CDEC hourly columns: ", paste(names(x),collapse=", "))
+      }
+      # CDEC exports observation datetimes in Pacific Standard Time (PST).
+      stamps <- as.character(x[[datetime_col]])
+      stamps <- gsub("T", " ", stamps, fixed=TRUE)
+      stamps <- sub("\\.[0-9]+$", "", stamps)
+      stamps <- sub("(Z|[+-][0-9]{2}:?[0-9]{2})$", "", stamps)
+      tm <- as.POSIXct(stamps, format="%Y-%m-%d %H:%M:%S", tz="Etc/GMT+8")
+      missing <- is.na(tm)
+      if (any(missing)) tm[missing] <- as.POSIXct(stamps[missing],
+                     format="%m/%d/%Y %H:%M", tz="Etc/GMT+8")
+      missing <- is.na(tm)
+      if (any(missing)) tm[missing] <- as.POSIXct(stamps[missing],
+                     format="%Y-%m-%d %H:%M", tz="Etc/GMT+8")
+      vals <- suppressWarnings(as.numeric(gsub(",", "",
+                                   as.character(x[[value_col]]),fixed=TRUE)))
+      day <- as.Date(tm, tz="Etc/GMT+8")
+      keep <- !is.na(tm) & is.finite(vals) & vals > -9000 &
+              day >= start_date & day <= end_date
+      y <- data.frame(Date=day[keep], Timestamp=tm[keep],
+                      Flow_cfs=vals[keep])
+      y <- y[!duplicated(y$Timestamp,fromLast=TRUE),,drop=FALSE]
+      y <- y[order(y$Timestamp),,drop=FALSE]
+      if (!nrow(y)) stop("No usable FLOW values in hourly CDEC response")
+      attr(y,"source_url") <- urls[k]
+      y
+    }, error=function(e) e)
+    if (!inherits(dat,"error")) return(dat)
+    failures <- c(failures, paste0(if(k==1L) "CSV" else "JSON", ": ",
+                                    conditionMessage(dat)))
+  }
+  stop("Hourly FLOW retrieval failed for CDEC DLC sensor 20: ",
+       paste(failures,collapse="; "))
+}
+
+read_historical_dcc_daily <- function(end_date = Sys.Date() - 1L,
+                                      lookback_days = 35L) {
+  h <- read_historical_dcc_hourly(end_date, lookback_days)
+  spl <- split(h$Flow_cfs, h$Date)
+  out <- data.frame(Date=as.Date(names(spl)),
+                    Value=vapply(spl, mean, numeric(1)),
+                    Hours=vapply(spl, length, integer(1)))
+  out <- out[order(out$Date),,drop=FALSE]
+  attr(out, "source_url") <- attr(h,"source_url")
+  out
+}
+
+read_historical_dcc_7day <- function(end_date=Sys.Date()-1L) {
+  end_date <- as.Date(end_date)
+  dat <- read_historical_dcc_daily(end_date, lookback_days=35L)
+  # Prefer the most recent 7-day calendar window with valid observations.
+  # Gaps do not erase available records; incomplete days are flagged.
+  recent <- dat[dat$Date >= end_date-6L & dat$Date <= end_date,,drop=FALSE]
+  if (!nrow(recent)) {
+    # CDEC can lag. Find the latest 7-day window containing observations.
+    last <- max(dat$Date)
+    recent <- dat[dat$Date >= last-6L & dat$Date <= last,,drop=FALSE]
+  }
+  if (!nrow(recent)) stop("No observed DLC hourly FLOW in the past 35 days")
+  target <- seq(max(recent$Date)-6L,max(recent$Date),by="day")
+  # The observed-day mean is based on available hourly measurements.
+  # A day with fewer than 24 hours remains marked incomplete.
+  list(value=mean(recent$Value), dates=recent$Date,
+       days_available=nrow(recent), hours=sum(recent$Hours),
+       incomplete_dates=recent$Date[recent$Hours < 24L],
+       missing_dates=setdiff(target,recent$Date),
+       source_url=attr(dat,"source_url"), plot_url=DCC_CDEC_PLOT_URL,
+       source="CDEC DLC sensor 20 hourly FLOW; mean of observed daily means")
 }
 
 read_cdec_query_daily_mflow <- function(
@@ -1145,7 +1269,269 @@ parse_flow_input <- function(value) {
 }
 
 
+# =======================================================================
+# EXPLORATION ONLY - DAYFLOW-style five-day precipitation contribution,
+# aggregated over a rolling 30-day window (a PROPOSED TAF/30-day model input).
+# Daily effective rainfall on d = (P[d] + P[d-1] + ... + P[d-4]) / 5.
+# Each rainfall event therefore contributes equally on its observation day
+# and the following four dates. 30-day volume (TAF) = sum(effective daily
+# inches on 30 consecutive dates) * 679000 / 12000.
+# The four days before the 30-day window are required for correct carry-in.
+# Do not interpret missing daily precipitation as zero or silently annualize.
+# IMPORTANT: This rolling window has not been verified as the training-time
+# QPREC definition used by Ching-Fu; it is explicitly a rolling estimate.
+# =======================================================================
+ccwd_qprec_five_day_rolling30 <- function(daily, ending_on,
+                                          delta_area_acres = 679000) {
+  if (!is.data.frame(daily) ||
+      !all(c("date", "precip_in") %in% names(daily))) {
+    stop("Daily precipitation input needs date and precip_in columns")
+  }
+  if (anyDuplicated(daily$date)) stop("Duplicate dates in precipitation series")
+  if (any(is.finite(daily$precip_in) & daily$precip_in < 0)) {
+    stop("Negative daily precipitation values require source review")
+  }
+  ending_on <- as.Date(ending_on)
+  start_on <- ending_on - 29L
+  required_start <- start_on - 4L
+  required_dates <- seq(required_start, ending_on, by = "day")
+  date_to_value <- setNames(daily$precip_in, as.character(daily$date))
+  observed <- unname(date_to_value[as.character(required_dates)])
+  missing_dates <- required_dates[!is.finite(observed)]
+  complete <- length(observed) == 34L && all(is.finite(observed))
+  daily_dates <- seq(start_on, ending_on, by = "day")
+  effective_daily <- if (complete) {
+    vapply(daily_dates, function(d) {
+      dates5 <- seq(d - 4L, d, by = "day")
+      sum(unname(date_to_value[as.character(dates5)])) / 5
+    }, numeric(1))
+  } else rep(NA_real_, 30L)
+  raw_window <- unname(date_to_value[as.character(daily_dates)])
+  total_inches <- if (complete) sum(effective_daily) else NA_real_
+  list(
+    start_date = start_on, end_date = ending_on,
+    required_start_date = required_start,
+    expected_input_days = 34L,
+    observed_input_days = sum(is.finite(observed)),
+    missing_dates = missing_dates,
+    complete = complete,
+    raw_precip_inches_30d = if (all(is.finite(raw_window)))
+      sum(raw_window) else NA_real_,
+    distributed_precip_inches_30d = total_inches,
+    accretion_taf_30d = total_inches * delta_area_acres / 12000
+  )
+}
+
+ccwd_fetch_noaa_daily_precip <- function(station, first_day, last_day) {
+  url <- paste0(
+    "https://www.ncei.noaa.gov/access/services/data/v1",
+    "?dataset=daily-summaries&stations=", station,
+    "&dataTypes=PRCP&startDate=", format(first_day, "%Y-%m-%d"),
+    "&endDate=", format(last_day, "%Y-%m-%d"),
+    "&units=standard&format=csv")
+  response <- download_observed_source_file(url, fileext = ".csv")
+  if (!length(response) || !any(grepl("DATE", response, fixed = TRUE))) {
+    stop("NOAA returned no daily precipitation table for ", station)
+  }
+  p <- utils::read.csv(text = paste(response, collapse = "\n"),
+                       stringsAsFactors = FALSE, check.names = FALSE,
+                       na.strings = c("", "NA", "M"))
+  if (!all(c("DATE", "PRCP") %in% names(p))) {
+    stop("NOAA response missing DATE or PRCP for ", station)
+  }
+  if ("STATION" %in% names(p) &&
+      any(!is.na(p$STATION) & p$STATION != station)) {
+    stop("NOAA returned a different precipitation station")
+  }
+  p$date <- as.Date(as.character(p$DATE))
+  # NOAA marks trace precipitation with T; treat this as zero measurable
+  # inches, while keeping genuinely missing records as NA.
+  raw <- trimws(as.character(p$PRCP))
+  p$precip_in <- suppressWarnings(as.numeric(raw))
+  p$precip_in[!is.na(raw) & toupper(raw) == "T"] <- 0
+  p <- p[!is.na(p$date) & p$date >= first_day &
+           p$date <= last_day, c("date", "precip_in"), drop = FALSE]
+  if (!nrow(p)) stop("No NOAA precipitation observations for ", station)
+  if (anyDuplicated(p$date)) stop("Duplicate daily records for ", station)
+  list(daily = p, source_url = url)
+}
+
+fetch_ccwd_noaa_rolling30_accretion <- function(reference_date = Sys.Date(),
+                                                months_back = 18L,
+                                                delta_area_acres = 679000) {
+  reference_date <- as.Date(reference_date)
+  last_day <- reference_date - 1L  # exclude potentially incomplete current day
+  first_day <- last_day - as.integer(ceiling(months_back * 31))
+  stations <- c("US1CASJ0004", "USW00023237")
+  names(stations) <- c("STOCKTON 5.8 NNE", "STOCKTON AIRPORT")
+  candidates <- list()
+  failures <- character(0)
+  for (station_name in names(stations)) {
+    station <- unname(stations[[station_name]])
+    item <- tryCatch({
+      raw <- ccwd_fetch_noaa_daily_precip(station, first_day, last_day)
+      valid <- raw$daily$date[is.finite(raw$daily$precip_in)]
+      if (!length(valid)) stop("no valid daily precipitation measurements")
+      newest <- max(valid)
+      # Prefer most recent COMPLETE rolling window, not necessarily latest
+      # observation if its preceding 33 days have gaps. Never fill gaps as zero.
+      ends <- seq(newest, max(min(valid) + 33L, first_day + 33L), by = "-1 day")
+      chosen <- NULL
+      most_recent <- NULL
+      for (ending_on in ends) {
+        candidate <- ccwd_qprec_five_day_rolling30(raw$daily,
+                            ending_on, delta_area_acres)
+        if (is.null(most_recent)) most_recent <- candidate
+        if (isTRUE(candidate$complete)) {
+          chosen <- candidate
+          break
+        }
+      }
+      if (is.null(chosen)) {
+        missing_sample <- if (length(most_recent$missing_dates))
+          paste(head(format(most_recent$missing_dates, "%Y-%m-%d"), 8L),
+                collapse = ", ") else "not determined"
+        stop("no complete 30-day window; latest observation ",
+             format(newest, "%Y-%m-%d"), "; ",
+             most_recent$observed_input_days, "/34 required observations",
+             "; missing dates include: ", missing_sample)
+      }
+      list(latest = chosen, station = station,
+           station_name = station_name, source_url = raw$source_url,
+           latest_observation_date = newest,
+           requested_through_date = last_day)
+    }, error = function(e) e)
+    if (inherits(item, "error")) {
+      failures <- c(failures, paste0(station_name, ": ", conditionMessage(item)))
+    } else {
+      candidates[[station_name]] <- item
+    }
+  }
+  if (!length(candidates)) stop(
+    "No complete rolling 30-day precipitation data available. ",
+    paste(failures, collapse = "; "),
+    ". Missing observations were not assumed zero.")
+  # Choose the station with the most recent COMPLETE 30-day period;
+  # first station wins a tie (Stockton 5.8 NNE).
+  dates <- vapply(candidates, function(x) as.numeric(x$latest$end_date), numeric(1))
+  winner <- candidates[[order(dates, decreasing = TRUE)[1L]]]
+  winner$delta_area_acres <- delta_area_acres
+  winner$method <- "DAYFLOW five-day distribution; rolling 30-day TAF"
+  winner$source_is_proxy <- TRUE
+  winner$failures <- failures
+  winner
+}
+
 server <- function(input, output, session) {
+  ccwd_display_whole <- function(value) {
+    if (is.null(value) || !length(value) || !is.finite(value[1])) return("")
+    format(round(as.numeric(value[1]), 0), big.mark=",", scientific=FALSE, trim=TRUE)
+  }
+  ccwd_info_line <- function(key, value) {
+    tagList(tags$div(class="ccwd-help-key", key), tags$div(class="ccwd-help-value", value))
+  }
+
+  # Exploration measured DCC cache; separate from Weekly Assessment.
+  ccwd_dcc_measured <- reactiveVal(NULL)
+  ccwd_dcc_note <- reactiveVal("Retrieving historical DCC flow from CDEC...")
+  output$current_ptm_dcc_auto_note <- renderUI({
+    dat <- ccwd_dcc_measured()
+    if (is.null(dat)) return(tags$div(class="ccwd-help-status", ccwd_dcc_note()))
+    tags$div(class="ccwd-help-section",
+      tags$strong("Latest historical data used"),
+      tags$div(class="ccwd-help-detail",
+        ccwd_info_line("Measured mean", paste0(ccwd_display_whole(dat$value), " cfs")),
+        ccwd_info_line("Observed days", paste0(dat$days_available, " of 7")),
+        ccwd_info_line("Hourly readings", as.character(dat$hours)),
+        ccwd_info_line("Partial days", as.character(length(dat$incomplete_dates))),
+        ccwd_info_line("Missing days", as.character(length(dat$missing_dates)))
+      ),
+      tags$div(class="ccwd-help-source", "CDEC DLC hourly FLOW: ",
+        tags$a(href=dat$source_url, target="_blank", rel="noopener noreferrer", "Open measurement source")),
+      tags$div(class="ccwd-help-foot", "Displayed measured mean is before the closed-gate override. When Closed is selected, model input is 0 cfs.")
+    )
+  })
+  observeEvent(TRUE, {
+    result <- tryCatch(read_historical_dcc_7day(), error=function(e) e)
+    if (inherits(result,"error")) {
+      ccwd_dcc_measured(NULL)
+      ccwd_dcc_note(paste0("Historical DCC data unavailable: ",
+        conditionMessage(result),
+        ". Forecast regression was NOT used. Source: CDEC DLC sensor 20 hourly FLOW."))
+    } else {
+      ccwd_dcc_measured(result)
+      ccwd_dcc_note(paste0(
+        "CDEC DLC hourly FLOW → daily means → historical mean: ",
+        round(result$value, 2), " cfs (", result$days_available,
+        " observed days, ", result$hours, " hourly values; ",
+        length(result$incomplete_dates), " partial days, ",
+        length(result$missing_dates), " missing days). ",
+        "Gate status is user-selected, not verified historical operations. ",
+        "Source: ", result$source_url))
+    }
+  }, once=TRUE)
+  observeEvent(list(ccwd_dcc_measured(), input$current_ptm_dcc_status), {
+    gate <- suppressWarnings(as.numeric(input$current_ptm_dcc_status))
+    measured <- ccwd_dcc_measured()
+    if (identical(gate, 0)) {
+      updateTextInput(session,"current_ptm_dcc_flow",value="0")
+    } else if (identical(gate, 1) && !is.null(measured)) {
+      updateTextInput(session,"current_ptm_dcc_flow",
+                      value=ccwd_display_whole(measured$value))
+    } else {
+      updateTextInput(session,"current_ptm_dcc_flow",value="")
+    }
+  }, ignoreInit=FALSE)
+  # Exploration only: most recent COMPLETE rolling 30-day DAYFLOW-style QPREC.
+  # Prefer original NOAA proxy for ties; use newer complete airport data if available.
+  # Users can edit the resulting scenario input.
+  # If NOAA is unavailable, leave input blank and show a clear message.
+  ccwd_qprec_note <- reactiveVal(
+    "Retrieving NOAA daily precipitation for rolling 30-day QPREC..."
+  )
+  ccwd_qprec_detail <- reactiveVal(NULL)
+  output$current_ptm_qprec_auto_note <- renderUI({
+    result <- ccwd_qprec_detail()
+    if (is.null(result)) return(tags$div(class="ccwd-help-status", ccwd_qprec_note()))
+    row <- result$latest
+    tags$div(class="ccwd-help-section",
+      tags$strong("Latest calculated default"),
+      tags$div(class="ccwd-help-stat", paste0(ccwd_display_whole(row$accretion_taf_30d), " TAF / rolling 30 days")),
+      tags$div(class="ccwd-help-detail",
+        ccwd_info_line("Gauge", paste0(result$station_name, " (",result$station,")")),
+        ccwd_info_line("Last observation", format(result$latest_observation_date,"%b %d, %Y")),
+        ccwd_info_line("Requested through", format(result$requested_through_date,"%b %d, %Y")),
+        ccwd_info_line("30-day window", paste(format(row$start_date,"%b %d"),"–",format(row$end_date,"%b %d, %Y"))),
+        ccwd_info_line("Rainfall records", paste(format(row$required_start_date,"%b %d"),"–",format(row$end_date,"%b %d, %Y"))),
+        ccwd_info_line("Coverage", paste0(row$observed_input_days," of ",row$expected_input_days," days")),
+        ccwd_info_line("Rainfall", paste0(format(round(row$raw_precip_inches_30d,3), nsmall=3), " inches in 30 days")),
+        ccwd_info_line("Distributed depth", paste0(format(round(row$distributed_precip_inches_30d,3), nsmall=3), " inches"))
+      ),
+      tags$div(class="ccwd-help-source", "NOAA daily precipitation: ",
+        tags$a(href=result$source_url, target="_blank", rel="noopener noreferrer", "Open data source")),
+      tags$div(class="ccwd-help-foot", "A complete 30-day window is required. A substitute gauge is used; the window may end before the latest observation if more recent records are incomplete. The input is an editable rolling monthly-volume proxy; original model-training aggregation remains unverified.")
+    )
+  })
+  observeEvent(TRUE, {
+    result <- tryCatch(fetch_ccwd_noaa_rolling30_accretion(),
+                       error = function(e) e)
+    if (inherits(result, "error")) {
+      updateTextInput(session, "current_ptm_qprec", value = "")
+      ccwd_qprec_detail(NULL)
+      ccwd_qprec_note(paste0(
+        "NOAA auto-fill unavailable: ", conditionMessage(result),
+        " Enter a documented TAF/month scenario value if testing."
+      ))
+    } else {
+      row <- result$latest
+      updateTextInput(session, "current_ptm_qprec",
+                      value = ccwd_display_whole(row$accretion_taf_30d))
+      ccwd_qprec_detail(result)
+      ccwd_qprec_note("Latest available complete 30-day window loaded.")
+    }
+  }, once = TRUE)
+
+
 
 
   app_name_value <- if (exists("APP_NAME", inherits = TRUE)) APP_NAME else "Entrainment Dashboard"
@@ -1526,7 +1912,12 @@ server <- function(input, output, session) {
           message = NULL
         )
       } else {
-        list(ok = FALSE, message = fre$message)
+        # TEST SCENARIO ONLY: missing FRE sensor 41 -> YOL = 0 cfs.
+        # Not an observed zero; unresolved CDEC data-quality issue.
+        list(ok = TRUE, value = 0, latest_value = 0,
+             latest_date = Sys.Date(), start_date = Sys.Date(),
+             end_date = Sys.Date(), message =
+               "TEST ONLY: FRE missing; assumed 0 cfs (Sacramento Weir also 0).")
       }
 
       east_result <- if (
@@ -2403,6 +2794,141 @@ server <- function(input, output, session) {
         zoom = 9
       )
   }
+  # =====================================================================
+  # EXPLORATION ONLY: New CCWD public-release LightGBM models.
+  # The archive workflow and existing display components are untouched.
+  # These functions only run for Exploration (current / single inputs).
+  # =====================================================================
+  # Use the same validated model paths checked at server startup.
+  new_model_paths <- NEW_CCWD_MODEL_FILES
+  find_new_model <- function(key) {
+    if (!key %in% names(NEW_CCWD_MODEL_PATHS)) {
+      stop("Unrecognized CCWD model key: ", key)
+    }
+    path <- unname(NEW_CCWD_MODEL_PATHS[[key]])
+    if (!file.exists(path)) stop("New CCWD model file not found: ", path)
+    path
+  }
+  load_new_model <- local({
+    cache <- new.env(parent = emptyenv())
+    function(key) {
+      if (!exists(key, envir = cache, inherits = FALSE)) {
+        assign(key, lightgbm::lgb.load(find_new_model(key)), envir = cache)
+      }
+      get(key, envir = cache, inherits = FALSE)
+    }
+  })
+  # The published README defines predictor ORDER. Use the order from the
+  # trained feature header; do not call booster$feature_name() (not R API).
+  # Only the feature count is validated here. Categorical node encoding
+  # still needs cross-checking with the developer's training specification.
+  new_predict <- function(key, feature_matrix) {
+    file <- find_new_model(key)
+    trained <- read_lgb_features(file)
+    if (length(trained) != ncol(feature_matrix)) stop(
+      key, ": expected ", length(trained), " features, got ",
+      ncol(feature_matrix), ". Training feature names: ",
+      paste(trained, collapse = ", ")
+    )
+    colnames(feature_matrix) <- trained
+    vals <- as.numeric(predict(load_new_model(key), feature_matrix))
+    if (length(vals) != nrow(feature_matrix) || any(!is.finite(vals))) {
+      stop(key, ": predictions were missing or non-finite.")
+    }
+    vals
+  }
+  get_exploration_delta_inputs <- function(prefix) {
+    qgcd <- parse_flow_input(input[[paste0(prefix, "_ptm_qgcd")]])
+    qprec <- parse_flow_input(input[[paste0(prefix, "_ptm_qprec")]])
+    dcc_status <- suppressWarnings(as.numeric(input[[paste0(prefix, "_ptm_dcc_status")]]))
+    validate(need(length(dcc_status)==1L && is.finite(dcc_status) &&
+                    dcc_status %in% c(0,1),
+                  "Select the DCC gate status: Closed or Open."))
+    # For Exploration historical conditions:
+    # CLOSED => force zero. OPEN => measured DLC flow (CDEC plot 33744),
+    # optionally user-edited scenario input. Never use CalSim3 regression.
+    if (identical(dcc_status, 0)) {
+      dcc_flow <- 0
+      dcc_source <- "FORCED_ZERO_USER_SELECTED_CLOSED"
+    } else {
+      flow_text <- input[[paste0(prefix, "_ptm_dcc_flow")]]
+      flow_text <- if (is.null(flow_text)) "" else trimws(as.character(flow_text)[1])
+      measured <- ccwd_dcc_measured()
+      if (!nzchar(flow_text)) {
+        validate(need(!is.null(measured),
+          "Measured historical DCC flow is missing from CDEC. ",
+          "No forecast regression will be used in Exploration."))
+        dcc_flow <- measured$value
+        dcc_source <- "CDEC_HISTORICAL_MEASURED"
+      } else {
+        dcc_flow <- parse_flow_input(flow_text)
+        dcc_source <- if (!is.null(measured) &&
+                         isTRUE(all.equal(dcc_flow, round(measured$value,0)))) {
+          "CDEC_HISTORICAL_MEASURED"
+        } else {
+          "USER_EDITED_SCENARIO_NOT_VERIFIED_MEASUREMENT"
+        }
+      }
+    }
+    inputs <- c(QGCD=qgcd, QPREC=qprec, DCC_FLOW=dcc_flow)
+    validate(need(all(is.finite(inputs)),
+      "Provide finite gross depletion/accretion inputs (TAF/month), ",
+      "and a measured or explicitly entered DCC flow (cfs)."))
+    list(qgcd=qgcd, qprec=qprec, dcc_flow=dcc_flow,
+         dcc_open=dcc_status, dcc_source=dcc_source)
+  }
+  make_new_ptm_results <- function(condition, scenario_name, exp, ver, sac,
+                                   east, qgcd, qprec, dcc_flow) {
+    ref <- reference_data()
+    make_one <- function(key, title, nodes) {
+      # Exact public README predictor order (PTM7 = 7, PTM30 = 8).
+      features <- cbind(as.numeric(nodes), exp, ver, sac, qgcd, qprec, east)
+      if (identical(key, "PTM30")) features <- cbind(features, dcc_flow)
+      raw <- new_predict(key, features)
+      data.frame(
+        Condition = condition, Input_Method = "single", Scenario_Name = scenario_name,
+        Model = title, DSM2_Node = as.character(nodes),
+        Prediction_Raw = raw, Prediction_Final = bound_percent(raw),
+        Output_Unit = "Percent", EXP = exp, VER = ver, SAC = sac,
+        EAST = east, QGCD = qgcd, QPREC = qprec, DCC_flow = dcc_flow,
+        stringsAsFactors = FALSE
+      ) %>% left_join(ref$node_meta, by = "DSM2_Node")
+    }
+    bind_rows(
+      make_one("PTM7", "PTM Emulator 7-Day Entrainment", ref$nodes_7d),
+      make_one("PTM30", "PTM Emulator 30-Day Entrainment", ref$nodes_30d)
+    )
+  }
+  make_new_eco_results <- function(condition, scenario_name, sac, yol, moke, dcc) {
+    validate(need(dcc %in% c(0,1), "DCC must be 0 (closed) or 1 (open)."))
+    mat <- matrix(c(sac, yol, moke, dcc), nrow = 1)
+    # Same exact four-predictor order for both new ECO-PTM models.
+    surv <- new_predict("ECO_survival", mat)
+    interior <- new_predict("ECO_interior", mat)
+    raw <- c(surv, interior)
+    data.frame(
+      Condition = condition, Input_Method = "single", Scenario_Name = scenario_name,
+      Model = c("ECO-PTM Emulator Survival", "ECO-PTM Emulator Interior Routing"),
+      Prediction_Raw = raw, Prediction_Final = bound_percent(raw),
+      Output_Unit = "Percent", SAC = sac, YOL = yol, MOKE = moke, DCC = dcc,
+      stringsAsFactors = FALSE
+    )
+  }
+  make_new_eh_result <- function(condition, scenario_name, risk, exp, ver,
+                                 sac, qgcd, qprec, east) {
+    validate(need(risk %in% seq(15,80,5), "Risk threshold must be 15–80 by 5."))
+    # Risk, EXP, VER, SAC, QGCD, QPREC, EAST = seven features.
+    mat <- matrix(c(risk, exp, ver, sac, qgcd, qprec, east), nrow = 1)
+    raw <- new_predict("EH", mat)
+    data.frame(
+      Condition = condition, Input_Method = "single", Scenario_Name = scenario_name,
+      Model = "Event Horizon", Risk_Level_Percent = risk,
+      Prediction_Raw = raw, Prediction_Final = pmax(0, raw),
+      Output_Unit = "River miles", EXP = exp, VER = ver, SAC = sac,
+      EAST = east, QGCD = qgcd, QPREC = qprec, stringsAsFactors = FALSE
+    )
+  }
+
   make_ptm_results <- function(condition, scenario_name, exp, ver, sac, east, xgeo) {
     ref <- reference_data()
     
@@ -8835,7 +9361,8 @@ server <- function(input, output, session) {
         
         if (identical(input_method, "single")) {
           
-          result <- make_ptm_results(
+          delta_values <- get_exploration_delta_inputs(prefix)
+          result <- make_new_ptm_results(
             condition = condition_label,
             scenario_name = input[[paste0(
               prefix,
@@ -8865,12 +9392,9 @@ server <- function(input, output, session) {
               "_ptm_east"
             )]]
             ),
-            xgeo = parse_flow_input(
-              input[[paste0(
-              prefix,
-              "_ptm_xgeo"
-            )]]
-            )
+            qgcd = delta_values$qgcd,
+            qprec = delta_values$qprec,
+            dcc_flow = delta_values$dcc_flow
           )
           
           run_name <- input[[paste0(
@@ -8954,7 +9478,7 @@ server <- function(input, output, session) {
         
         if (identical(input_method, "single")) {
           
-          result <- make_eco_results(
+          result <- make_new_eco_results(
             condition = condition_label,
             scenario_name = input[[paste0(
               prefix,
@@ -9064,7 +9588,8 @@ server <- function(input, output, session) {
         
         if (identical(input_method, "single")) {
           
-          result <- make_eh_result(
+          delta_values <- get_exploration_delta_inputs(prefix)
+          result <- make_new_eh_result(
             condition = condition_label,
             scenario_name = input[[paste0(
               prefix,
@@ -9088,12 +9613,9 @@ server <- function(input, output, session) {
               "_ptm_east"
             )]]
             ),
-            xgeo = parse_flow_input(
-              input[[paste0(
-              prefix,
-              "_ptm_xgeo"
-            )]]
-            ),
+            sac = parse_flow_input(input[[paste0(prefix, "_ptm_sac")]]),
+            qgcd = delta_values$qgcd,
+            qprec = delta_values$qprec,
             risk = risk
           )
           

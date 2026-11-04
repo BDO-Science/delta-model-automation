@@ -11,13 +11,19 @@ run_page <- function(prefix, title, theme_class) {
   
   is_current <- identical(prefix, "current")
   status_name <- "warning"
-  
+  # Fixed seasonal gross Delta depletion (TAF/month), per new CCWD README.
+  seasonal_qgcd <- c(`1`=74.40,`2`=49.04,`3`=80.55,`4`=111.87,
+                     `5`=149.66,`6`=222.96,`7`=267.59,`8`=232.73,
+                     `9`=156.61,`10`=144.67,`11`=102.94,`12`=127.96)
+  current_qgcd <- unname(seasonal_qgcd[[as.character(as.integer(format(Sys.Date(), "%m")))]])
+
+
   flow_input <- function(input_id, label, value) {
     if (is_current) {
       textInput(
         input_id,
         label,
-        format(value, big.mark = ",", scientific = FALSE, trim = TRUE)
+        format(round(value, 0), big.mark = ",", scientific = FALSE, trim = TRUE)
       )
     } else {
       numericInput(input_id, label, value)
@@ -328,7 +334,7 @@ run_page <- function(prefix, title, theme_class) {
                         div(
                           class = "exploration-input-card",
                           flow_info(
-                            "Default value is based on the latest available 7-day average flow. PTM emulator input only: SAC is used by the PTM emulators and is not used by the Event Horizon emulator.",
+                            "Default value is based on the latest available 7-day average flow. SAC is used in both new PTM and new Event Horizon models.",
                             paste0(prefix, "_ptm_sac_note")
                           ),
                           flow_input(
@@ -354,14 +360,67 @@ run_page <- function(prefix, title, theme_class) {
                         div(
                           class = "exploration-input-card",
                           flow_info(
-                            "Default value is based on the latest available 7-day average flow. XGEO is the sum of Sacramento River above Delta Cross Channel and Sacramento River below Georgiana Slough.",
-                            paste0(prefix, "_ptm_xgeo_note")
+                            tagList(
+                              tags$div(class = "ccwd-help-title", "Gross Delta Depletion (QGCD)"),
+                            tags$div(class = "ccwd-help-lead", "Source: DAYFLOW monthly gross Delta depletion reference table. Values are provided in thousand acre-feet per month (TAF/month)."),
+                            tags$div(class = "ccwd-help-section", tags$strong("How the default is selected"),
+                              tags$p("The app looks up the current calendar month in the DAYFLOW monthly reference table. It displays the value rounded to the nearest whole TAF, with comma separators. The model uses the value entered in the box.")),
+                            tags$div(class = "ccwd-help-section", tags$strong("Current reference"),
+                              tags$div(class = "ccwd-help-stat", paste0(format(Sys.Date(), "%B"), ": ", format(round(current_qgcd), big.mark=",", trim=TRUE), " TAF/month"))),
+                            tags$div(class = "ccwd-help-foot", "The displayed reference is a monthly DAYFLOW table value, not a live flow measurement. Editable for scenarios.")
+                            )
                           ),
-                          flow_input(
-                            paste0(prefix, "_ptm_xgeo"),
-                            "XGEO: Interior Delta Flow (cfs):",
-                            3000
-                          )
+                          flow_input(paste0(prefix, "_ptm_qgcd"),
+                                     "QGCD: Gross Delta Depletion (TAF/month):", current_qgcd)
+                        ),
+
+                        div(
+                          class = "exploration-input-card",
+                          flow_info(
+                            tagList(
+                              tags$div(class = "ccwd-help-title", "Gross Delta Accretion (QPREC)"),
+                            tags$div(class = "ccwd-help-lead", "Rolling 30-day estimate derived from measured Stockton-area precipitation, using the DAYFLOW five-day rainfall distribution."),
+                            tags$div(class = "ccwd-help-section", tags$strong("Calculation in 3 steps"),
+                              tags$ol(
+                                tags$li("For every day, average rainfall on that day and the preceding four days. Each rainfall event contributes over five days."),
+                                tags$li("Sum these daily distributed rainfall depths across the latest 30 complete days."),
+                                tags$li("Multiply the 30-day depth (inches) by 679,000 acres and divide by 12,000 to obtain thousand acre-feet (TAF).")
+                              )),
+                            tags$div(class = "ccwd-help-foot", "Requires 34 consecutive daily records (30 analysis days plus four earlier days). Missing observations are never treated as zero. This rolling 30-day proxy is not a verified model-training definition; the reference source is a NOAA substitute for Stockton Fire Station No. 4.")
+                            ),
+                            "current_ptm_qprec_auto_note"
+                          ),
+                          textInput(paste0(prefix, "_ptm_qprec"),
+                                    "QPREC: Gross Delta Accretion (TAF/month):", value = "")
+                        ),
+
+                        div(
+                          class = "exploration-input-card",
+                          flow_info(
+                            tagList(
+                              tags$div(class = "ccwd-help-title", "Historical DCC Flow"),
+                            tags$div(class = "ccwd-help-lead", "Measured Delta Cross Channel discharge from CDEC station DLC, hourly FLOW series (sensor 20). Used by the PTM 30-day model."),
+                            tags$div(class = "ccwd-help-section", tags$strong("How the default is calculated"),
+                              tags$ol(
+                                tags$li("Group available hourly FLOW measurements by day and calculate a daily mean (cfs)."),
+                                tags$li("Average the available daily means over the latest historical seven-day window."),
+                                tags$li("When DCC gates are selected Closed, force flow to 0 cfs, regardless of measured values.")
+                              )),
+                            tags$div(class = "ccwd-help-foot", "Coverage and partial days are reported below. Gate status is user-selected, not retrieved from historical operation records. The CalSim3 forecast regression is not used here.")
+                            ),
+                            "current_ptm_dcc_auto_note"
+                          ),
+                          textInput(paste0(prefix, "_ptm_dcc_flow"),
+                                    "DCC: Historical Measured Flow (cfs):", value = "")
+                        ),
+
+                        div(
+                          class = "exploration-input-card",
+                          flow_info("Historical gate status is currently user-selected, not verified against gate-operation records. Closed always forces DCC flow to 0 cfs; Open uses CDEC measured discharge where available. Verify actual historical gate dates before scientific use."),
+                          radioButtons(paste0(prefix, "_ptm_dcc_status"),
+                                       "DCC Gate Status (User Selected):",
+                                       choices = c("Closed" = 0, "Open" = 1),
+                                       selected = 1, inline = TRUE)
                         ),
                         
                         div(
@@ -797,7 +856,7 @@ run_page <- function(prefix, title, theme_class) {
                           div(
                             class = "exploration-input-card",
                             flow_info(
-                              "Default value is based on the latest available 7-day average flow. YOL is the sum of Sacramento Weir and Fremont Weir. Sacramento Weir flow is assumed to be 0 cfs; Fremont Weir uses CDEC FRE flow data.",
+                              "YOL = CDEC FRE daily flow (sensor 41) + Sacramento Weir (assumed 0 cfs). Missing Fremont observations are temporarily assumed 0 for model execution testing only; confirm with the team.",
                               paste0(prefix, "_eco_yol_note")
                             ),
                             flow_input(
@@ -827,7 +886,7 @@ run_page <- function(prefix, title, theme_class) {
                               paste0(prefix, "_eco_dcc"),
                               "Delta Cross Channel Status:",
                               choices = c("Closed" = 0, "Open" = 1),
-                              selected = 0,
+                              selected = 1,
                               inline = TRUE
                             )
                           )
@@ -1245,7 +1304,10 @@ ui <- dashboardPage(
         }
 
         .current-theme .exploration-ptm-grid {
-          grid-template-columns: repeat(6, minmax(0, 1fr));
+          display: grid;
+          grid-template-columns: repeat(9, minmax(150px, 1fr));
+          overflow-x: auto;
+          padding-bottom: 8px;
         }
 
         .current-theme .exploration-eco-grid {
@@ -1373,8 +1435,45 @@ ui <- dashboardPage(
           font-weight: 600;
         }
 
+        /* Read-only copies of input help popovers are mounted under body by JS.
+           The originals remain bound for Shiny's dynamic help text. */
+        .ccwd-viewport-popover {
+          display: block !important;
+          position: fixed !important;
+          z-index: 2147483000 !important;
+          background: #fff;
+          color: #33454d;
+          padding: 12px 14px;
+          border: 1px solid #c9d9de;
+          border-radius: 7px;
+          box-shadow: 0 7px 24px rgba(0,0,0,.19);
+          font-size: 12.5px;
+          line-height: 1.45;
+          white-space: normal;
+          max-height: calc(100vh - 30px);
+          overflow-y: auto;
+          overflow-wrap: anywhere;
+          pointer-events: none;
+        }
+        .ccwd-viewport-popover a { pointer-events: auto; }
+        .ccwd-viewport-popover hr {margin: 12px 0;border-top: 1px solid #e4ecef;}
+        .ccwd-viewport-popover .ccwd-help-title {font-weight: 750;font-size: 15px;line-height:1.35;color:#153d55;margin-bottom:7px;}
+        .ccwd-viewport-popover .ccwd-help-lead {font-size:12.5px;line-height:1.55;color:#435662;margin-bottom:10px;}
+        .ccwd-viewport-popover .ccwd-help-section {border-top:1px solid #e8eef1;padding-top:10px;margin-top:10px;}
+        .ccwd-viewport-popover .ccwd-help-section strong {display:block;color:#254f63;font-size:12px;margin-bottom:6px;}
+        .ccwd-viewport-popover .ccwd-help-section p {margin:0;}
+        .ccwd-viewport-popover .ccwd-help-section ol {margin:4px 0 0;padding-left:20px;}
+        .ccwd-viewport-popover .ccwd-help-section li {margin:0 0 7px;line-height:1.5;}
+        .ccwd-viewport-popover .ccwd-help-stat {padding:8px 10px;background:#f0f6f9;border-radius:5px;color:#174960;font-weight:700;}
+        .ccwd-viewport-popover .ccwd-help-detail {display:grid;grid-template-columns:108px minmax(0,1fr);gap:5px 10px;padding:8px 0;line-height:1.5;}
+        .ccwd-viewport-popover .ccwd-help-key {font-size:11px;color:#6b7a84;}
+        .ccwd-viewport-popover .ccwd-help-value {font-weight:600;color:#263d4b;overflow-wrap:anywhere;}
+        .ccwd-viewport-popover .ccwd-help-foot {margin-top:10px;color:#667883;font-size:11.5px;line-height:1.5;}
+        .ccwd-viewport-popover .ccwd-help-status {font-size:12px;background:#fff6e7;padding:9px 10px;border-radius:5px;color:#7b5619;}
+        .ccwd-viewport-popover .ccwd-help-source {margin-top:8px;font-size:11px;overflow-wrap:anywhere;}
+
+
         /* Keep information popovers fully visible, including the leftmost EXP card. */
-        .current-theme .exploration-input-grid,
         .current-theme .exploration-input-card,
         .current-theme .box-body {
           overflow: visible;
@@ -1454,11 +1553,7 @@ ui <- dashboardPage(
           margin-bottom: 16px;
         }
 
-        @media (max-width: 1350px) {
-          .current-theme .exploration-ptm-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-        }
+        /* The nine PTM inputs stay on one horizontally scrollable row. */
 
         @media (max-width: 1050px) {
           .current-theme .exploration-eco-grid {
@@ -1480,9 +1575,9 @@ ui <- dashboardPage(
         }
 
         @media (max-width: 760px) {
-          .current-theme .exploration-ptm-grid,
           .current-theme .exploration-eco-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(4, minmax(150px,1fr));
+            overflow-x: auto;
           }
 
           .current-theme .exploration-action-buttons {
@@ -1900,6 +1995,60 @@ ui <- dashboardPage(
       $(document).on('click', '.sidebar-menu a', function() {
         resizeLeafletMaps();
       });
+
+      // Exploration/Weekly/Comparison information popovers: render a read-only
+      // visual copy directly under <body>. This avoids clipping by the
+      // horizontally scrollable inputs row, tab panels, or dashboard margins.
+      // The original Shiny UI output stays in place and remains reactive.
+      var ccwdInfoPopup = null;
+      var ccwdInfoHost = null;
+      function ccwdHideInfoPopup() {
+        if (ccwdInfoPopup) ccwdInfoPopup.remove();
+        ccwdInfoPopup = null;
+        ccwdInfoHost = null;
+      }
+      function ccwdPositionInfoPopup() {
+        if (!ccwdInfoPopup || !ccwdInfoHost || !ccwdInfoHost.length) return;
+        var anchor = ccwdInfoHost.find('.flow-info-trigger').first()[0];
+        if (!anchor) return;
+        var rect = anchor.getBoundingClientRect();
+        var width = Math.min(420, window.innerWidth - 24);
+        ccwdInfoPopup.css({width: width + 'px', maxWidth: width + 'px'});
+        var height = ccwdInfoPopup.outerHeight();
+        var left = Math.min(Math.max(12, rect.left - 4), window.innerWidth - width - 12);
+        var below = rect.bottom + 8;
+        var top = (below + height <= window.innerHeight - 12 || below < 70)
+          ? below : Math.max(12, rect.top - height - 8);
+        top = Math.max(12, Math.min(top, window.innerHeight - 30));
+        ccwdInfoPopup.css({left: left + 'px', top: top + 'px'});
+      }
+      function ccwdShowInfoPopup(host) {
+        ccwdHideInfoPopup();
+        ccwdInfoHost = $(host);
+        var source = ccwdInfoHost.children('.flow-info-popover').first();
+        if (!source.length) return;
+        ccwdInfoPopup = source.clone(false, false);
+        // Cloned informational content is inert. Avoid duplicate Shiny output IDs.
+        ccwdInfoPopup.find('[id]').addBack('[id]').removeAttr('id');
+        ccwdInfoPopup.removeClass('flow-info-popover')
+          .addClass('ccwd-viewport-popover').appendTo('body');
+        ccwdPositionInfoPopup();
+      }
+      $(document).on('mouseenter focusin', '.flow-info-hover', function() {
+        ccwdShowInfoPopup(this);
+      });
+      $(document).on('mouseleave', '.flow-info-hover', function() {
+        if (ccwdInfoHost && ccwdInfoHost[0] === this) ccwdHideInfoPopup();
+      });
+      $(document).on('focusout', '.flow-info-hover', function() {
+        var host = this;
+        setTimeout(function() {
+          if (!host.contains(document.activeElement) &&
+              ccwdInfoHost && ccwdInfoHost[0] === host) ccwdHideInfoPopup();
+        }, 0);
+      });
+      $(window).on('resize scroll', ccwdPositionInfoPopup);
+      $('.content-wrapper, .exploration-ptm-grid').on('scroll', ccwdPositionInfoPopup);
 
       var modelRunWaiting = false;
       var modelRunBecameBusy = false;
