@@ -93,3 +93,6 @@ ShinyApp/ui.txt
 ShinyApp/STN_EMULATOR/models/EH_lightgbm.txt
 ShinyApp/STN_EMULATOR/models/PTM30_lightgbm.txt
 ShinyApp/STN_EMULATOR/models/PTM7_lightgbm.txt
+ShinyApp/STN_EMULATOR/models/PTM7_lightgbm.txt
+ShinyApp/STN_EMULATOR/models/PTM30_lightgbm.txt
+ShinyApp/STN_EMULATOR/models/EH_lightgbm.txt
