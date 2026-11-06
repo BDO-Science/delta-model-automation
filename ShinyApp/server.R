@@ -17,6 +17,7 @@ library(xgboost)
 library(metR)
 library(mgcv)
 library (ps)
+source("ccwd_qgcd_excel.R", local=TRUE)
 APP_NAME <- "Entrainment Dashboard"
 APP_VERSION <- "1.1.0"
 
@@ -1566,6 +1567,10 @@ server <- function(input, output, session) {
       ccwd_info_line("Runoff area","682,230 acres"),
       ccwd_info_line("Conversion","Five-day runoff × calendar days in month"),
       ccwd_info_line("7-day model input",paste0(ccwd_display_whole(d$value)," TAF/month")),
+      if (length(d$estimated_dates)) tags$div(class="ccwd-help-foot",
+        paste0("Estimated SCKC1 rainfall for missing day(s): ",
+          paste(as.character(d$estimated_dates),collapse=", "),
+          ". Linear interpolation between adjacent actual observations; not a measured zero.")),
       tags$a(href=d$source_url,target="_blank","SCKC1 daily precipitation summary"),
       tags$div(class="ccwd-help-foot","Monthly-equivalent estimate, not the DAYFLOW observed calendar-month total."))
   })
@@ -1602,6 +1607,8 @@ server <- function(input, output, session) {
           }
           chosen <- list(value=mean(candidate$qprec_taf_month),
                          through=end_day,source_url=attr(rain,"source_url"),
+                         estimated_dates=as.Date(rain$date[which(rain$estimated %in% TRUE &
+                           rain$date >= min(dates)-4L & rain$date <= max(dates))]),
                          age_days=age_days)
           break
         }
@@ -5444,64 +5451,113 @@ server <- function(input, output, session) {
   # WEEKLY ASSESSMENTS ONLY — new five-model CCWD public release.
   # Historical inputs and displayed archive metadata are retained.
   # ---------------------------------------------------------------
-  weekly_qgcd_table <- c(74.40,49.04,80.55,111.87,149.66,222.96,
-                         267.59,232.73,156.61,144.67,102.94,127.96)
-
   weekly_qgcd_for_dates <- function(dates) {
     dates <- as.Date(dates)
     validate(need(length(dates) > 0L && all(!is.na(dates)),
-                  "No valid dates for DAYFLOW gross depletion reference."))
-    mean(weekly_qgcd_table[as.integer(format(dates, "%m"))])
+                  "QGCD requires valid assessment dates."))
+    # The same workbook drives every measured window and OMRI forecast window.
+    ccwd_qgcd_for_dates(dates)
   }
 
-  # Use one SCKC1 observation series for all scenarios in the same
-  # archive assessment, with a single CNRFC QPF issuance for all OMRI
-  # scenarios. Source data are cached per selected archive and cutoff.
+  # Use one forecast QPREC series per archive assessment, independent of
+  # OMRI scenario. A verified archived CNRFC QPF takes priority. If the QPF
+  # cannot be retrieved or validated, carry the last MEASURED SCKC1-derived
+  # daily runoff rate through the forecast week. This is a PERSISTENCE
+  # ASSUMPTION, never a claim that historical forecast rainfall was measured.
   weekly_qprec_cache <- new.env(parent=emptyenv())
   weekly_qprec_for_measured_date <- function(last_measured_date, forecast=FALSE) {
     last_measured_date <- as.Date(last_measured_date)
     validate(need(!is.na(last_measured_date), "Invalid measured QPREC cutoff"))
-    # Cache observed precipitation through this cutoff; forecast data always
-    # select one issuance from the common assessment date.
     function_for_dates <- function(dates) {
       dates <- as.Date(dates)
+      if (!length(dates) || anyNA(dates)) stop("QPREC: invalid assessment dates")
       key <- paste(last_measured_date,forecast,min(dates),max(dates),sep="|")
       if (!exists(key,envir=weekly_qprec_cache,inherits=FALSE)) {
         item <- tryCatch({
-          rain <- ccwd_sckc1_daily(min(dates)-4L, min(max(dates),last_measured_date))
-          # Historical forecast: prepend observed rainfall and use only QPF
-          # that was issued no later than the observation cutoff.
-          src <- "SCKC1 (observed)"
+          # An entire 5-day observed window through the assessment cutoff is
+          # required even for a fully forecast seven-day period.
+          first_observation <- min(min(dates)-4L,last_measured_date-4L)
+          last_observation <- min(max(dates),last_measured_date)
+          rain <- ccwd_sckc1_daily(first_observation,last_observation)
+          src <- "SCKC1 observed daily precipitation"
           url <- attr(rain,"source_url")
-          if (forecast) {
-            fc_dates <- dates[dates>last_measured_date]
-            if (length(fc_dates)) {
-              fc <- ccwd_cnrfc_daily(last_measured_date+1L,
-                                    fc_dates,last_measured_date)
-              rain <- rbind(rain[,c("date","precip_in")],fc[,c("date","precip_in")])
-              src <- "SCKC1 observations + automatically downloaded historical CNRFC QPF"
-              url <- attr(fc,"source_url")
+          estimated_dates <- if ("estimated" %in% names(rain))
+            as.Date(rain$date[which(rain$estimated %in% TRUE)]) else as.Date(character())
+          verified_snapshot_dates <- attr(rain,"verified_snapshot_dates")
+          if (length(verified_snapshot_dates))
+            src <- paste0(src,"; verified SCKC1 observation records used for ",
+                          paste(as.character(verified_snapshot_dates),collapse=", "))
+          forecast_method <- if (forecast) "CNRFC_ARCHIVE_QPF" else "OBSERVED_SCKC1"
+          forecast_issue <- NA_character_
+          forecast_problem <- NULL
+          if (!forecast) {
+            calc <- ccwd_qprec_from_daily(rain,dates)
+          } else {
+            fc_dates <- dates[dates > last_measured_date]
+            if (!length(fc_dates)) stop("QPREC: forecast window has no forecast dates")
+            fc <- tryCatch({
+              qpf <- ccwd_cnrfc_daily(last_measured_date+1L,
+                                       fc_dates,last_measured_date)
+              combined <- rbind(rain[,c("date","precip_in")],
+                                qpf[,c("date","precip_in")])
+              result <- ccwd_qprec_from_daily(combined,dates)
+              list(qpf=qpf,calc=result)
+            },error=function(e)e)
+            if (!inherits(fc,"error")) {
+              # Verified CNRFC QPF, plus the preceding observed days.
+              forecast_issue <- attr(fc$qpf,"issue_utc")
+              forecast_issue <- if (length(forecast_issue)) as.character(forecast_issue)[1] else NA_character_
+              url <- attr(fc$qpf,"source_url")
+              carried <- attr(fc$qpf,"carried_days")
+              src <- paste0("SCKC1 measured precipitation + archived CNRFC QPF",
+                            if (length(carried)) paste0("; CNRFC last-day rainfall carried forward for ",
+                                   paste(as.character(carried),collapse=", ")) else "")
+              calc <- fc$calc
+            } else {
+              # Historical forecast archive is missing or invalid. Keep model
+              # runnable using ONLY verified rainfall up to the cutoff.
+              # A daily runoff rate in TAF/day is held constant, then scaled
+              # separately for each forecast date's calendar-month length.
+              forecast_problem <- conditionMessage(fc)
+              measured_day <- ccwd_qprec_from_daily(rain,last_measured_date)
+              last_rate <- measured_day$qprec_taf_day[1]
+              if (length(last_rate)!=1L || !is.finite(last_rate))
+                stop("QPREC: cannot estimate forecast runoff because the last measured five-day SCKC1 window is incomplete. ",forecast_problem)
+              calc <- data.frame(
+                date=dates,
+                qprec_taf_day=rep(last_rate,length(dates)),
+                qprec_taf_month=last_rate*ccwd_qprec_days_in_month(dates)
+              )
+              forecast_method <- "PERSIST_LAST_MEASURED_DAILY_RUNOFF"
+              src <- "SCKC1 measured QPREC held constant as a forecast assumption (CNRFC archived QPF unavailable)"
+              url <- attr(rain,"source_url")
+              message("CCWD Weekly forecast QPREC: no validated historical CNRFC QPF for cutoff ",
+                      as.character(last_measured_date),". Holding measured SCKC1 daily runoff rate. CNRFC detail: ",
+                      forecast_problem)
             }
           }
-          calc <- ccwd_qprec_from_daily(rain,dates)
           list(value=mean(calc$qprec_taf_month),source=src,
                through=if (forecast) max(dates) else min(max(dates),last_measured_date),
                window_start=min(dates),source_url=url,
-               daily=calc)
+               estimated_dates=estimated_dates,daily=calc,
+               forecast_method=forecast_method,
+               forecast_issue=forecast_issue,
+               forecast_problem=forecast_problem)
         },error=function(e)e)
         assign(key,item,envir=weekly_qprec_cache)
       }
       item <- get(key,envir=weekly_qprec_cache,inherits=FALSE)
-      if (inherits(item,"error")) stop(conditionMessage(item),call.=FALSE)
+      if (inherits(item,"error")) {
+        rm(list=key,envir=weekly_qprec_cache) # retry after transient download failure
+        stop(conditionMessage(item),call.=FALSE)
+      }
       item
     }
-    # Default 7-day reference for backwards compatibility with the UI.
     default_dates <- seq(last_measured_date-6L,last_measured_date,by="day")
     result <- if (forecast) {
-      # Forecast values are produced for the selected forecast dates, not for
-      # the measured reference week and not from a future issuance.
-      list(value=NA_real_, source="SCKC1 / CNRFC", through=last_measured_date,
-           window_start=last_measured_date,source_url=CCWD_CNRFC_ARCHIVE)
+      list(value=NA_real_,source="SCKC1 observed / CNRFC QPF",
+           through=last_measured_date,window_start=last_measured_date,
+           source_url=CCWD_CNRFC_ARCHIVE)
     } else function_for_dates(default_dates)
     result$for_dates <- function_for_dates
     result$forecast <- forecast
@@ -9946,6 +10002,13 @@ server <- function(input, output, session) {
     tags$span("Rainfall source: ",x$source,". Window: ",
       format(x$window_start,"%b %d"),"–",format(x$through,"%b %d, %Y"),
       ". Five-day DAYFLOW-style runoff; 682,230 acres; daily monthly-equivalent scaled by calendar-month length. ",
+      if (identical(x$forecast_method,"PERSIST_LAST_MEASURED_DAILY_RUNOFF"))
+        tags$strong(" Forecast precipitation is not a verified CNRFC forecast: the last measured SCKC1 runoff rate was held constant for all seven forecast days. "),
+      if (identical(x$forecast_method,"CNRFC_ARCHIVE_QPF") && !is.na(x$forecast_issue))
+        tags$span(" Archived CNRFC QPF issue: ",x$forecast_issue,". "),
+      if (length(x$estimated_dates)) tags$span(
+        "Estimated missing SCKC1 rainfall for: ",paste(as.character(x$estimated_dates),collapse=", "),
+        " (interpolated from adjacent measured days, not assumed zero). "),
       tags$a(href=x$source_url,target="_blank", "Precipitation source"))
   })
 

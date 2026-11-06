@@ -4,6 +4,8 @@ library(shinydashboard)
 library(leaflet)
 library(plotly)
 library(gt)
+source("ccwd_qgcd_excel.R", local=TRUE)
+CCWD_QGCD_DEFAULT <- ccwd_qgcd_default_or_na()
 APP_NAME <- "Entrainment Dashboard"
 APP_VERSION <- "1.1.0"
 
@@ -29,11 +31,8 @@ run_page <- function(prefix, title, theme_class) {
   
   is_current <- identical(prefix, "current")
   status_name <- "warning"
-  # Fixed seasonal gross Delta depletion (TAF/month), per new CCWD README.
-  seasonal_qgcd <- c(`1`=74.40,`2`=49.04,`3`=80.55,`4`=111.87,
-                     `5`=149.66,`6`=222.96,`7`=267.59,`8`=232.73,
-                     `9`=156.61,`10`=144.67,`11`=102.94,`12`=127.96)
-  current_qgcd <- unname(seasonal_qgcd[[as.character(as.integer(format(Sys.Date(), "%m")))]])
+  # QGCD client-facing source is the DAYFLOW-based daily reference series.
+  current_qgcd <- CCWD_QGCD_DEFAULT
 
 
   flow_input <- function(input_id, label, value) {
@@ -41,7 +40,7 @@ run_page <- function(prefix, title, theme_class) {
       textInput(
         input_id,
         label,
-        format(round(value, 0), big.mark = ",", scientific = FALSE, trim = TRUE)
+        if (is.finite(value)) format(round(value, 0), big.mark = ",", scientific = FALSE, trim = TRUE) else "Unavailable"
       )
     } else {
       numericInput(input_id, label, value)
@@ -381,12 +380,12 @@ run_page <- function(prefix, title, theme_class) {
                           flow_info(
                             tagList(
                               tags$div(class = "ccwd-help-title", "Gross Delta Depletion (QGCD)"),
-                            tags$div(class = "ccwd-help-lead", "Source: DAYFLOW monthly gross Delta depletion reference table. Values are provided in thousand acre-feet per month (TAF/month)."),
+                            tags$div(class = "ccwd-help-lead", "Source: DAYFLOW-based daily gross channel depletion reference series. Daily reference values are in cfs; each is converted to a monthly-equivalent TAF/month."),
                             tags$div(class = "ccwd-help-section", tags$strong("How the default is selected"),
-                              tags$p("The app looks up the current calendar month in the DAYFLOW monthly reference table. It displays the value rounded to the nearest whole TAF, with comma separators. The model uses the value entered in the box.")),
+                              tags$p("For each of the latest 7 complete days, daily cfs × 86,400 / 43,560 × number of days in that calendar month / 1,000. The seven daily monthly-equivalent values are averaged. The model uses the editable input shown here.")),
                             tags$div(class = "ccwd-help-section", tags$strong("Current reference"),
-                              tags$div(class = "ccwd-help-stat", paste0(format(Sys.Date(), "%B"), ": ", format(round(current_qgcd), big.mark=",", trim=TRUE), " TAF/month"))),
-                            tags$div(class = "ccwd-help-foot", "The displayed reference is a monthly DAYFLOW table value, not a live flow measurement. Editable for scenarios.")
+                              tags$div(class = "ccwd-help-stat", paste0(if (is.finite(current_qgcd)) format(round(current_qgcd), big.mark=",", trim=TRUE) else "Unavailable", " TAF/month; source: DAYFLOW-based daily reference"))),
+                            tags$div(class = "ccwd-help-foot", "The displayed value is the seven-day mean of daily monthly-equivalent reference values, not a fixed monthly lookup. Editable for scenarios.")
                             )
                           ),
                           flow_input(paste0(prefix, "_ptm_qgcd"),
@@ -549,7 +548,7 @@ run_page <- function(prefix, title, theme_class) {
                         weekly_value_card(
                           "QGCD: Gross Delta Depletion (TAF/month):",
                           "forecast_ptm_qgcd_value",
-                          "DAYFLOW monthly reference. For a week crossing two months, the value is averaged over the seven relevant dates."
+                          "Source: DAYFLOW-based daily gross channel depletion reference. Each daily cfs value is converted to monthly-equivalent TAF/month using the calendar-month length; the seven daily values are averaged across assessment dates, including cross-month windows."
                         ),
                         weekly_value_card(
                           "QPREC: Gross Delta Accretion (TAF/month):",
@@ -3408,8 +3407,8 @@ ui <- dashboardPage(
                     compare_ccwd_card("compare_s1_ver", "VER: San Joaquin River at Vernalis (cfs):", "3,000", "Latest observed 7-day average Vernalis flow."),
                     compare_ccwd_card("compare_s1_sac", "SAC: Sacramento River at Freeport (cfs):", "18,000", "Latest observed 7-day average Freeport flow."),
                     compare_ccwd_card("compare_s1_east", "EAST: East-Side River Flow (cfs):", "1,500", "Mokelumne + Calaveras + Cosumnes flows; observed 7-day average."),
-                    compare_ccwd_card("compare_s1_qgcd", "QGCD: Gross Delta Depletion (TAF/month):", format(round(c(`1`=74.40,`2`=49.04,`3`=80.55,`4`=111.87,`5`=149.66,`6`=222.96,`7`=267.59,`8`=232.73,`9`=156.61,`10`=144.67,`11`=102.94,`12`=127.96)[[as.character(as.integer(format(Sys.Date(), "%m")))]],0),big.mark=",",trim=TRUE), "Fixed DAYFLOW reference by month; same as Exploration."),
-                    compare_ccwd_card("compare_s1_qprec", "QPREC: Gross Delta Accretion (TAF/month):", "", "SCKC1 (Stockton Fire Station #4) IEM daily precip_in. For day d: average rainfall d−4 through d, multiply by 682,230 acres / 12,000 to obtain TAF/day, then multiply by calendar days in month. Average seven daily monthly-equivalent values. Missing readings are not zero."),
+                    compare_ccwd_card("compare_s1_qgcd", "QGCD: Gross Delta Depletion (TAF/month):", if (is.finite(CCWD_QGCD_DEFAULT)) format(round(CCWD_QGCD_DEFAULT), big.mark=",", trim=TRUE) else "Unavailable", "Source: DAYFLOW-based daily gross channel depletion reference. Daily cfs is converted to monthly-equivalent TAF/month and averaged over seven days; the same default as Exploration."),
+                    compare_ccwd_card("compare_s1_qprec", "QPREC: Gross Delta Accretion (TAF/month):", "", "SCKC1 (Stockton Fire Station #4) IEM daily precip_in. For day d: average rainfall d−4 through d, multiply by 682,230 acres / 12,000 to obtain TAF/day, then multiply by calendar days in month. Average seven daily monthly-equivalent values. An isolated missing observation may be estimated from adjacent measured SCKC1 days and explicitly flagged; missing values are never automatically treated as zero."),
                     compare_ccwd_card("compare_s1_dcc_flow", "DCC: Measured/Scenario Flow (cfs):", "", "Closed gates: 0 cfs. Open gates: use measured CDEC DCC flow when available; if missing, estimate from SAC as 0.1846 × SAC + 306.52 cfs."),
                     compare_ccwd_card("compare_s1_dcc", "DCC Gate Status:", NULL, "0 = Closed, 1 = Open. In comparison scenarios the user chooses status.", kind="dcc"),
                     compare_ccwd_card("compare_s1_risk", "Entrainment / Event Horizon Threshold (%):", NULL, "Threshold for PTM map and Event Horizon model.", kind="risk"),
@@ -3443,8 +3442,8 @@ ui <- dashboardPage(
                     compare_ccwd_card("compare_s2_ver", "VER: San Joaquin River at Vernalis (cfs):", "3,000", "Latest observed 7-day average Vernalis flow."),
                     compare_ccwd_card("compare_s2_sac", "SAC: Sacramento River at Freeport (cfs):", "18,000", "Latest observed 7-day average Freeport flow."),
                     compare_ccwd_card("compare_s2_east", "EAST: East-Side River Flow (cfs):", "1,500", "Mokelumne + Calaveras + Cosumnes flows; observed 7-day average."),
-                    compare_ccwd_card("compare_s2_qgcd", "QGCD: Gross Delta Depletion (TAF/month):", format(round(c(`1`=74.40,`2`=49.04,`3`=80.55,`4`=111.87,`5`=149.66,`6`=222.96,`7`=267.59,`8`=232.73,`9`=156.61,`10`=144.67,`11`=102.94,`12`=127.96)[[as.character(as.integer(format(Sys.Date(), "%m")))]],0),big.mark=",",trim=TRUE), "Fixed DAYFLOW reference by month; same as Exploration."),
-                    compare_ccwd_card("compare_s2_qprec", "QPREC: Gross Delta Accretion (TAF/month):", "", "SCKC1 (Stockton Fire Station #4) IEM daily precip_in. For day d: average rainfall d−4 through d, multiply by 682,230 acres / 12,000 to obtain TAF/day, then multiply by calendar days in month. Average seven daily monthly-equivalent values. Missing readings are not zero."),
+                    compare_ccwd_card("compare_s2_qgcd", "QGCD: Gross Delta Depletion (TAF/month):", if (is.finite(CCWD_QGCD_DEFAULT)) format(round(CCWD_QGCD_DEFAULT), big.mark=",", trim=TRUE) else "Unavailable", "Source: DAYFLOW-based daily gross channel depletion reference. Daily cfs is converted to monthly-equivalent TAF/month and averaged over seven days; the same default as Exploration."),
+                    compare_ccwd_card("compare_s2_qprec", "QPREC: Gross Delta Accretion (TAF/month):", "", "SCKC1 (Stockton Fire Station #4) IEM daily precip_in. For day d: average rainfall d−4 through d, multiply by 682,230 acres / 12,000 to obtain TAF/day, then multiply by calendar days in month. Average seven daily monthly-equivalent values. An isolated missing observation may be estimated from adjacent measured SCKC1 days and explicitly flagged; missing values are never automatically treated as zero."),
                     compare_ccwd_card("compare_s2_dcc_flow", "DCC: Measured/Scenario Flow (cfs):", "", "Closed gates: 0 cfs. Open gates: use measured CDEC DCC flow when available; if missing, estimate from SAC as 0.1846 × SAC + 306.52 cfs."),
                     compare_ccwd_card("compare_s2_dcc", "DCC Gate Status:", NULL, "0 = Closed, 1 = Open. In comparison scenarios the user chooses status.", kind="dcc"),
                     compare_ccwd_card("compare_s2_risk", "Entrainment / Event Horizon Threshold (%):", NULL, "Threshold for PTM map and Event Horizon model.", kind="risk"),
