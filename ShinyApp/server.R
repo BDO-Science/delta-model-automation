@@ -17,6 +17,7 @@ library(xgboost)
 library(metR)
 library(mgcv)
 library (ps)
+source("ccwd_qgcd_excel.R", local=TRUE)
 APP_NAME <- "Entrainment Dashboard"
 APP_VERSION <- "1.1.0"
 
@@ -762,10 +763,12 @@ read_historical_dcc_hourly <- function(end_date = Sys.Date() - 1L,
         x <- as.data.frame(x, check.names=FALSE, stringsAsFactors=FALSE)
       }
       if (!nrow(x)) stop("CDEC returned zero hourly rows")
-      nms <- tolower(gsub("[^a-z0-9]", "", names(x)))
-      datetime_col <- match("obsdate", nms)
+      nms <- gsub("[^a-z0-9]", "", tolower(names(x)))
+      # CDEC current CSV returns DATE TIME and OBS DATE; use observation
+      # timestamp when present. Normalize case before stripping punctuation.
+      datetime_col <- match("datetime", nms)
+      if (is.na(datetime_col)) datetime_col <- match("obsdate", nms)
       if (is.na(datetime_col)) datetime_col <- match("date", nms)
-      if (is.na(datetime_col)) datetime_col <- match("datetime", nms)
       value_col <- match("value", nms)
       if (is.na(value_col)) value_col <- match("obsvalue", nms)
       if (is.na(datetime_col) || is.na(value_col)) {
@@ -777,6 +780,9 @@ read_historical_dcc_hourly <- function(end_date = Sys.Date() - 1L,
       stamps <- sub("\\.[0-9]+$", "", stamps)
       stamps <- sub("(Z|[+-][0-9]{2}:?[0-9]{2})$", "", stamps)
       tm <- as.POSIXct(stamps, format="%Y-%m-%d %H:%M:%S", tz="Etc/GMT+8")
+      missing <- is.na(tm)
+      if (any(missing)) tm[missing] <- as.POSIXct(stamps[missing],
+                     format="%m/%d/%Y %H:%M:%S", tz="Etc/GMT+8")
       missing <- is.na(tm)
       if (any(missing)) tm[missing] <- as.POSIXct(stamps[missing],
                      format="%m/%d/%Y %H:%M", tz="Etc/GMT+8")
@@ -804,16 +810,74 @@ read_historical_dcc_hourly <- function(end_date = Sys.Date() - 1L,
        paste(failures,collapse="; "))
 }
 
-read_historical_dcc_daily <- function(end_date = Sys.Date() - 1L,
-                                      lookback_days = 35L) {
-  h <- read_historical_dcc_hourly(end_date, lookback_days)
-  spl <- split(h$Flow_cfs, h$Date)
-  out <- data.frame(Date=as.Date(names(spl)),
-                    Value=vapply(spl, mean, numeric(1)),
-                    Hours=vapply(spl, length, integer(1)))
-  out <- out[order(out$Date),,drop=FALSE]
-  attr(out, "source_url") <- attr(h,"source_url")
-  out
+# Prefer observed CDEC DLC hourly FLOW; if the hourly service fails, try the
+# *observed* daily flow product at the SAME CDEC station/sensor (not a forecast
+# regression).  Record which source supplied the value.
+read_historical_dcc_daily_csv <- function(end_date, lookback_days) {
+  end_date <- as.Date(end_date)
+  start_date <- end_date-as.integer(lookback_days)+1L
+  errors <- character()
+  # 41: native mean-daily FLOW; 20 daily is accepted only if published.
+  for (sensor in c(41L,20L)) {
+    url <- paste0('https://cdec.water.ca.gov/dynamicapp/req/CSVDataServlet?',
+                  'Stations=DLC&SensorNums=',sensor,'&dur_code=D&Start=',start_date,
+                  '&End=',end_date+1L)
+    result <- tryCatch({
+      lines <- download_observed_source_file(url,fileext='.csv',attempts=2L)
+      x <- utils::read.csv(text=paste(lines,collapse='\n'),
+                           check.names=FALSE,stringsAsFactors=FALSE)
+      nms <- gsub('[^a-z0-9]','',tolower(names(x)))
+      date_col <- match('obsdate',nms)
+      if (is.na(date_col)) date_col <- match('datetime',nms)
+      if (is.na(date_col)) date_col <- match('date',nms)
+      value_col <- match('value',nms)
+      if (is.na(date_col) || is.na(value_col))
+        stop('Missing date/value columns: ',paste(names(x),collapse=', '))
+      dates <- as.Date(substr(trimws(as.character(x[[date_col]])),1L,10L))
+      if (all(is.na(dates))) dates <- as.Date(substr(trimws(as.character(x[[date_col]])),1L,10L),format='%m/%d/%Y')
+      vals <- suppressWarnings(as.numeric(gsub(',','',as.character(x[[value_col]]),fixed=TRUE)))
+      ok <- !is.na(dates) & is.finite(vals) & vals > -9000 &
+              dates>=start_date & dates<=end_date
+      if (!any(ok)) stop('No valid observed daily flow values')
+      result <- data.frame(Date=dates[ok],Value=vals[ok],Hours=24L)
+      result <- result[!duplicated(result$Date,fromLast=TRUE),,drop=FALSE]
+      result <- result[order(result$Date),,drop=FALSE]
+      attr(result,'source_url') <- url
+      attr(result,'source_note') <- paste0('CDEC DLC sensor ',sensor,' observed daily mean flow')
+      result
+    },error=function(e)e)
+    if (!inherits(result,'error')) return(result)
+    errors <- c(errors,paste0('sensor ',sensor,': ',conditionMessage(result)))
+  }
+  stop('CDEC DLC observed daily FLOW unavailable: ',paste(errors,collapse='; '),call.=FALSE)
+}
+
+read_historical_dcc_daily <- function(end_date=Sys.Date()-1L,
+                                      lookback_days=35L) {
+  hourly <- tryCatch(read_historical_dcc_hourly(end_date,lookback_days),error=function(e)e)
+  if (!inherits(hourly,'error')) {
+    spl <- split(hourly$Flow_cfs,hourly$Date)
+    out <- data.frame(Date=as.Date(names(spl)),
+                      Value=vapply(spl,mean,numeric(1)),
+                      Hours=vapply(spl,length,integer(1)))
+    out <- out[order(out$Date),,drop=FALSE]
+    attr(out,'source_url') <- attr(hourly,'source_url')
+    attr(out,'source_note') <- 'CDEC DLC sensor 20 observed hourly flow, daily means'
+    expected <- seq(as.Date(end_date)-as.integer(lookback_days)+1L,as.Date(end_date),by='day')
+    if (all(expected %in% out$Date)) return(out)
+    daily <- tryCatch(read_historical_dcc_daily_csv(end_date,lookback_days),error=function(e)e)
+    if (!inherits(daily,'error')) {
+      extra <- daily[!daily$Date %in% out$Date,,drop=FALSE]
+      if (nrow(extra)) out <- rbind(out,extra)
+      out <- out[order(out$Date),,drop=FALSE]
+      attr(out,'source_note') <- 'CDEC DLC sensor 20 hourly flow with observed daily mean gap-fill'
+    }
+    return(out)
+  }
+  daily <- tryCatch(read_historical_dcc_daily_csv(end_date,lookback_days),error=function(e)e)
+  if (!inherits(daily,'error')) return(daily)
+  stop('CDEC DLC measured flow unavailable. Hourly: ',conditionMessage(hourly),
+       '; daily observed fallback: ',conditionMessage(daily),call.=FALSE)
 }
 
 read_historical_dcc_7day <- function(end_date=Sys.Date()-1L) {
@@ -1422,6 +1486,8 @@ fetch_ccwd_noaa_rolling30_accretion <- function(reference_date = Sys.Date(),
   winner
 }
 
+source("ccwd_qprec_sources.R", local=TRUE)
+
 server <- function(input, output, session) {
   ccwd_display_whole <- function(value) {
     if (is.null(value) || !length(value) || !is.finite(value[1])) return("")
@@ -1448,16 +1514,19 @@ server <- function(input, output, session) {
       ),
       tags$div(class="ccwd-help-source", "CDEC DLC hourly FLOW: ",
         tags$a(href=dat$source_url, target="_blank", rel="noopener noreferrer", "Open measurement source")),
-      tags$div(class="ccwd-help-foot", "Displayed measured mean is before the closed-gate override. When Closed is selected, model input is 0 cfs.")
+      tags$div(class="ccwd-help-foot", "Closed gate: 0 cfs. Open gate: observed CDEC DCC flow where available; otherwise estimate from measured SAC at Freeport (0.1846 × SAC + 306.52 cfs).")
     )
   })
-  observeEvent(TRUE, {
+  # Defer external requests until the browser has rendered its controls.
+  # This prevents slow HTTP calls from holding the initial comparison form hostage.
+  observeEvent(input$ccwd_load_dcc, {
+    req(isTRUE(input$ccwd_load_dcc))
     result <- tryCatch(read_historical_dcc_7day(), error=function(e) e)
     if (inherits(result,"error")) {
       ccwd_dcc_measured(NULL)
       ccwd_dcc_note(paste0("Historical DCC data unavailable: ",
         conditionMessage(result),
-        ". Forecast regression was NOT used. Source: CDEC DLC sensor 20 hourly FLOW."))
+        ". When Open, the app estimates missing DCC flow from measured SAC at Freeport: 0.1846 × SAC + 306.52 cfs."))
     } else {
       ccwd_dcc_measured(result)
       ccwd_dcc_note(paste0(
@@ -1470,7 +1539,7 @@ server <- function(input, output, session) {
         "Source: ", result$source_url))
     }
   }, once=TRUE)
-  observeEvent(list(ccwd_dcc_measured(), input$current_ptm_dcc_status), {
+  observeEvent(list(ccwd_dcc_measured(), input$current_ptm_dcc_status, input$current_ptm_sac), {
     gate <- suppressWarnings(as.numeric(input$current_ptm_dcc_status))
     measured <- ccwd_dcc_measured()
     if (identical(gate, 0)) {
@@ -1478,59 +1547,100 @@ server <- function(input, output, session) {
     } else if (identical(gate, 1) && !is.null(measured)) {
       updateTextInput(session,"current_ptm_dcc_flow",
                       value=ccwd_display_whole(measured$value))
-    } else {
-      updateTextInput(session,"current_ptm_dcc_flow",value="")
+    } else if (identical(gate, 1)) {
+      sac <- parse_flow_input(input$current_ptm_sac)
+      if (length(sac)==1L && is.finite(sac))
+        updateTextInput(session,"current_ptm_dcc_flow",
+                        value=ccwd_display_whole(0.1846*sac+306.52))
     }
   }, ignoreInit=FALSE)
-  # Exploration only: most recent COMPLETE rolling 30-day DAYFLOW-style QPREC.
-  # Prefer original NOAA proxy for ties; use newer complete airport data if available.
-  # Users can edit the resulting scenario input.
-  # If NOAA is unavailable, leave input blank and show a clear message.
-  ccwd_qprec_note <- reactiveVal(
-    "Retrieving NOAA daily precipitation for rolling 30-day QPREC..."
-  )
+  # Exploration uses latest complete SCKC1 observations, not NOAA proxy.
+  ccwd_qprec_note <- reactiveVal("Retrieving SCKC1 daily precipitation summaries...")
   ccwd_qprec_detail <- reactiveVal(NULL)
   output$current_ptm_qprec_auto_note <- renderUI({
-    result <- ccwd_qprec_detail()
-    if (is.null(result)) return(tags$div(class="ccwd-help-status", ccwd_qprec_note()))
-    row <- result$latest
+    d <- ccwd_qprec_detail()
+    if (is.null(d)) return(tags$div(class="ccwd-help-status",ccwd_qprec_note()))
     tags$div(class="ccwd-help-section",
-      tags$strong("Latest calculated default"),
-      tags$div(class="ccwd-help-stat", paste0(ccwd_display_whole(row$accretion_taf_30d), " TAF / rolling 30 days")),
-      tags$div(class="ccwd-help-detail",
-        ccwd_info_line("Gauge", paste0(result$station_name, " (",result$station,")")),
-        ccwd_info_line("Last observation", format(result$latest_observation_date,"%b %d, %Y")),
-        ccwd_info_line("Requested through", format(result$requested_through_date,"%b %d, %Y")),
-        ccwd_info_line("30-day window", paste(format(row$start_date,"%b %d"),"–",format(row$end_date,"%b %d, %Y"))),
-        ccwd_info_line("Rainfall records", paste(format(row$required_start_date,"%b %d"),"–",format(row$end_date,"%b %d, %Y"))),
-        ccwd_info_line("Coverage", paste0(row$observed_input_days," of ",row$expected_input_days," days")),
-        ccwd_info_line("Rainfall", paste0(format(round(row$raw_precip_inches_30d,3), nsmall=3), " inches in 30 days")),
-        ccwd_info_line("Distributed depth", paste0(format(round(row$distributed_precip_inches_30d,3), nsmall=3), " inches"))
-      ),
-      tags$div(class="ccwd-help-source", "NOAA daily precipitation: ",
-        tags$a(href=result$source_url, target="_blank", rel="noopener noreferrer", "Open data source")),
-      tags$div(class="ccwd-help-foot", "A complete 30-day window is required. A substitute gauge is used; the window may end before the latest observation if more recent records are incomplete. The input is an editable rolling monthly-volume proxy; original model-training aggregation remains unverified.")
-    )
+      tags$strong("SCKC1 DAYFLOW-style QPREC estimate"),
+      ccwd_info_line("Station","Stockton Fire Station No. 4 (SCKC1)"),
+      ccwd_info_line("Last complete date",as.character(d$through)),
+      ccwd_info_line("Runoff area","682,230 acres"),
+      ccwd_info_line("Conversion","Five-day runoff × calendar days in month"),
+      ccwd_info_line("7-day model input",paste0(ccwd_display_whole(d$value)," TAF/month")),
+      if (length(d$estimated_dates)) tags$div(class="ccwd-help-foot",
+        paste0("Estimated SCKC1 rainfall for missing day(s): ",
+          paste(as.character(d$estimated_dates),collapse=", "),
+          ". Linear interpolation between adjacent actual observations; not a measured zero.")),
+      tags$a(href=d$source_url,target="_blank","SCKC1 daily precipitation summary"),
+      tags$div(class="ccwd-help-foot","Monthly-equivalent estimate, not the DAYFLOW observed calendar-month total."))
   })
-  observeEvent(TRUE, {
-    result <- tryCatch(fetch_ccwd_noaa_rolling30_accretion(),
-                       error = function(e) e)
-    if (inherits(result, "error")) {
-      updateTextInput(session, "current_ptm_qprec", value = "")
+  # Start Exploration QPREC from the server after the initial UI flush.
+  # A previous release relied solely on a one-time browser shiny:connected
+  # event, which can be missed and leave the input permanently blank.
+  ccwd_qprec_started <- FALSE
+  ccwd_initialize_exploration_qprec <- function() {
+    if (isTRUE(ccwd_qprec_started)) return(invisible(NULL))
+    ccwd_qprec_started <<- TRUE
+    ccwd_qprec_note("Checking SCKC1 daily precipitation observations...")
+    result <- tryCatch({
+      # Use the latest *complete* local-date window, not blindly yesterday;
+      # station reporting can lag a few days. Eleven dates are necessary
+      # for a seven-day average with four preceding rainfall days.
+      last <- Sys.Date() - 1L
+      rain <- ccwd_sckc1_daily(last - 59L, last)
+      complete <- rain$date[is.finite(rain$precip_in)]
+      if (!length(complete)) stop("SCKC1 returned no valid precipitation days")
+      endings <- rev(complete)
+      chosen <- NULL
+      # R's `for (day in Date_vector)` can strip the Date class. Indexing
+      # with `[` preserves dates and prevents invalid seven-day windows.
+      for (i in seq_along(endings)) {
+        end_day <- endings[i]
+        dates <- seq(end_day - 6L, end_day, by="day")
+        candidate <- tryCatch(ccwd_qprec_from_daily(rain, dates),error=function(e) NULL)
+        if (!is.null(candidate)) {
+          age_days <- as.integer(last - end_day)
+          if (age_days > 14L) {
+            stop(paste0("Most recent complete seven-day SCKC1 window ends ",
+              as.character(end_day), " (", age_days,
+              " days before the requested date). Refusing to label stale observations as current."))
+          }
+          chosen <- list(value=mean(candidate$qprec_taf_month),
+                         through=end_day,source_url=attr(rain,"source_url"),
+                         estimated_dates=as.Date(rain$date[which(rain$estimated %in% TRUE &
+                           rain$date >= min(dates)-4L & rain$date <= max(dates))]),
+                         age_days=age_days)
+          break
+        }
+      }
+      if (is.null(chosen)) stop(paste0(
+        "No complete SCKC1 seven-day precipitation window with the four-day carry-in ",
+        "was found in the past 60 days. Missing precipitation is never set to zero."))
+      chosen
+    }, error=function(e)e)
+    if (inherits(result,"error")) {
       ccwd_qprec_detail(NULL)
-      ccwd_qprec_note(paste0(
-        "NOAA auto-fill unavailable: ", conditionMessage(result),
-        " Enter a documented TAF/month scenario value if testing."
-      ))
+      ccwd_qprec_note(paste0("QPREC source error: ",conditionMessage(result),
+        " Check the SCKC1 daily source or the RStudio Console."))
+      # Never leave a blank text box: it is indistinguishable from a UI bug.
+      updateTextInput(session,"current_ptm_qprec",value="Unavailable")
+      message("[CCWD Exploration QPREC] ",conditionMessage(result))
     } else {
-      row <- result$latest
-      updateTextInput(session, "current_ptm_qprec",
-                      value = ccwd_display_whole(row$accretion_taf_30d))
       ccwd_qprec_detail(result)
-      ccwd_qprec_note("Latest available complete 30-day window loaded.")
+      ccwd_qprec_note("SCKC1 QPREC calculated")
+      updateTextInput(session,"current_ptm_qprec",value=ccwd_display_whole(result$value))
+      message("[CCWD Exploration QPREC] ",as.character(result$through),
+        ": ",result$value," TAF/month (seven-day mean, SCKC1)")
     }
-  }, once = TRUE)
-
+    invisible(NULL)
+  }
+  # Browser event is still supported, but is no longer the sole trigger.
+  observeEvent(input$ccwd_load_noaa, {
+    if (isTRUE(input$ccwd_load_noaa)) ccwd_initialize_exploration_qprec()
+  })
+  session$onFlushed(function() {
+    ccwd_initialize_exploration_qprec()
+  }, once=TRUE)
 
 
 
@@ -1766,8 +1876,9 @@ server <- function(input, output, session) {
   })
 
   observeEvent(
-    input$current_input_method,
+    list(input$current_input_method, input$ccwd_load_observed),
     {
+      req(isTRUE(input$ccwd_load_observed))
       if (!identical(input$current_input_method, "single")) {
         return(invisible(NULL))
       }
@@ -2707,25 +2818,31 @@ server <- function(input, output, session) {
                 fraction
               )
             }
-            st_sf(
-              Region = one_path$Region,
-              Location = one_path$`Insertion Location Name`,
-              Target_Node = one_path$DSM2_Node,
-              Start_Node = one_path$Start_Node,
-              Path_TotalLength_ft = one_path$TotalLength_ft,
-              Event_Horizon_miles = distance_miles,
-              Event_Horizon_ft = distance_ft,
-              CHAN_NO = edge$CHAN_NO,
-              FROM_NODE = edge$FROM_NODE,
-              TO_NODE = edge$TO_NODE,
-              PATH_ORDER = edge$PATH_ORDER,
-              geometry = st_geometry(out_geom),
-              crs = st_crs(dsm2_channels),
-              Visual_Only = ifelse(
-                "VISUAL_ONLY" %in% names(edge),
-                edge$VISUAL_ONLY,
-                FALSE
-              )
+            # A DSM2 channel can consist of several geometry features.
+            # sf::st_sf requires one metadata record PER geometry. Previously
+            # a single record was paired with e.g. 15 line features, producing:
+            # "arguments imply differing number of rows: 1, 15".
+            out_sfc <- sf::st_geometry(out_geom)
+            n_parts <- length(out_sfc)
+            if (n_parts == 0L) return(NULL)
+            visual_only <- if ("VISUAL_ONLY" %in% names(edge)) {
+              isTRUE(edge$VISUAL_ONLY[1])
+            } else FALSE
+            sf::st_sf(
+              Region = rep(as.character(one_path$Region[1]), n_parts),
+              Location = rep(as.character(one_path$`Insertion Location Name`[1]), n_parts),
+              Target_Node = rep(one_path$DSM2_Node[1], n_parts),
+              Start_Node = rep(one_path$Start_Node[1], n_parts),
+              Path_TotalLength_ft = rep(one_path$TotalLength_ft[1], n_parts),
+              Event_Horizon_miles = rep(distance_miles, n_parts),
+              Event_Horizon_ft = rep(distance_ft, n_parts),
+              CHAN_NO = rep(edge$CHAN_NO[1], n_parts),
+              FROM_NODE = rep(edge$FROM_NODE[1], n_parts),
+              TO_NODE = rep(edge$TO_NODE[1], n_parts),
+              PATH_ORDER = rep(edge$PATH_ORDER[1], n_parts),
+              Visual_Only = rep(visual_only, n_parts),
+              geometry = out_sfc,
+              crs = st_crs(dsm2_channels)
             )
           }
         )
@@ -2855,16 +2972,25 @@ server <- function(input, output, session) {
       flow_text <- if (is.null(flow_text)) "" else trimws(as.character(flow_text)[1])
       measured <- ccwd_dcc_measured()
       if (!nzchar(flow_text)) {
-        validate(need(!is.null(measured),
-          "Measured historical DCC flow is missing from CDEC. ",
-          "No forecast regression will be used in Exploration."))
-        dcc_flow <- measured$value
-        dcc_source <- "CDEC_HISTORICAL_MEASURED"
+        if (!is.null(measured) && is.finite(measured$value)) {
+          dcc_flow <- measured$value
+          dcc_source <- "CDEC_HISTORICAL_MEASURED"
+        } else {
+          sac_measured <- parse_flow_input(input[[paste0(prefix,"_ptm_sac")]])
+          validate(need(length(sac_measured)==1L && is.finite(sac_measured),
+            'DCC observation unavailable; valid measured SAC is required for regression.'))
+          dcc_flow <- 0.1846*sac_measured + 306.52
+          dcc_source <- "ESTIMATED_FROM_MEASURED_SAC"
+        }
       } else {
         dcc_flow <- parse_flow_input(flow_text)
+        sac_measured <- parse_flow_input(input[[paste0(prefix,"_ptm_sac")]])
         dcc_source <- if (!is.null(measured) &&
                          isTRUE(all.equal(dcc_flow, round(measured$value,0)))) {
           "CDEC_HISTORICAL_MEASURED"
+        } else if (length(sac_measured)==1L && is.finite(sac_measured) &&
+                   abs(dcc_flow-round(0.1846*sac_measured+306.52))<=1) {
+          "ESTIMATED_FROM_MEASURED_SAC"
         } else {
           "USER_EDITED_SCENARIO_NOT_VERIFIED_MEASUREMENT"
         }
@@ -2900,18 +3026,37 @@ server <- function(input, output, session) {
     )
   }
   make_new_eco_results <- function(condition, scenario_name, sac, yol, moke, dcc) {
+    # Each ECO LightGBM model predicts one scalar from four inputs. Construct
+    # two explicitly aligned result rows rather than mixing scalar metadata
+    # with a two-model prediction vector (R row-count 1 vs 2 errors).
+    scalar <- function(value, label) {
+      value <- suppressWarnings(as.numeric(value))
+      if (length(value) != 1L || !is.finite(value))
+        stop("ECO-PTM requires one finite value for ", label, ".", call. = FALSE)
+      value
+    }
+    sac <- scalar(sac, "SAC")
+    yol <- scalar(yol, "YOL")
+    moke <- scalar(moke, "MOKE")
+    dcc <- scalar(dcc, "DCC")
     validate(need(dcc %in% c(0,1), "DCC must be 0 (closed) or 1 (open)."))
-    mat <- matrix(c(sac, yol, moke, dcc), nrow = 1)
-    # Same exact four-predictor order for both new ECO-PTM models.
+    mat <- matrix(c(sac, yol, moke, dcc), nrow = 1L)
     surv <- new_predict("ECO_survival", mat)
     interior <- new_predict("ECO_interior", mat)
-    raw <- c(surv, interior)
+    if (length(surv) != 1L || length(interior) != 1L)
+      stop("ECO-PTM models must each produce exactly one prediction.", call. = FALSE)
+    raw <- c(as.numeric(surv), as.numeric(interior))
+    n <- length(raw)
     data.frame(
-      Condition = condition, Input_Method = "single", Scenario_Name = scenario_name,
+      Condition = rep(as.character(condition)[1], n),
+      Input_Method = rep("single", n),
+      Scenario_Name = rep(as.character(scenario_name)[1], n),
       Model = c("ECO-PTM Emulator Survival", "ECO-PTM Emulator Interior Routing"),
-      Prediction_Raw = raw, Prediction_Final = bound_percent(raw),
-      Output_Unit = "Percent", SAC = sac, YOL = yol, MOKE = moke, DCC = dcc,
-      stringsAsFactors = FALSE
+      Prediction_Raw = raw,
+      Prediction_Final = bound_percent(raw),
+      Output_Unit = rep("Percent", n),
+      SAC = rep(sac, n), YOL = rep(yol, n), MOKE = rep(moke, n),
+      DCC = rep(dcc, n), stringsAsFactors = FALSE
     )
   }
   make_new_eh_result <- function(condition, scenario_name, risk, exp, ver,
@@ -4451,7 +4596,7 @@ server <- function(input, output, session) {
     local_file
   }
   
-  read_archive_csv <- function(file_path) {
+  read_archive_csv <- function(file_path, require_xgeo = TRUE) {
     
     source_url <- if (is_remote_archive_file(file_path)) {
       file_path
@@ -4701,11 +4846,42 @@ server <- function(input, output, session) {
       archive_data,
       c(
         "DCC",
-        "Delta Cross Channel"
+        "Delta Cross Channel",
+        "DCC Status",
+        "DCC Gate Status",
+        "DCC Open",
+        "DCC_open",
+        "DCCGate"
       ),
       required = FALSE
     )
     
+    # Weekly OMRI files sometimes place the DCC gate flag in the FINAL
+    # data column with a blank or nonstandard header.  Recognize common
+    # header variants first, then use the trailing column only when its
+    # contents demonstrably encode binary (0/1, open/closed) gate status.
+    if (is.null(dcc_col)) {
+      trailing_candidates <- rev(tail(names(archive_data), min(3L, ncol(archive_data))))
+      is_binary_dcc_column <- function(values) {
+        raw_values <- trimws(toupper(as.character(values)))
+        raw_values <- raw_values[!is.na(raw_values) & nzchar(raw_values)]
+        if (length(raw_values) < 5L) return(FALSE)
+        numeric_values <- suppressWarnings(as.numeric(raw_values))
+        matches <- raw_values %in% c("OPEN", "OPENED", "CLOSED", "CLOSE") |
+          (is.finite(numeric_values) & numeric_values %in% c(0, 1))
+        sum(matches) >= 5L && mean(matches) >= 0.9
+      }
+      for (candidate in trailing_candidates) {
+        # Never mistake a named hydrologic variable for gate status.
+        if (!grepl("^UNNAMED_|^X[0-9]+$|DCC|GATE|STATUS", candidate,
+                   ignore.case = TRUE)) next
+        if (is_binary_dcc_column(archive_data[[candidate]])) {
+          dcc_col <- candidate
+          break
+        }
+      }
+    }
+
     xgeo_col <- find_archive_column(
       archive_data,
       c(
@@ -4911,10 +5087,18 @@ server <- function(input, output, session) {
       },
       
       DCC = if (is.null(dcc_col)) {
-        0
+        # Missing gate-status column is unknown, never automatically Closed.
+        # The Weekly UI can request an explicit user assumption if needed.
+        NA_real_
       } else {
-        to_numeric(dcc_col)
+        raw_dcc <- trimws(toupper(as.character(archive_data[[dcc_col]])))
+        numeric_dcc <- suppressWarnings(as.numeric(gsub(",", "", raw_dcc, fixed=TRUE)))
+        numeric_dcc[raw_dcc %in% c("OPEN", "OPENED")] <- 1
+        numeric_dcc[raw_dcc %in% c("CLOSED", "CLOSE")] <- 0
+        numeric_dcc[!is.finite(numeric_dcc) | !numeric_dcc %in% c(0, 1)] <- NA_real_
+        numeric_dcc
       },
+      DCC_STATUS_AVAILABLE = !is.null(dcc_col),
       
       XGEO = xgeo_values
     ) %>%
@@ -4950,13 +5134,7 @@ server <- function(input, output, session) {
     
     # If XGEO was not present in the archive CSV, download daily
     # values for all measured dates and calculate XGEO = A - C.
-    if (
-      all(
-        is.na(
-          result$XGEO
-        )
-      )
-    ) {
+    if (isTRUE(require_xgeo) && all(is.na(result$XGEO))) {
       
       measured_dates <- result %>%
         filter(
@@ -5024,17 +5202,8 @@ server <- function(input, output, session) {
         "The archive CSV contains no measured rows."
       ),
       
-      need(
-        any(
-          !is.na(
-            result$XGEO
-          )
-        ),
-        paste(
-          "No XGEO values were found or downloaded.",
-          "Check the internet connection or the XGEO_USGS_daily.csv cache."
-        )
-      )
+      need(!isTRUE(require_xgeo) || any(!is.na(result$XGEO)),
+           "No XGEO values were found or downloaded. Check internet connection or XGEO cache.")
     )
     
     validate(
@@ -5049,7 +5218,7 @@ server <- function(input, output, session) {
       
       need(
         all(
-          c("EXP", "VER", "SAC", "EAST", "XGEO") %in% names(result)
+          c("EXP", "VER", "SAC", "EAST") %in% names(result)
         ),
         "The archive data could not be converted to the emulator input naming convention."
       )
@@ -5278,6 +5447,362 @@ server <- function(input, output, session) {
   }
   
   
+  # ---------------------------------------------------------------
+  # WEEKLY ASSESSMENTS ONLY — new five-model CCWD public release.
+  # Historical inputs and displayed archive metadata are retained.
+  # ---------------------------------------------------------------
+  weekly_qgcd_for_dates <- function(dates) {
+    dates <- as.Date(dates)
+    validate(need(length(dates) > 0L && all(!is.na(dates)),
+                  "QGCD requires valid assessment dates."))
+    # The same workbook drives every measured window and OMRI forecast window.
+    ccwd_qgcd_for_dates(dates)
+  }
+
+  # Use one forecast QPREC series per archive assessment, independent of
+  # OMRI scenario. A verified archived CNRFC QPF takes priority. If the QPF
+  # cannot be retrieved or validated, carry the last MEASURED SCKC1-derived
+  # daily runoff rate through the forecast week. This is a PERSISTENCE
+  # ASSUMPTION, never a claim that historical forecast rainfall was measured.
+  weekly_qprec_cache <- new.env(parent=emptyenv())
+  weekly_qprec_for_measured_date <- function(last_measured_date, forecast=FALSE) {
+    last_measured_date <- as.Date(last_measured_date)
+    validate(need(!is.na(last_measured_date), "Invalid measured QPREC cutoff"))
+    function_for_dates <- function(dates) {
+      dates <- as.Date(dates)
+      if (!length(dates) || anyNA(dates)) stop("QPREC: invalid assessment dates")
+      key <- paste(last_measured_date,forecast,min(dates),max(dates),sep="|")
+      if (!exists(key,envir=weekly_qprec_cache,inherits=FALSE)) {
+        item <- tryCatch({
+          # An entire 5-day observed window through the assessment cutoff is
+          # required even for a fully forecast seven-day period.
+          first_observation <- min(min(dates)-4L,last_measured_date-4L)
+          last_observation <- min(max(dates),last_measured_date)
+          rain <- ccwd_sckc1_daily(first_observation,last_observation)
+          src <- "SCKC1 observed daily precipitation"
+          url <- attr(rain,"source_url")
+          estimated_dates <- if ("estimated" %in% names(rain))
+            as.Date(rain$date[which(rain$estimated %in% TRUE)]) else as.Date(character())
+          verified_snapshot_dates <- attr(rain,"verified_snapshot_dates")
+          if (length(verified_snapshot_dates))
+            src <- paste0(src,"; verified SCKC1 observation records used for ",
+                          paste(as.character(verified_snapshot_dates),collapse=", "))
+          forecast_method <- if (forecast) "CNRFC_ARCHIVE_QPF" else "OBSERVED_SCKC1"
+          forecast_issue <- NA_character_
+          forecast_problem <- NULL
+          if (!forecast) {
+            calc <- ccwd_qprec_from_daily(rain,dates)
+          } else {
+            fc_dates <- dates[dates > last_measured_date]
+            if (!length(fc_dates)) stop("QPREC: forecast window has no forecast dates")
+            fc <- tryCatch({
+              qpf <- ccwd_cnrfc_daily(last_measured_date+1L,
+                                       fc_dates,last_measured_date)
+              combined <- rbind(rain[,c("date","precip_in")],
+                                qpf[,c("date","precip_in")])
+              result <- ccwd_qprec_from_daily(combined,dates)
+              list(qpf=qpf,calc=result)
+            },error=function(e)e)
+            if (!inherits(fc,"error")) {
+              # Verified CNRFC QPF, plus the preceding observed days.
+              forecast_issue <- attr(fc$qpf,"issue_utc")
+              forecast_issue <- if (length(forecast_issue)) as.character(forecast_issue)[1] else NA_character_
+              url <- attr(fc$qpf,"source_url")
+              carried <- attr(fc$qpf,"carried_days")
+              src <- paste0("SCKC1 measured precipitation + archived CNRFC QPF",
+                            if (length(carried)) paste0("; CNRFC last-day rainfall carried forward for ",
+                                   paste(as.character(carried),collapse=", ")) else "")
+              calc <- fc$calc
+            } else {
+              # Historical forecast archive is missing or invalid. Keep model
+              # runnable using ONLY verified rainfall up to the cutoff.
+              # A daily runoff rate in TAF/day is held constant, then scaled
+              # separately for each forecast date's calendar-month length.
+              forecast_problem <- conditionMessage(fc)
+              measured_day <- ccwd_qprec_from_daily(rain,last_measured_date)
+              last_rate <- measured_day$qprec_taf_day[1]
+              if (length(last_rate)!=1L || !is.finite(last_rate))
+                stop("QPREC: cannot estimate forecast runoff because the last measured five-day SCKC1 window is incomplete. ",forecast_problem)
+              calc <- data.frame(
+                date=dates,
+                qprec_taf_day=rep(last_rate,length(dates)),
+                qprec_taf_month=last_rate*ccwd_qprec_days_in_month(dates)
+              )
+              forecast_method <- "PERSIST_LAST_MEASURED_DAILY_RUNOFF"
+              src <- "SCKC1 measured QPREC held constant as a forecast assumption (CNRFC archived QPF unavailable)"
+              url <- attr(rain,"source_url")
+              message("CCWD Weekly forecast QPREC: no validated historical CNRFC QPF for cutoff ",
+                      as.character(last_measured_date),". Holding measured SCKC1 daily runoff rate. CNRFC detail: ",
+                      forecast_problem)
+            }
+          }
+          list(value=mean(calc$qprec_taf_month),source=src,
+               through=if (forecast) max(dates) else min(max(dates),last_measured_date),
+               window_start=min(dates),source_url=url,
+               estimated_dates=estimated_dates,daily=calc,
+               forecast_method=forecast_method,
+               forecast_issue=forecast_issue,
+               forecast_problem=forecast_problem)
+        },error=function(e)e)
+        assign(key,item,envir=weekly_qprec_cache)
+      }
+      item <- get(key,envir=weekly_qprec_cache,inherits=FALSE)
+      if (inherits(item,"error")) {
+        rm(list=key,envir=weekly_qprec_cache) # retry after transient download failure
+        stop(conditionMessage(item),call.=FALSE)
+      }
+      item
+    }
+    default_dates <- seq(last_measured_date-6L,last_measured_date,by="day")
+    result <- if (forecast) {
+      list(value=NA_real_,source="SCKC1 observed / CNRFC QPF",
+           through=last_measured_date,window_start=last_measured_date,
+           source_url=CCWD_CNRFC_ARCHIVE)
+    } else function_for_dates(default_dates)
+    result$for_dates <- function_for_dates
+    result$forecast <- forecast
+    result
+  }
+
+  # DCC is the 0/1 gate flag in the *selected archive CSV*.
+  # Use the first forecast day or the last observed day, never a 7-day mean.
+  # A remote GitHub CSV can differ from the copy opened locally in Excel;
+  # do not manufacture a 0 when that remote file has a blank DCC cell.
+  weekly_archive_gate <- function(archive_data, forecast=FALSE, dates=NULL,
+                                  allow_manual_override=TRUE) {
+    subset <- archive_data[
+      archive_data$DATA_TYPE == if (forecast) "Forecast" else "Measured",
+      , drop=FALSE]
+    subset <- subset[order(subset$DATE),,drop=FALSE]
+    if (forecast) {
+      subset <- head(subset, 7L)
+    } else if (!is.null(dates)) {
+      subset <- subset[subset$DATE %in% as.Date(dates),,drop=FALSE]
+    } else {
+      subset <- tail(subset, 7L)
+    }
+    validate(need(nrow(subset) >= 7L,
+      "At least seven daily archive rows are required to determine DCC status."))
+    index <- if (forecast) 1L else nrow(subset)
+    status <- suppressWarnings(as.numeric(subset$DCC[index]))
+    available <- isTRUE(subset$DCC_STATUS_AVAILABLE[index]) &&
+      length(status) == 1L && is.finite(status) && status %in% c(0,1)
+    if (available) {
+      result <- as.numeric(status)
+      attr(result, "gate_source") <- "ARCHIVE_CSV"
+      return(result)
+    }
+
+    # Only use an explicitly user-selected assumption if the CSV value is
+    # truly absent/invalid.  Do not override a valid archived 0 or 1.
+    chosen <- if (allow_manual_override) {
+      input$forecast_weekly_gate_override
+    } else NULL
+    if (!is.null(chosen) && length(chosen)==1L && chosen %in% c("0","1")) {
+      result <- as.numeric(chosen)
+      attr(result, "gate_source") <- "USER_ASSUMPTION_MISSING_ARCHIVE_DCC"
+      return(result)
+    }
+    day <- as.character(subset$DATE[index])
+    stop(paste0(
+      "DCC gate status is blank or invalid in the selected GitHub archive CSV ",
+      "for ", if (forecast) "first forecast" else "last measured",
+      " day (", day, "). Select an explicit Open/Closed assumption in ",
+      "the Weekly Assessments panel, or add the correct 0/1 data to ",
+      "the archived GitHub CSV."), call.=FALSE)
+  }
+
+  # Returns mean across the requested dates. For gate-open measured periods,
+  # prefer CDEC DLC observations on each date, and fill ONLY missing dates with
+  # the measured SAC value on those dates from the selected archive CSV.
+  # Forecast windows always use regression with the forecast SAC series.
+  weekly_dcc_flow <- function(archive_data, dates, gate, forecast=FALSE) {
+    if (gate == 0) return(0)
+    dates <- as.Date(dates)
+    validate(need(length(dates)>0L && all(!is.na(dates)),
+                  'DCC flow dates are unavailable.'))
+    kind <- if (forecast) 'Forecast' else 'Measured'
+    rows <- archive_data[archive_data$DATA_TYPE == kind &
+                         archive_data$DATE %in% dates,,drop=FALSE]
+    rows <- rows[order(rows$DATE),,drop=FALSE]
+    idx <- match(dates, rows$DATE)
+    validate(need(all(!is.na(idx)) && all(is.finite(rows$SAC[idx])),
+      paste0('Cannot estimate DCC: ',kind,' Freeport SAC flow is missing for the selected dates.')))
+    sac_daily <- as.numeric(rows$SAC[idx])
+    estimate <- 0.1846*sac_daily + 306.52
+    if (forecast) {
+      out <- mean(estimate)
+      attr(out,'dcc_source') <- 'Forecast regression (forecast SAC at Freeport)'
+      return(out)
+    }
+    observed <- tryCatch(read_historical_dcc_daily(max(dates),
+       lookback_days=max(14L,as.integer(max(dates)-min(dates))+1L)),
+       error=function(e)e)
+    flow <- estimate
+    covered <- rep(FALSE,length(dates))
+    if (!inherits(observed,'error') && nrow(observed)) {
+      ix <- match(dates, observed$Date)
+      covered <- !is.na(ix)
+      covered[covered] <- is.finite(observed$Value[ix[covered]]) &
+                           observed$Hours[ix[covered]] >= 1L
+      flow[covered] <- observed$Value[ix[covered]]
+    }
+    if (any(!covered)) message('CCWD DCC: CDEC observations unavailable for ',
+      paste(as.character(dates[!covered]),collapse=', '),
+      '; using measured SAC regression for ',sum(!covered),' date(s).')
+    out <- mean(flow)
+    attr(out,'dcc_source') <- if (all(covered)) 'Measured CDEC DLC daily means' else
+      if (any(covered)) 'CDEC measured with missing dates estimated from measured archive SAC' else
+        'Estimated from measured archive SAC; CDEC DLC unavailable'
+    attr(out,'dcc_missing_dates') <- dates[!covered]
+    out
+  }
+
+  weekly_add_window_info <- function(df, window, archive_date, scenario) {
+    n <- nrow(df)
+    if (n == 0L) return(df)
+    df$Input_Method <- rep("weekly_archive", n)
+    df$Archive_Date <- rep(as.character(archive_date)[1], n)
+    df$OMRI_Scenario <- rep(as.character(scenario)[1], n)
+    df$Window_Start_Date <- rep(as.Date(window$Window_Start_Date[1]), n)
+    df$Window_End_Date <- rep(as.Date(window$Window_End_Date[1]), n)
+    df$Window_Days <- rep(as.integer(window$Window_Days[1]), n)
+    df
+  }
+
+  weekly_new_ptm_windows <- function(windows, archive_data, condition,
+                                     scenario_name, archive_date, scenario,
+                                     qprec_ref, forecast=FALSE) {
+    # Every LightGBM prediction is one row per DSM2 node.  Construct each
+    # predictor and each result column at exactly that length; never rely on
+    # implicit recycling of a one-row window into a multi-node result.
+    ref <- reference_data()
+    validate(need(nrow(windows) > 0L,
+                  "No seven-day archive windows are available for PTM prediction."))
+    bind_rows(lapply(seq_len(nrow(windows)), function(i) {
+      w <- windows[i, , drop=FALSE]
+      dates <- seq(as.Date(w$Window_Start_Date),
+                   as.Date(w$Window_End_Date), by="day")
+      gate <- weekly_archive_gate(archive_data, forecast=forecast, dates=dates)
+      qgcd <- weekly_qgcd_for_dates(dates)
+      this_qprec <- qprec_ref$for_dates(dates)
+      qprec <- this_qprec$value
+      dcc_flow <- weekly_dcc_flow(archive_data, dates, gate,
+                                   forecast=forecast)
+
+      predict_one <- function(key, label, nodes) {
+        tryCatch({
+          node_ids <- as.character(nodes)
+          n <- length(node_ids)
+          if (n == 0L || anyNA(node_ids)) {
+            stop("The reference workbook has no valid DSM2 nodes for ", key)
+          }
+          # Windows are single rows. Convert each hydrologic value to an
+          # explicit scalar, then repeat it once for every prediction node.
+          one_number <- function(x, name) {
+            val <- suppressWarnings(as.numeric(x))
+            if (length(val) != 1L || !is.finite(val)) {
+              stop("Invalid ", name, " input (expected one finite number).")
+            }
+            val
+          }
+          exp_value  <- one_number(w$EXP, "EXP")
+          ver_value  <- one_number(w$VER, "VER")
+          sac_value  <- one_number(w$SAC, "SAC")
+          east_value <- one_number(w$EAST, "EAST")
+          qgcd_value <- one_number(qgcd, "QGCD")
+          qprec_value <- one_number(qprec, "QPREC")
+          dcc_value  <- one_number(dcc_flow, "DCC flow")
+          gate_value <- one_number(gate, "DCC gate status")
+          numeric_nodes <- suppressWarnings(as.numeric(node_ids))
+          if (length(numeric_nodes) != n || any(!is.finite(numeric_nodes))) {
+            stop("DSM2 node identifiers must be numeric for ", key)
+          }
+
+          columns <- list(
+            numeric_nodes,
+            rep(exp_value, n), rep(ver_value, n), rep(sac_value, n),
+            rep(qgcd_value, n), rep(qprec_value, n), rep(east_value, n)
+          )
+          if (identical(key, "PTM30")) {
+            columns[[length(columns) + 1L]] <- rep(dcc_value, n)
+          }
+          features <- do.call(cbind, columns)
+          storage.mode(features) <- "double"
+          if (nrow(features) != n) {
+            stop("PTM feature row count does not match node count.")
+          }
+          raw <- as.numeric(new_predict(key, features))
+          if (length(raw) != n) {
+            stop("Model returned ", length(raw), " predictions for ", n,
+                 " DSM2 nodes.")
+          }
+          # Make the result columns the same explicit length as raw/nodes.
+          result <- data.frame(
+            Condition=rep(condition, n),
+            Input_Method=rep("weekly_archive", n),
+            Archive_Date=rep(archive_date, n),
+            OMRI_Scenario=rep(scenario, n),
+            Scenario_Name=rep(scenario_name, n),
+            Model=rep(label, n),
+            Window_Start_Date=rep(as.Date(w$Window_Start_Date), n),
+            Window_End_Date=rep(as.Date(w$Window_End_Date), n),
+            Window_Days=rep(as.numeric(w$Window_Days), n),
+            DSM2_Node=node_ids,
+            Prediction_Raw=raw,
+            Prediction_Final=bound_percent(raw),
+            Output_Unit=rep("Percent", n),
+            EXP=rep(exp_value, n), VER=rep(ver_value, n),
+            SAC=rep(sac_value, n), EAST=rep(east_value, n),
+            QGCD=rep(qgcd_value, n), QPREC=rep(qprec_value, n),
+            DCC_flow=rep(dcc_value, n), DCC=rep(gate_value, n),
+            QPREC_Through_Date=rep(as.character(this_qprec$through), n),
+            QPREC_Station=rep(as.character(this_qprec$source), n),
+            stringsAsFactors=FALSE
+          )
+          if (nrow(result) != n) {
+            stop("PTM output row count does not match DSM2 nodes.")
+          }
+          left_join(result, ref$node_meta, by="DSM2_Node")
+        }, error=function(e) {
+          stop(paste0("Weekly ", key, " prediction construction failed for ",
+                      as.character(w$Window_Start_Date), " through ",
+                      as.character(w$Window_End_Date), ": ",
+                      conditionMessage(e)), call.=FALSE)
+        })
+      }
+      bind_rows(
+        predict_one("PTM7", "PTM Emulator 7-Day Entrainment", ref$nodes_7d),
+        predict_one("PTM30", "PTM Emulator 30-Day Entrainment", ref$nodes_30d)
+      )
+    }))
+  }
+
+  weekly_new_eh_windows <- function(windows, condition,scenario_name,
+                                    archive_date,scenario,risk,qprec_ref) {
+    bind_rows(lapply(seq_len(nrow(windows)),function(i) {
+      w <- windows[i,,drop=FALSE]
+      dates <- seq(as.Date(w$Window_Start_Date),as.Date(w$Window_End_Date),by="day")
+      qgcd <- weekly_qgcd_for_dates(dates)
+      this_qprec <- qprec_ref$for_dates(dates)
+      result <- make_new_eh_result(condition,scenario_name,risk,w$EXP,w$VER,
+                                    w$SAC,qgcd,this_qprec$value,w$EAST)
+      result <- weekly_add_window_info(result,w,archive_date,scenario)
+      result$QPREC_Through_Date <- as.character(this_qprec$through)
+      result$QPREC_Station <- this_qprec$source
+      result
+    }))
+  }
+
+  weekly_new_eco <- function(archive_data,window,condition,scenario_name,
+                             archive_date,scenario,forecast=FALSE) {
+    dates <- seq(as.Date(window$Window_Start_Date),as.Date(window$Window_End_Date),by="day")
+    gate <- weekly_archive_gate(archive_data,forecast=forecast,dates=dates)
+    result <- make_new_eco_results(condition,scenario_name,window$SAC,
+              window$YOL,window$MOKE,gate)
+    weekly_add_window_info(result,window,archive_date,scenario)
+  }
+
   predict_ptm_from_windows <- function(
     windows,
     model,
@@ -5451,101 +5976,44 @@ server <- function(input, output, session) {
   }
   
   
-  make_weekly_ptm_observed <- function(archive_date, scenario_name) {
-    source_file <- archive_csv_files(archive_date)[1]
-    validate(need(length(source_file) > 0, "No OMRI CSV file was found for the selected week."))
-    archive_data <- read_archive_csv(source_file)
-
-    rolling_7 <- rolling_measured_7day_inputs(archive_data)
-    inputs_7 <- weekly_measured_7day_inputs(archive_data)
-
-    ref <- reference_data()
-    bind_rows(
-      predict_ptm_from_windows(
-        rolling_7,
-        ptm7_model,
-        "PTM Emulator 7-Day Entrainment",
-        ref$nodes_7d,
-        "Observed Conditions",
-        scenario_name,
-        archive_date,
-        "Measured"
-      ),
-      predict_ptm_from_windows(
-        inputs_7,
-        ptm30_model,
-        "PTM Emulator 30-Day Entrainment",
-        ref$nodes_30d,
-        "Observed Conditions",
-        scenario_name,
-        archive_date,
-        "Measured"
-      )
-    )
+  make_weekly_ptm_observed <- function(archive_date,scenario_name) {
+    file <- archive_csv_files(archive_date)[1]
+    validate(need(length(file)>0L,"No measured OMRI CSV found."))
+    data <- read_archive_csv(file, require_xgeo=FALSE)
+    windows <- rolling_measured_7day_inputs(data)
+    last_measured <- max(data$DATE[data$DATA_TYPE=="Measured"])
+    qprec <- weekly_qprec_for_measured_date(last_measured)
+    weekly_new_ptm_windows(windows,data,"Observed Conditions",scenario_name,
+       archive_date,"Measured",qprec,forecast=FALSE)
   }
 
-
-  make_weekly_ptm_forecast <- function(archive_date, omri_scenario, scenario_name) {
-    source_file <- archive_file_for_scenario(archive_date, omri_scenario)
-    archive_data <- read_archive_csv(source_file)
-    inputs_7 <- forecast_7day_inputs(archive_data)
-    ref <- reference_data()
-    bind_rows(
-      predict_ptm_from_windows(inputs_7, ptm7_model, "PTM Emulator 7-Day Entrainment",
-                               ref$nodes_7d, "Forecast Conditions", scenario_name,
-                               archive_date, omri_scenario),
-      predict_ptm_from_windows(inputs_7, ptm30_model, "PTM Emulator 30-Day Entrainment",
-                               ref$nodes_30d, "Forecast Conditions", scenario_name,
-                               archive_date, omri_scenario)
-    )
+  make_weekly_ptm_forecast <- function(archive_date,omri_scenario,scenario_name) {
+    file <- archive_file_for_scenario(archive_date,omri_scenario)
+    data <- read_archive_csv(file, require_xgeo=FALSE)
+    windows <- forecast_7day_inputs(data)
+    validate(need(any(data$DATA_TYPE=="Measured"),
+                  "Forecast archive does not include a measured reference date for QPREC."))
+    last_measured <- max(data$DATE[data$DATA_TYPE=="Measured"])
+    qprec <- weekly_qprec_for_measured_date(last_measured,forecast=TRUE)
+    weekly_new_ptm_windows(windows,data,"Forecast Conditions",scenario_name,
+       archive_date,omri_scenario,qprec,forecast=TRUE)
   }
 
-
-  make_weekly_eco_observed <- function(archive_date, scenario_name) {
-    source_file <- archive_csv_files(archive_date)[1]
-    archive_data <- read_archive_csv(source_file)
-    inputs <- weekly_measured_7day_inputs(archive_data)
-    make_eco_results(
-      condition = "Observed Conditions",
-      scenario_name = scenario_name,
-      sac = inputs$SAC,
-      yol = inputs$YOL,
-      moke = inputs$MOKE,
-      dcc = inputs$DCC
-    ) %>%
-      mutate(
-        Input_Method = "weekly_archive",
-        Archive_Date = archive_date,
-        OMRI_Scenario = "Measured",
-        Window_Start_Date = inputs$Window_Start_Date,
-        Window_End_Date = inputs$Window_End_Date,
-        Window_Days = inputs$Window_Days
-      )
+  make_weekly_eco_observed <- function(archive_date,scenario_name) {
+    file <- archive_csv_files(archive_date)[1]
+    data <- read_archive_csv(file, require_xgeo=FALSE)
+    window <- weekly_measured_7day_inputs(data)
+    weekly_new_eco(data,window,"Observed Conditions",scenario_name,
+                   archive_date,"Measured",forecast=FALSE)
   }
 
-
-  make_weekly_eco_forecast <- function(archive_date, omri_scenario, scenario_name) {
-    source_file <- archive_file_for_scenario(archive_date, omri_scenario)
-    archive_data <- read_archive_csv(source_file)
-    inputs <- forecast_7day_inputs(archive_data)
-    make_eco_results(
-      condition = "Forecast Conditions",
-      scenario_name = scenario_name,
-      sac = inputs$SAC,
-      yol = inputs$YOL,
-      moke = inputs$MOKE,
-      dcc = inputs$DCC
-    ) %>%
-      mutate(
-        Input_Method = "weekly_archive",
-        Archive_Date = archive_date,
-        OMRI_Scenario = omri_scenario,
-        Window_Start_Date = inputs$Window_Start_Date,
-        Window_End_Date = inputs$Window_End_Date,
-        Window_Days = inputs$Window_Days
-      )
+  make_weekly_eco_forecast <- function(archive_date,omri_scenario,scenario_name) {
+    file <- archive_file_for_scenario(archive_date,omri_scenario)
+    data <- read_archive_csv(file, require_xgeo=FALSE)
+    window <- forecast_7day_inputs(data)
+    weekly_new_eco(data,window,"Forecast Conditions",scenario_name,
+                   archive_date,omri_scenario,forecast=TRUE)
   }
-
 
   make_archive_eco_current <- function(
     archive_date,
@@ -5692,31 +6160,27 @@ server <- function(input, output, session) {
   }
   
   
-  make_weekly_eh_observed <- function(archive_date, scenario_name, risk) {
-    source_file <- archive_csv_files(archive_date)[1]
-    archive_data <- read_archive_csv(source_file)
-
-    rolling_7 <- rolling_measured_7day_inputs(archive_data)
-
-    predict_eh_from_windows(
-      rolling_7,
-      "Observed Conditions",
-      scenario_name,
-      archive_date,
-      "Measured",
-      risk
-    )
+  make_weekly_eh_observed <- function(archive_date,scenario_name,risk) {
+    file <- archive_csv_files(archive_date)[1]
+    data <- read_archive_csv(file, require_xgeo=FALSE)
+    windows <- rolling_measured_7day_inputs(data)
+    last_measured <- max(data$DATE[data$DATA_TYPE=="Measured"])
+    qprec <- weekly_qprec_for_measured_date(last_measured)
+    weekly_new_eh_windows(windows,"Observed Conditions",scenario_name,
+                          archive_date,"Measured",risk,qprec)
   }
 
-
-  make_weekly_eh_forecast <- function(archive_date, omri_scenario, scenario_name, risk) {
-    source_file <- archive_file_for_scenario(archive_date, omri_scenario)
-    archive_data <- read_archive_csv(source_file)
-    inputs_7 <- forecast_7day_inputs(archive_data)
-    predict_eh_from_windows(inputs_7, "Forecast Conditions", scenario_name,
-                            archive_date, omri_scenario, risk)
+  make_weekly_eh_forecast <- function(archive_date,omri_scenario,scenario_name,risk) {
+    file <- archive_file_for_scenario(archive_date,omri_scenario)
+    data <- read_archive_csv(file, require_xgeo=FALSE)
+    windows <- forecast_7day_inputs(data)
+    validate(need(any(data$DATA_TYPE=="Measured"),
+                  "Forecast archive is missing the measured QPREC reference date."))
+    last_measured <- max(data$DATE[data$DATA_TYPE=="Measured"])
+    qprec <- weekly_qprec_for_measured_date(last_measured,forecast=TRUE)
+    weekly_new_eh_windows(windows,"Forecast Conditions",scenario_name,
+                          archive_date,omri_scenario,risk,qprec)
   }
-
 
   latest_result_window <- function(
     data,
@@ -6777,9 +7241,10 @@ server <- function(input, output, session) {
       map_df <- map_df %>%
         dplyr::mutate(.map_date = as.Date(Window_End_Date, origin = "1970-01-01")) %>%
         dplyr::group_by(Saved_Run_ID) %>%
-        dplyr::filter(is.na(.map_date) | .map_date == max(.map_date, na.rm = TRUE)) %>%
+        dplyr::mutate(.last_date = if (all(is.na(.map_date))) as.Date(NA) else max(.map_date, na.rm = TRUE)) %>%
+        dplyr::filter(is.na(.map_date) | is.na(.last_date) | .map_date == .last_date) %>%
         dplyr::ungroup() %>%
-        dplyr::select(-.map_date)
+        dplyr::select(-.map_date, -.last_date)
     }
 
     run_ids <- unique(as.character(map_df$Saved_Run_ID))
@@ -6821,7 +7286,7 @@ server <- function(input, output, session) {
       if (nrow(nodes) < 3) next
 
       surface <- make_entrainment_risk_surface(
-        nodes = nodes, grid_cell_size = 500, idp = 2, nmax = 6,
+        nodes = nodes, grid_cell_size = 2000, idp = 2, nmax = 6,
         maximum_distance = Inf
       )
       surface$grid$Comparison_Opacity <- 0.68 * sqrt(pmax(0, pmin(100, surface$grid$risk)) / 100)
@@ -7349,9 +7814,15 @@ server <- function(input, output, session) {
       )
     )
     
-    eh_lines <- make_event_horizon_path_geometry(
-      distance_miles = eh_distance,
-      regions = c("OMR")
+    eh_lines <- tryCatch(
+      make_event_horizon_path_geometry(
+        distance_miles = eh_distance,
+        regions = c("OMR")
+      ),
+      error = function(e) {
+        stop("Unable to build the Event Horizon map geometry: ",
+             conditionMessage(e), call. = FALSE)
+      }
     )
     
     validate(
@@ -7789,6 +8260,124 @@ server <- function(input, output, session) {
         lat = 38.05,
         zoom = 10
       )
+  }
+  # Lightweight comparison maps. Avoid expensive interpolation in the
+  # interactive map; show predicted values at their actual DSM2 nodes.
+  # Saved-run/OMRI request errors are handled by each output renderer below.
+  ccwd_minimal_map <- function(label) {
+    leaflet::leaflet(options=leaflet::leafletOptions(preferCanvas=TRUE)) %>%
+      leaflet::addTiles() %>%
+      leaflet::setView(lng=-121.60,lat=38.05,zoom=9) %>%
+      leaflet::addControl(html=paste0('<div style="background:white;padding:10px;border:1px solid #ccc;border-radius:5px;">',label,'</div>'),position='topright')
+  }
+
+  ccwd_fast_comparison_map <- function(df, model, threshold=25, context='Comparison') {
+    started <- Sys.time()
+    message('[CCWD comparison map] ',context, ' preparing node map')
+    if (!is.data.frame(df) || nrow(df)==0L) return(ccwd_minimal_map('No comparison results are available. Run or select the scenarios first.'))
+    if (length(model)==0L || is.na(model[1])) model <- 'PTM Emulator 7-Day Entrainment'
+    if (!'Saved_Run_ID' %in% names(df)) {
+      if ('OMRI_Scenario' %in% names(df)) df$Saved_Run_ID <- paste0('OMRI ',df$OMRI_Scenario)
+      else df$Saved_Run_ID <- 'Scenario'
+    }
+    if (!'Scenario_Name' %in% names(df)) df$Scenario_Name <- as.character(df$Saved_Run_ID)
+    if (!'Prediction_Final' %in% names(df)) return(ccwd_minimal_map('Predictions are missing from the comparison data.'))
+    map <- leaflet::leaflet(options=leaflet::leafletOptions(preferCanvas=TRUE)) %>% leaflet::addTiles() %>%
+      leaflet::setView(lng=-121.60,lat=38.05,zoom=9)
+    # Optional geographic layers must never prevent the prediction markers from loading.
+    map <- tryCatch({
+      if (inherits(delta_boundary,'sf') && nrow(delta_boundary)>0L)
+        leaflet::addPolygons(map,data=sf::st_transform(delta_boundary,4326),color='#698f99',
+                             weight=1,fillOpacity=0.03,group='Delta boundary')
+      else map
+    },error=function(e) {message('[CCWD comparison map] boundary: ',conditionMessage(e));map})
+    # For Event Horizon, preserve the real computed path geometry but avoid
+    # interpolation. If path geometry fails, show the predicted miles in the map.
+    is_eh <- identical(as.character(model[1]),'Event Horizon')
+    is_ptm <- grepl('PTM Emulator',as.character(model[1]),fixed=TRUE)
+    run_ids <- unique(as.character(df$Saved_Run_ID)); run_ids <- run_ids[!is.na(run_ids)]
+    if (length(run_ids)==0L) run_ids <- 'Scenario'
+    colors <- stats::setNames(viridisLite::viridis(length(run_ids)),run_ids)
+    overlays <- character()
+    if (is_eh) {
+      for (rid in run_ids) {
+        d <- df[as.character(df$Saved_Run_ID)==rid,,drop=FALSE]
+        if (!nrow(d)) next
+        miles <- suppressWarnings(as.numeric(as.character(d$Prediction_Final[1])))
+        if (!is.finite(miles)) next
+        path <- tryCatch(make_event_horizon_path_geometry(distance_miles=miles,regions=c('OMR')),
+                         error=function(e) {message('[CCWD comparison map] EH geometry: ',conditionMessage(e));NULL})
+        if (!is.null(path) && inherits(path,'sf') && nrow(path)>0L) {
+          map <- tryCatch(leaflet::addPolylines(map,data=sf::st_transform(path,4326),
+             color=unname(colors[rid]),weight=5,opacity=0.85,group=rid,
+             popup=paste0(rid,': ',sprintf('%.1f',miles),' river miles')),
+             error=function(e) {message('[CCWD comparison map] EH layer: ',conditionMessage(e));map})
+          overlays <- c(overlays,rid)
+        }
+      }
+    } else if (is_ptm) {
+      if (!'DSM2_Node' %in% names(df)) return(ccwd_minimal_map('Predictions do not include DSM2 node IDs.'))
+      # Map node identifiers to canonical GIS coordinates. This also works
+      # when saved result tables do not carry X/Y fields.
+      geo <- tryCatch({
+        nodes <- sf::st_transform(dsm2_nodes,4326)
+        xy <- sf::st_coordinates(nodes)
+        data.frame(DSM2_Node=as.character(nodes$DSM2_Node),
+                   longitude=as.numeric(xy[,1]),latitude=as.numeric(xy[,2]))
+      },error=function(e) {message('[CCWD comparison map] node geometry: ',conditionMessage(e));NULL})
+      df$node_key <- as.character(df$DSM2_Node)
+      if (!is.null(geo)) {
+        matches <- match(df$node_key,geo$DSM2_Node)
+        df$longitude <- geo$longitude[matches]
+        df$latitude <- geo$latitude[matches]
+      } else {
+        df$longitude <- NA_real_;df$latitude <- NA_real_
+      }
+      # If GIS IDs cannot be matched, use explicit geographic coordinates
+      # only when they lie within a plausible geographic range.
+      if (all(c('X','Y') %in% names(df))) {
+        x <- suppressWarnings(as.numeric(as.character(df$X)))
+        y <- suppressWarnings(as.numeric(as.character(df$Y)))
+        missing <- !is.finite(df$longitude) | !is.finite(df$latitude)
+        good <- is.finite(x)&is.finite(y)&x>=-180&x<=180&y>=-90&y<=90
+        idx <- which(missing&good)
+        df$longitude[idx] <- x[idx];df$latitude[idx] <- y[idx]
+      }
+      score <- suppressWarnings(as.numeric(as.character(df$Prediction_Final)))
+      good <- is.finite(df$longitude)&is.finite(df$latitude)&is.finite(score)
+      df <- df[which(good),,drop=FALSE];score <- score[good]
+      if (nrow(df)) {
+        df$score <- pmax(0,pmin(100,score))
+        for (rid in run_ids) {
+          d <- df[as.character(df$Saved_Run_ID)==rid,,drop=FALSE]
+          if (!nrow(d)) next
+          map <- leaflet::addCircleMarkers(map,lng=d$longitude,lat=d$latitude,
+            radius=4+9*sqrt(d$score/100),color=unname(colors[rid]),
+            fillOpacity=0.5,weight=2,group=rid,
+            popup=paste0('<b>',rid,'</b><br>DSM2 node: ',d$DSM2_Node,
+                         '<br>Predicted entrainment: ',sprintf('%.1f%%',d$score)))
+          overlays <- c(overlays,rid)
+        }
+      }
+    } else return(ccwd_minimal_map('Spatial maps are supported for PTM and Event Horizon comparisons.'))
+    if (length(overlays)) {
+      map <- leaflet::addLayersControl(map,overlayGroups=unique(overlays),
+          options=leaflet::layersControlOptions(collapsed=FALSE))
+      map <- leaflet::addLegend(map,position='bottomright',colors=unname(colors),
+           labels=names(colors),title='Compared scenarios',opacity=1)
+    } else {
+      map <- leaflet::addControl(map,html='<div style="background:white;padding:9px;">The predictions are available, but no usable map geometry was found. Check the RStudio Console.</div>',position='topright')
+    }
+    message('[CCWD comparison map] ',context,' complete in ',
+      round(as.numeric(difftime(Sys.time(),started,units='secs')),1),' seconds')
+    map
+  }
+  ccwd_safe_map_request <- function(build, context) {
+    tryCatch(build(), error=function(e) {
+      message('[CCWD comparison map] ',context,' FAILED: ',conditionMessage(e))
+      ccwd_minimal_map(paste0('Map could not be created: ',
+        htmltools::htmlEscape(conditionMessage(e))))
+    })
   }
   make_eh_map <- function(df) {
     
@@ -9276,14 +9865,14 @@ server <- function(input, output, session) {
     if (is.null(flow_source) || identical(flow_source, "observed")) {
       source_file <- archive_csv_files(input$forecast_archive_date)[1]
       validate(need(length(source_file) > 0, "No archive CSV file was found for the selected week."))
-      weekly_measured_7day_inputs(read_archive_csv(source_file))
+      weekly_measured_7day_inputs(read_archive_csv(source_file, require_xgeo=FALSE))
     } else {
       req(nzchar(input$forecast_archive_scenario))
       source_file <- archive_file_for_scenario(
         input$forecast_archive_date,
         input$forecast_archive_scenario
       )
-      forecast_7day_inputs(read_archive_csv(source_file))
+      forecast_7day_inputs(read_archive_csv(source_file, require_xgeo=FALSE))
     }
   })
 
@@ -9298,14 +9887,142 @@ server <- function(input, output, session) {
   output$forecast_ptm_ver_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$VER) })
   output$forecast_ptm_sac_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$SAC) })
   output$forecast_ptm_east_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$EAST) })
-  output$forecast_ptm_xgeo_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$XGEO) })
+  # Keep DAYFLOW QGCD and precipitation-derived QPREC independent of gate
+  # validation.  One missing DCC status must NOT blank unrelated inputs.
+  weekly_reference_context <- reactive({
+    w <- weekly_selected_inputs()
+    req(w$Window_Start_Date, w$Window_End_Date)
+    dates <- seq(as.Date(w$Window_Start_Date),
+                 as.Date(w$Window_End_Date), by="day")
+    archive_date <- input$forecast_archive_date
+    src <- if (is.null(input$forecast_flow_source)) "observed" else input$forecast_flow_source
+    file <- if (identical(src, "forecast")) {
+      req(input$forecast_archive_scenario)
+      archive_file_for_scenario(archive_date, input$forecast_archive_scenario)
+    } else {
+      archive_csv_files(archive_date)[1]
+    }
+    data <- read_archive_csv(file, require_xgeo=FALSE)
+    measured_dates <- data$DATE[data$DATA_TYPE=="Measured"]
+    list(data=data, dates=dates, forecast=identical(src,"forecast"),
+         measured_date=if (length(measured_dates)) max(measured_dates) else as.Date(NA))
+  })
+  weekly_reference_qgcd <- reactive({
+    weekly_qgcd_for_dates(weekly_reference_context()$dates)
+  })
+  weekly_reference_qprec <- reactive({
+    ctx <- weekly_reference_context()
+    tryCatch({
+      x <- weekly_qprec_for_measured_date(ctx$measured_date,forecast=ctx$forecast)
+      x$for_dates(ctx$dates)
+    },error=function(e)e)
+  })
+  # Check the archive's *raw* gate value separately; the override control
+  # must stay visible after a choice (otherwise the selector would disappear).
+  weekly_reference_gate_raw <- reactive({
+    ctx <- weekly_reference_context()
+    tryCatch(weekly_archive_gate(ctx$data, forecast=ctx$forecast,
+                                 dates=ctx$dates, allow_manual_override=FALSE),
+             error=function(e) e)
+  })
+  weekly_reference_gate <- reactive({
+    ctx <- weekly_reference_context()
+    tryCatch(weekly_archive_gate(ctx$data, forecast=ctx$forecast,
+                                 dates=ctx$dates), error=function(e) e)
+  })
+  output$forecast_weekly_gate_override_ui <- renderUI({
+    raw_gate <- weekly_reference_gate_raw()
+    if (!inherits(raw_gate,"error")) return(NULL)
+    tags$div(
+      class="alert alert-warning",
+      style="margin-top:12px;margin-bottom:0;padding:10px 14px;",
+      tags$strong("DCC gate status is missing in the selected GitHub archive"),
+      tags$p(style="margin:5px 0 9px;",
+        conditionMessage(raw_gate),
+        " The local Excel copy may contain 0/1 values that are not present ",
+        "in the GitHub copy used by this app."),
+      selectInput("forecast_weekly_gate_override",
+        "Optional scenario assumption (required to run models when DCC is absent):",
+        choices=c("Choose gate status (no assumption)"="",
+                  "Closed (0) — user assumption"="0",
+                  "Open (1) — user assumption"="1"),
+        selected=if (!is.null(input$forecast_weekly_gate_override))
+          input$forecast_weekly_gate_override else "", width="380px"),
+      tags$small("A selected assumption is applied to the entire 7-day window; ",
+                 "the archive source is not changed. If valid archived DCC exists, ",
+                 "the archived value always takes priority.")
+    )
+  })
+  observeEvent(list(input$forecast_archive_date,
+                    input$forecast_flow_source,
+                    input$forecast_archive_scenario), {
+    updateSelectInput(session,"forecast_weekly_gate_override",selected="")
+  },ignoreInit=TRUE)
+
+  weekly_reference_dcc <- reactive({
+    ctx <- weekly_reference_context()
+    gate <- weekly_reference_gate()
+    if (inherits(gate,"error")) return(gate)
+    tryCatch(weekly_dcc_flow(ctx$data, ctx$dates, gate, ctx$forecast),
+             error=function(e) e)
+  })
+  output$forecast_ptm_qgcd_value <- renderText({
+    format_weekly_flow(weekly_reference_qgcd())
+  })
+  output$forecast_ptm_qprec_value <- renderText({
+    x <- weekly_reference_qprec()
+    if (inherits(x,"error")) "Unavailable" else format_weekly_flow(x$value)
+  })
+  output$forecast_ptm_dcc_flow_value <- renderText({
+    x <- weekly_reference_dcc()
+    if (inherits(x,"error")) "Unavailable" else format_weekly_flow(x)
+  })
+  output$forecast_ptm_dcc_source_note <- renderUI({
+    flow <- weekly_reference_dcc()
+    if (inherits(flow,'error')) return(tags$span('DCC flow unavailable: ',conditionMessage(flow)))
+    source <- attr(flow,'dcc_source')
+    if (is.null(source)) source <- if (identical(as.numeric(weekly_reference_gate()),0))
+      'Gate closed: forced 0 cfs' else 'Observed CDEC flow'
+    tags$span('DCC source: ',source,'. ',
+      'When gates are open and CDEC observations are missing, ',
+      'the gap is estimated using 0.1846 × measured SAC + 306.52 cfs.')
+  })
+  output$forecast_ptm_dcc_status_value <- renderText({
+    gate <- weekly_reference_gate()
+    if (inherits(gate,"error")) return("Missing in archive — select status above")
+    label <- if (gate == 1) "Open (1)" else "Closed (0)"
+    if (identical(attr(gate,"gate_source"),
+                  "USER_ASSUMPTION_MISSING_ARCHIVE_DCC")) {
+      paste0(label," — assumed")
+    } else paste0(label," — archive")
+  })
+  output$forecast_ptm_qprec_source_note <- renderUI({
+    x <- weekly_reference_qprec()
+    if (inherits(x,"error")) return(tags$span("Precipitation unavailable: ",conditionMessage(x)))
+    tags$span("Rainfall source: ",x$source,". Window: ",
+      format(x$window_start,"%b %d"),"–",format(x$through,"%b %d, %Y"),
+      ". Five-day DAYFLOW-style runoff; 682,230 acres; daily monthly-equivalent scaled by calendar-month length. ",
+      if (identical(x$forecast_method,"PERSIST_LAST_MEASURED_DAILY_RUNOFF"))
+        tags$strong(" Forecast precipitation is not a verified CNRFC forecast: the last measured SCKC1 runoff rate was held constant for all seven forecast days. "),
+      if (identical(x$forecast_method,"CNRFC_ARCHIVE_QPF") && !is.na(x$forecast_issue))
+        tags$span(" Archived CNRFC QPF issue: ",x$forecast_issue,". "),
+      if (length(x$estimated_dates)) tags$span(
+        "Estimated missing SCKC1 rainfall for: ",paste(as.character(x$estimated_dates),collapse=", "),
+        " (interpolated from adjacent measured days, not assumed zero). "),
+      tags$a(href=x$source_url,target="_blank", "Precipitation source"))
+  })
+
   output$forecast_eco_sac_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$SAC) })
   output$forecast_eco_yol_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$YOL) })
   output$forecast_eco_moke_value <- renderText({ format_weekly_flow(weekly_selected_inputs()$MOKE) })
   output$forecast_eco_dcc_value <- renderText({
-    dcc <- weekly_selected_inputs()$DCC
-    if (is.null(dcc) || length(dcc) == 0 || !is.finite(as.numeric(dcc)[1])) return("")
-    if (as.numeric(dcc)[1] >= 0.5) "Open" else "Closed"
+    gate <- weekly_reference_gate()
+    if (inherits(gate,"error")) return("Missing in archive — select status above")
+    label <- if (gate == 1) "Open (1)" else "Closed (0)"
+    if (identical(attr(gate,"gate_source"),
+                  "USER_ASSUMPTION_MISSING_ARCHIVE_DCC")) {
+      paste0(label," — assumed")
+    } else paste0(label," — archive")
   })
 
 
@@ -9324,9 +10041,9 @@ server <- function(input, output, session) {
         nzchar(input$forecast_archive_date)
       ) {
         week_token <- gsub("[^0-9A-Za-z]+", "", input$forecast_archive_date)
-        paste0(format(Sys.Date(), "%m%d%Y"), "_Week_", week_token, "_01")
+        paste0("Week_", week_token, "_01")
       } else {
-        paste0(format(Sys.Date(), "%m%d%Y"), "_Week_Obs_01")
+        "Week_Obs_01"
       }
       updateTextInput(session, "forecast_ptm_archive_name", value = scenario_name)
       updateTextInput(session, "forecast_eco_archive_name", value = scenario_name)
@@ -10686,70 +11403,24 @@ server <- function(input, output, session) {
     "forecast",
     "Forecast Conditions"
   )
-  output$comparison_spatial_map <- renderLeaflet({
-    
-    df <- comparison_data()
-    
-    validate(
-      need(
-        nrow(df) > 0,
-        "Select compatible runs to compare on the map."
-      )
-    )
-    
-    selected_model <- input$comparison_model
-    
-    threshold <- suppressWarnings(
-      as.numeric(
-        input$comparison_map_threshold
-      )
-    )
-    
-    threshold <- threshold[1]
-    
-    if (is.na(threshold)) {
-      threshold <- 25
-    }
-    
-    if (
-      selected_model %in%
-      c(
-        "PTM Emulator 7-Day Entrainment",
-        "PTM Emulator 30-Day Entrainment"
-      )
-    ) {
-      
-      make_ptm_spatial_comparison_map(
-        df = df,
-        threshold = threshold
-      )
-      
-    } else if (
-      identical(
-        selected_model,
-        "Event Horizon"
-      )
-    ) {
-      
-      make_eh_spatial_comparison_map(
-        df = df
-      )
-      
-    } else {
-      
-      make_empty_comparison_map(
-        paste(
-          "<b>Spatial comparison is not available for this model.</b>",
-          "<br>",
-          "PTM Emulator models support spatial risk-zone overlays.",
-          "Event Horizon supports pathway-line overlays.",
-          "ECO-PTM currently returns model-level outputs without map geometry."
-        )
-      )
-      
-    }
+  output$comparison_library_status <- renderUI({
+    selected <- input$comparison_runs
+    if (is.null(selected) || length(selected) < 2L) return(NULL)
+    NULL
   })
-  
+
+  # Spatial interpolation is intentionally opt-in; plots/tables must not wait for it.
+  comparison_map_request <- eventReactive(input$generate_library_map, {
+    list(data=comparison_data(), model=isolate(input$comparison_model),
+         threshold=isolate(input$comparison_map_threshold))
+  }, ignoreInit=TRUE)
+  output$comparison_spatial_map <- renderLeaflet({
+    ccwd_safe_map_request(function() {
+      request <- comparison_map_request()
+      ccwd_fast_comparison_map(request$data, as.character(request$model)[1],request$threshold,'Library of Runs')
+    },'Library of Runs')
+  })
+
   output$comparison_run_selector <- renderUI({
     
     runs <- saved_runs()
@@ -11165,42 +11836,144 @@ server <- function(input, output, session) {
   
   
   # ===============================================================
-  # Compare 2 Scenarios - user-defined reruns
-  # ===============================================================
+  # Compare 2 Scenarios - same feature mappings and new LightGBM models
+  # as Exploration. Only user-edited scenario values differ.
+  compare_defaults_initialized <- reactiveVal(FALSE)
   observe({
+    if (isTRUE(compare_defaults_initialized())) return()
     state <- observed_flow_state()
     if (!identical(state$status, "ready")) return()
     getv <- function(name, fallback) {
       item <- state[[name]]
-      if (!is.null(item) && isTRUE(item$ok) && is.finite(as.numeric(item$value)[1])) format_observed_value(item$value) else fallback
+      if (!is.null(item) && isTRUE(item$ok) &&
+          is.finite(as.numeric(item$value)[1]))
+        format_observed_value(item$value) else fallback
     }
-    moke_value <- if (!is.null(state$MOK) && isTRUE(state$MOK$ok) && is.finite(as.numeric(state$MOK$value)[1])) format_observed_value(state$MOK$value) else "800"
-    defaults <- list(exp=getv("EXP","6,000"), ver=getv("VER","3,000"), sac=getv("SAC","18,000"), east=getv("EAST","1,500"), xgeo=getv("XGEO","3,000"), yol=getv("YOL","1,000"), moke=moke_value)
-    for (sid in c("s1","s2")) {
-      for (nm in names(defaults)) updateTextInput(session,paste0("compare_",sid,"_",nm),value=defaults[[nm]])
+    moke_value <- if (!is.null(state$MOK) && isTRUE(state$MOK$ok) &&
+      is.finite(as.numeric(state$MOK$value)[1]))
+      format_observed_value(state$MOK$value) else "800"
+    defaults <- list(exp=getv("EXP", "6,000"), ver=getv("VER", "3,000"),
+      sac=getv("SAC", "18,000"), east=getv("EAST", "1,500"),
+      yol=getv("YOL", "1,000"), moke=moke_value)
+    original_defaults <- c(exp="6,000", ver="3,000", sac="18,000",
+                           east="1,500", yol="1,000", moke="800")
+    for (sid in c("s1", "s2")) for (nm in names(defaults)) {
+      id <- paste0("compare_", sid, "_", nm)
+      existing <- isolate(input[[id]])
+      # Do not silently overwrite values the user has already edited.
+      if (is.null(existing) || !nzchar(trimws(existing)) ||
+          identical(existing, unname(original_defaults[[nm]])))
+        updateTextInput(session, id, value=defaults[[nm]])
     }
+    compare_defaults_initialized(TRUE)
   })
+  # Reference defaults mirror Exploration, without changing edited scenario
+  # values after the first successful source retrieval.
+  observeEvent(ccwd_qprec_detail(), {
+    detail <- ccwd_qprec_detail()
+    if (is.null(detail) || !is.finite(detail$value)) return()
+    v <- ccwd_display_whole(detail$value)
+    for (sid in c("s1", "s2")) {
+      id <- paste0("compare_", sid, "_qprec")
+      existing <- isolate(input[[id]])
+      if (is.null(existing) || !nzchar(trimws(existing)))
+        updateTextInput(session, id, value=v)
+    }
+  }, ignoreInit=FALSE)
+  observeEvent(ccwd_dcc_measured(), {
+    measured <- ccwd_dcc_measured()
+    if (is.null(measured) || !is.finite(measured$value)) return()
+    for (sid in c("s1", "s2")) {
+      id <- paste0("compare_", sid, "_dcc_flow")
+      existing <- isolate(input[[id]])
+      if (is.null(existing) || !nzchar(trimws(existing)))
+        updateTextInput(session, id, value=ccwd_display_whole(measured$value))
+    }
+  }, ignoreInit=FALSE)
 
   run_compare_scenario <- function(id) {
     nm <- input[[paste0("compare_",id,"_name")]]
-    vals <- c(exp=parse_flow_input(input[[paste0("compare_",id,"_exp")]]), ver=parse_flow_input(input[[paste0("compare_",id,"_ver")]]), sac=parse_flow_input(input[[paste0("compare_",id,"_sac")]]), east=parse_flow_input(input[[paste0("compare_",id,"_east")]]), xgeo=parse_flow_input(input[[paste0("compare_",id,"_xgeo")]]), yol=parse_flow_input(input[[paste0("compare_",id,"_yol")]]), moke=parse_flow_input(input[[paste0("compare_",id,"_moke")]]))
-    dcc <- as.numeric(input[[paste0("compare_",id,"_dcc")]])
-    risk <- as.numeric(input[[paste0("compare_",id,"_risk")]])
-    validate(need(!is.null(nm)&&nzchar(trimws(nm)),"Enter a scenario name."), need(all(is.finite(vals)),"Enter valid numeric flow inputs."), need(is.finite(dcc),"Select a Delta Cross Channel status."), need(is.finite(risk),"Select a risk threshold."))
-    ptm <- make_ptm_results("User Defined Comparison",nm,vals["exp"],vals["ver"],vals["sac"],vals["east"],vals["xgeo"])
-    eh <- make_eh_result("User Defined Comparison",nm,vals["exp"],vals["ver"],vals["east"],vals["xgeo"],risk)
-    eco <- make_eco_results("User Defined Comparison",nm,vals["sac"],vals["yol"],vals["moke"],dcc)
-    bind_rows(ptm,eh,eco) %>% mutate(Saved_Run_ID=nm)
+    getnum <- function(key) parse_flow_input(input[[paste0("compare_",id,"_",key)]])
+    keys <- c("exp","ver","sac","east","qgcd","qprec","yol","moke")
+    vals <- setNames(vapply(keys, getnum, numeric(1)), keys)
+    dcc <- suppressWarnings(as.numeric(input[[paste0("compare_",id,"_dcc")]]))
+    risk <- suppressWarnings(as.numeric(input[[paste0("compare_",id,"_risk")]]))
+    validate(
+      need(!is.null(nm) && nzchar(trimws(nm)), "Enter a scenario name."),
+      need(all(is.finite(vals)), "Enter valid numeric values for all eight flow and volume inputs (including QGCD/QPREC)."),
+      need(length(dcc)==1L && is.finite(dcc) && dcc %in% c(0,1), "Select the DCC gate status."),
+      need(length(risk)==1L && is.finite(risk) && risk %in% seq(15,80,5), "Select a risk threshold (15–80%).")
+    )
+    dcc_flow <- if (dcc == 0) 0 else getnum("dcc_flow")
+    if (dcc == 1 && !is.finite(dcc_flow)) {
+      dcc_flow <- 0.1846*as.numeric(vals['sac']) + 306.52
+      message('CCWD Comparison ',id,': DCC input missing; estimated from scenario SAC.')
+    }
+    validate(need(is.finite(dcc_flow),
+      "When DCC gates are open, enter a DCC flow or a valid Freeport SAC for regression estimation."))
+    ptm <- make_new_ptm_results("User Defined Comparison", nm,
+      vals["exp"], vals["ver"], vals["sac"], vals["east"],
+      vals["qgcd"], vals["qprec"], dcc_flow)
+    eh <- make_new_eh_result("User Defined Comparison", nm, risk,
+      vals["exp"], vals["ver"], vals["sac"], vals["qgcd"],
+      vals["qprec"], vals["east"])
+    eco <- make_new_eco_results("User Defined Comparison", nm,
+      vals["sac"], vals["yol"], vals["moke"], dcc)
+    dplyr::bind_rows(ptm, eh, eco) %>% dplyr::mutate(Saved_Run_ID=nm)
   }
 
-  compare_s1_result <- eventReactive(input$run_compare_s1,{run_compare_scenario("s1")})
-  compare_s2_result <- eventReactive(input$run_compare_s2,{run_compare_scenario("s2")})
+  # Run comparisons eagerly on button clicks. eventReactive() alone is lazy:
+  # a model may not begin until a downstream chart/table requests its value.
+  # Preserve the previous successful result if a subsequent run fails.
+  compare_s1_value <- reactiveVal(NULL)
+  compare_s2_value <- reactiveVal(NULL)
+  compare_s1_result <- reactive({ compare_s1_value() })
+  compare_s2_result <- reactive({ compare_s2_value() })
+
+  execute_compare_scenario <- function(sid, destination) {
+    started <- Sys.time()
+    session$sendCustomMessage("ccwdComparisonStatus", list(
+      id=sid, state="running", message="Running five LightGBM models..."))
+    tryCatch({
+      result <- run_compare_scenario(sid)
+      if (!is.data.frame(result) || nrow(result) < 1L)
+        stop("Model execution returned no prediction rows.")
+      destination(result)
+      elapsed <- round(as.numeric(difftime(Sys.time(), started, units="secs")), 1)
+      session$sendCustomMessage("ccwdComparisonStatus", list(
+        id=sid, state="success", seconds=elapsed,
+        message=paste0("Completed: ", nrow(result), " predictions in ", elapsed, " s.")))
+      message("[Scenario Comparison ", sid, "] completed ", nrow(result),
+              " predictions in ", elapsed, " seconds")
+    }, error=function(e) {
+      error_text <- conditionMessage(e)
+      elapsed <- round(as.numeric(difftime(Sys.time(), started, units="secs")), 1)
+      session$sendCustomMessage("ccwdComparisonStatus", list(
+        id=sid, state="error", seconds=elapsed,
+        message=paste0("Model run failed: ", error_text)))
+      message("[Scenario Comparison ", sid, "] FAILED after ",
+              elapsed, " seconds: ", error_text)
+    })
+  }
+  observeEvent(input$run_compare_s1, {
+    execute_compare_scenario("s1", compare_s1_value)
+  }, ignoreInit=TRUE, priority=10)
+  observeEvent(input$run_compare_s2, {
+    execute_compare_scenario("s2", compare_s2_value)
+  }, ignoreInit=TRUE, priority=10)
+  output$compare_two_readiness <- renderUI({ NULL })
+
   compare_two_data <- reactive({req(compare_s1_result(),compare_s2_result(),input$compare_two_model); bind_rows(compare_s1_result(),compare_s2_result()) %>% filter(Model==input$compare_two_model)})
   output$compare_two_table <- renderTable({format_comparison_table(compare_two_data())})
+  compare_two_map_request <- eventReactive(input$generate_compare_two_map, {
+    list(data=compare_two_data(), model=isolate(input$compare_two_model),
+         threshold=isolate(input$compare_two_map_threshold))
+  }, ignoreInit=TRUE)
   output$compare_two_spatial_map <- renderLeaflet({
-    df <- compare_two_data(); model <- input$compare_two_model
-    threshold <- suppressWarnings(as.numeric(input$compare_two_map_threshold))[1]; if (is.na(threshold)) threshold <- 25
-    if (model %in% c("PTM Emulator 7-Day Entrainment","PTM Emulator 30-Day Entrainment")) make_ptm_spatial_comparison_map(df,threshold) else if (identical(model,"Event Horizon")) make_eh_spatial_comparison_map(df) else make_empty_comparison_map("<b>Spatial comparison is not available for this ECO-PTM output.</b><br>Review the chart and table for the two scenario results.")
+    ccwd_safe_map_request(function() {
+      request <- compare_two_map_request()
+      ccwd_fast_comparison_map(request$data, as.character(request$model)[1],request$threshold,'Compare 2 Scenarios')
+    },'Compare 2 Scenarios')
   })
 
   output$download_compare_two_map <- downloadHandler(
@@ -11265,123 +12038,68 @@ server <- function(input, output, session) {
   })
   
   
-  omri_comparison_results <- eventReactive(
-    input$build_omri_comparison,
-    {
-      
-      req(
-        input$omri_archive_dates,
-        input$omri_comparison_model
-      )
-      
-      model_name <- input$omri_comparison_model
-      
-      all_results <- bind_rows(
-        lapply(
-          input$omri_archive_dates,
-          function(archive_date) {
-            
-            scenarios <- archive_scenario_choices(
-              archive_date
-            )
-            
-            validate(
-              need(
-                length(scenarios) > 0,
-                paste0(
-                  "No OMRI CSV files were found for ",
-                  archive_date,
-                  "."
-                )
-              )
-            )
-            
-            bind_rows(
-              lapply(
-                scenarios,
-                function(scenario) {
-                  
-                  scenario_name <- paste(
-                    archive_date,
-                    scenario,
-                    sep = " - OMRI "
-                  )
-                  
-                  if (
-                    identical(
-                      model_name,
-                      "PTM Emulator 7-Day Entrainment"
-                    )
-                  ) {
-                    
-                    make_archive_ptm_forecast(
-                      archive_date = archive_date,
-                      omri_scenario = scenario,
-                      scenario_name = scenario_name
-                    )
-                    
-                  } else {
-                    
-                    make_archive_eh_forecast(
-                      archive_date = archive_date,
-                      omri_scenario = scenario,
-                      scenario_name = scenario_name,
-                      risk = as.numeric(
-                        input$omri_comparison_risk
-                      )
-                    )
-                  }
-                }
-              )
-            )
-          }
-        )
-      )
-      
-      all_results
+  # OMRI archive comparisons are explicitly initiated and their success/failure
+  # state is stored independently of charts and the expensive spatial map.
+  omri_comparison_value <- reactiveVal(NULL)
+  omri_comparison_error <- reactiveVal(NULL)
+  omri_comparison_results <- reactive({req(omri_comparison_value()); omri_comparison_value()})
+  observeEvent(input$build_omri_comparison, {
+    started <- Sys.time()
+    omri_comparison_value(NULL)
+    omri_comparison_error(NULL)
+    dates <- isolate(input$omri_archive_dates)
+    model_name <- isolate(input$omri_comparison_model)
+    risk <- suppressWarnings(as.numeric(isolate(input$omri_comparison_risk)))
+    if (is.null(dates) || !length(dates) || is.null(model_name) || !nzchar(model_name)) {
+      omri_comparison_error("Choose at least one archive date and a forecast model.")
+      return()
     }
-  )
+    session$sendCustomMessage("ccwdOMRIStatus", list(state="running", message=paste0(
+      "Reading ", length(dates), " archive week(s) and running OMRI scenarios...")))
+    tryCatch({
+      all_results <- dplyr::bind_rows(lapply(seq_along(dates), function(i) {
+        archive_date <- dates[[i]]
+        message("[OMRI Comparison] Archive ", i, "/", length(dates), ": ", archive_date)
+        scenarios <- archive_scenario_choices(archive_date)
+        if (!length(scenarios)) stop("No OMRI CSV files found for ", archive_date)
+        dplyr::bind_rows(lapply(scenarios, function(scenario) {
+          scenario_name <- paste(archive_date, scenario, sep=" - OMRI ")
+          message("[OMRI Comparison] Processing ", scenario_name)
+          if (identical(model_name, "PTM Emulator 7-Day Entrainment")) {
+            make_archive_ptm_forecast(archive_date=archive_date,
+              omri_scenario=scenario, scenario_name=scenario_name)
+          } else if (identical(model_name, "Event Horizon")) {
+            make_archive_eh_forecast(archive_date=archive_date,
+              omri_scenario=scenario, scenario_name=scenario_name, risk=risk)
+          } else stop("Unsupported OMRI forecast model: ", model_name)
+        }))
+      }))
+      if (!is.data.frame(all_results) || nrow(all_results) < 1L)
+        stop("No predictions were returned by the selected OMRI scenarios.")
+      omri_comparison_value(all_results)
+      seconds <- round(as.numeric(difftime(Sys.time(), started, units="secs")), 1)
+      message("[OMRI Comparison] Complete: ", nrow(all_results), " rows in ", seconds, " s")
+      session$sendCustomMessage("ccwdOMRIStatus", list(state="success", message=paste0(
+        "Predictions complete: ", nrow(all_results), " rows in ", seconds,
+        " s. Charts/tables can now render. The map is optional.")))
+    }, error=function(e) {
+      msg <- conditionMessage(e)
+      if (!nzchar(msg)) msg <- "A model or archive operation failed; inspect the RStudio Console."
+      message("[OMRI Comparison] FAILED: ", msg)
+      omri_comparison_error(msg)
+      session$sendCustomMessage("ccwdOMRIStatus", list(state="error", message=paste0("OMRI run failed: ", msg)))
+    })
+  }, ignoreInit=TRUE, priority=10)
+
   output$omri_comparison_status <- renderUI({
-    
-    if (input$build_omri_comparison == 0) {
-      
-      tags$div(
-        class = "alert alert-info",
-        paste(
-          "Select one or more archive dates, choose a forecast model,",
-          "and click Run All Available OMRI Scenarios."
-        )
-      )
-      
-    } else {
-      
-      result <- omri_comparison_results()
-      
-      tags$div(
-        class = "alert alert-success",
-        paste0(
-          "Comparison created for ",
-          length(
-            unique(
-              result$Archive_Date
-            )
-          ),
-          " archive date(s) and ",
-          length(
-            unique(
-              paste(
-                result$Archive_Date,
-                result$OMRI_Scenario
-              )
-            )
-          ),
-          " archive-date/scenario combination(s)."
-        )
-      )
-    }
+    error <- omri_comparison_error()
+    if (!is.null(error)) return(tags$div(class="alert alert-danger", paste("Run failed:", error)))
+    result <- omri_comparison_value()
+    if (is.null(result)) return(tags$div(class="alert alert-info",
+      "No completed OMRI comparison yet. Choose dates and click Run All Available OMRI Scenarios. A live timer will appear beside the button."))
+    NULL
   })
-  
-  
+
   output$omri_comparison_table <- renderTable({
     
     data <- omri_comparison_results()
@@ -11724,89 +12442,20 @@ server <- function(input, output, session) {
   })
   
   
+  omri_map_request <- eventReactive(input$generate_omri_map, {
+    list(data=omri_comparison_results(),
+         threshold=isolate(input$omri_comparison_map_threshold))
+  }, ignoreInit=TRUE)
   output$omri_comparison_spatial_map <- renderLeaflet({
-    
-    if (
-      is.null(input$build_omri_comparison) ||
-      input$build_omri_comparison == 0
-    ) {
-      return(
-        make_empty_comparison_map(
-          paste(
-            "<b>OMRI spatial comparison map is ready.</b>",
-            "<br>",
-            "Select one or more archive dates, choose a forecast model,",
-            "and click Run All Available OMRI Scenarios."
-          )
-        )
-      )
-    }
-    
-    data <- omri_comparison_results()
-    
-    validate(
-      need(
-        nrow(data) > 0,
-        "No OMRI comparison results are available for the spatial map."
-      )
-    )
-    
-    map_data <- data %>%
-      mutate(
-        Saved_Run_ID = paste0(
-          Archive_Date,
-          " | OMRI ",
-          OMRI_Scenario
-        )
-      )
-    
-    selected_model <- unique(
-      as.character(
-        data$Model
-      )
-    )
-
-    selected_model <- selected_model[
-      !is.na(selected_model) &
-        nzchar(selected_model)
-    ][1]
-    
-    if (identical(selected_model, "PTM Emulator 7-Day Entrainment")) {
-      
-      threshold <- suppressWarnings(
-        as.numeric(input$omri_comparison_map_threshold)
-      )
-      
-      threshold <- threshold[1]
-      
-      if (is.na(threshold)) {
-        threshold <- 25
-      }
-      
-      make_ptm_spatial_comparison_map(
-        df = map_data,
-        threshold = threshold
-      )
-      
-    } else if (identical(selected_model, "Event Horizon")) {
-      
-      make_eh_spatial_comparison_map(
-        df = map_data
-      )
-      
-    } else {
-      
-      make_empty_comparison_map(
-        paste(
-          "<b>Spatial comparison is not available for this OMRI model.</b>",
-          "<br>",
-          "PTM Emulator supports spatial risk-zone overlays.",
-          "Event Horizon supports pathway-line overlays."
-        )
-      )
-    }
+    ccwd_safe_map_request(function() {
+      request <- omri_map_request()
+      data <- request$data
+      if (!is.data.frame(data) || nrow(data)==0L) return(ccwd_minimal_map('No OMRI results are available.'))
+      if (!'Saved_Run_ID' %in% names(data)) data$Saved_Run_ID <- paste0('OMRI ',data$OMRI_Scenario)
+      ccwd_fast_comparison_map(data,as.character(data$Model)[1],request$threshold,'OMRI Comparison')
+    },'OMRI Comparison')
   })
-  
+
   output$download_omri_comparison <- downloadHandler(
     
     filename = function() {

@@ -4,18 +4,35 @@ library(shinydashboard)
 library(leaflet)
 library(plotly)
 library(gt)
+source("ccwd_qgcd_excel.R", local=TRUE)
+CCWD_QGCD_DEFAULT <- ccwd_qgcd_default_or_na()
 APP_NAME <- "Entrainment Dashboard"
 APP_VERSION <- "1.1.0"
+
+# Scenario Comparison uses the same 2026 LightGBM feature inputs as Exploration.
+compare_ccwd_card <- function(id, label, value, description=NULL, kind="text") {
+  control <- if (identical(kind,"dcc")) {
+    radioButtons(id, label, choices=c("Closed"=0,"Open"=1), selected=1, inline=TRUE)
+  } else if (identical(kind,"risk")) {
+    selectInput(id, label, choices=seq(15,80,by=5), selected=25)
+  } else {
+    textInput(id, label, value=value)
+  }
+  div(class="exploration-input-card compare-ccwd-card",
+    div(class="flow-info-hover",
+      tags$span(class="flow-info-trigger", tabindex="0", role="button",
+                `aria-label`=paste(label,"information"), icon("info-circle")),
+      div(class="flow-info-popover", div(class="flow-info-static",
+        if (is.null(description)) "Editable scenario input using the same feature definition as Exploration." else description))),
+    control)
+}
 
 run_page <- function(prefix, title, theme_class) {
   
   is_current <- identical(prefix, "current")
   status_name <- "warning"
-  # Fixed seasonal gross Delta depletion (TAF/month), per new CCWD README.
-  seasonal_qgcd <- c(`1`=74.40,`2`=49.04,`3`=80.55,`4`=111.87,
-                     `5`=149.66,`6`=222.96,`7`=267.59,`8`=232.73,
-                     `9`=156.61,`10`=144.67,`11`=102.94,`12`=127.96)
-  current_qgcd <- unname(seasonal_qgcd[[as.character(as.integer(format(Sys.Date(), "%m")))]])
+  # QGCD client-facing source is the DAYFLOW-based daily reference series.
+  current_qgcd <- CCWD_QGCD_DEFAULT
 
 
   flow_input <- function(input_id, label, value) {
@@ -23,7 +40,7 @@ run_page <- function(prefix, title, theme_class) {
       textInput(
         input_id,
         label,
-        format(round(value, 0), big.mark = ",", scientific = FALSE, trim = TRUE)
+        if (is.finite(value)) format(round(value, 0), big.mark = ",", scientific = FALSE, trim = TRUE) else "Unavailable"
       )
     } else {
       numericInput(input_id, label, value)
@@ -237,7 +254,8 @@ run_page <- function(prefix, title, theme_class) {
                   condition = "input.forecast_flow_source == 'forecast'",
                   uiOutput(paste0(prefix, "_archive_scenario_ui"))
                 )
-              )
+              ),
+              uiOutput("forecast_weekly_gate_override_ui")
             )
           }
         )
@@ -362,12 +380,12 @@ run_page <- function(prefix, title, theme_class) {
                           flow_info(
                             tagList(
                               tags$div(class = "ccwd-help-title", "Gross Delta Depletion (QGCD)"),
-                            tags$div(class = "ccwd-help-lead", "Source: DAYFLOW monthly gross Delta depletion reference table. Values are provided in thousand acre-feet per month (TAF/month)."),
+                            tags$div(class = "ccwd-help-lead", "Source: DAYFLOW-based daily gross channel depletion reference series. Daily reference values are in cfs; each is converted to a monthly-equivalent TAF/month."),
                             tags$div(class = "ccwd-help-section", tags$strong("How the default is selected"),
-                              tags$p("The app looks up the current calendar month in the DAYFLOW monthly reference table. It displays the value rounded to the nearest whole TAF, with comma separators. The model uses the value entered in the box.")),
+                              tags$p("For each of the latest 7 complete days, daily cfs × 86,400 / 43,560 × number of days in that calendar month / 1,000. The seven daily monthly-equivalent values are averaged. The model uses the editable input shown here.")),
                             tags$div(class = "ccwd-help-section", tags$strong("Current reference"),
-                              tags$div(class = "ccwd-help-stat", paste0(format(Sys.Date(), "%B"), ": ", format(round(current_qgcd), big.mark=",", trim=TRUE), " TAF/month"))),
-                            tags$div(class = "ccwd-help-foot", "The displayed reference is a monthly DAYFLOW table value, not a live flow measurement. Editable for scenarios.")
+                              tags$div(class = "ccwd-help-stat", paste0(if (is.finite(current_qgcd)) format(round(current_qgcd), big.mark=",", trim=TRUE) else "Unavailable", " TAF/month; source: DAYFLOW-based daily reference"))),
+                            tags$div(class = "ccwd-help-foot", "The displayed value is the seven-day mean of daily monthly-equivalent reference values, not a fixed monthly lookup. Editable for scenarios.")
                             )
                           ),
                           flow_input(paste0(prefix, "_ptm_qgcd"),
@@ -379,19 +397,19 @@ run_page <- function(prefix, title, theme_class) {
                           flow_info(
                             tagList(
                               tags$div(class = "ccwd-help-title", "Gross Delta Accretion (QPREC)"),
-                            tags$div(class = "ccwd-help-lead", "Rolling 30-day estimate derived from measured Stockton-area precipitation, using the DAYFLOW five-day rainfall distribution."),
+                            tags$div(class = "ccwd-help-lead", "Seven-day mean of daily monthly-equivalent QPREC derived from measured SCKC1 precipitation and DAYFLOW five-day runoff distribution."),
                             tags$div(class = "ccwd-help-section", tags$strong("Calculation in 3 steps"),
                               tags$ol(
                                 tags$li("For every day, average rainfall on that day and the preceding four days. Each rainfall event contributes over five days."),
-                                tags$li("Sum these daily distributed rainfall depths across the latest 30 complete days."),
-                                tags$li("Multiply the 30-day depth (inches) by 679,000 acres and divide by 12,000 to obtain thousand acre-feet (TAF).")
+                                tags$li("Convert each daily distributed rainfall depth to TAF/day using 682,230 acres."),
+                                tags$li("Multiply each daily TAF/day rate by the number of calendar days in that month; average the seven values for the model input.")
                               )),
-                            tags$div(class = "ccwd-help-foot", "Requires 34 consecutive daily records (30 analysis days plus four earlier days). Missing observations are never treated as zero. This rolling 30-day proxy is not a verified model-training definition; the reference source is a NOAA substitute for Stockton Fire Station No. 4.")
+                            tags$div(class = "ccwd-help-foot", "SCKC1 daily precipitation is obtained from the IEM CA_DCP daily-summary service (station, day, precip_in, network). Zero rainfall is a valid value; missing dates are not treated as zero. This is a monthly-equivalent estimate, not an observed calendar-month total.")
                             ),
                             "current_ptm_qprec_auto_note"
                           ),
                           textInput(paste0(prefix, "_ptm_qprec"),
-                                    "QPREC: Gross Delta Accretion (TAF/month):", value = "")
+                                    "QPREC: Gross Delta Accretion (TAF/month):", value = "Retrieving...")
                         ),
 
                         div(
@@ -411,12 +429,12 @@ run_page <- function(prefix, title, theme_class) {
                             "current_ptm_dcc_auto_note"
                           ),
                           textInput(paste0(prefix, "_ptm_dcc_flow"),
-                                    "DCC: Historical Measured Flow (cfs):", value = "")
+                                    "DCC: Observed / Estimated Flow (cfs):", value = "")
                         ),
 
                         div(
                           class = "exploration-input-card",
-                          flow_info("Historical gate status is currently user-selected, not verified against gate-operation records. Closed always forces DCC flow to 0 cfs; Open uses CDEC measured discharge where available. Verify actual historical gate dates before scientific use."),
+                          flow_info("Historical gate status is user-selected. Closed: 0 cfs. Open: CDEC measured DCC flow if available; otherwise estimated using 0.1846 × measured Freeport SAC + 306.52 cfs. Confirm actual historical gate status before scientific use."),
                           radioButtons(paste0(prefix, "_ptm_dcc_status"),
                                        "DCC Gate Status (User Selected):",
                                        choices = c("Closed" = 0, "Open" = 1),
@@ -425,7 +443,16 @@ run_page <- function(prefix, title, theme_class) {
                         
                         div(
                           class = "exploration-input-card exploration-threshold-card",
-                          tags$div(class = "input-card-spacer"),
+                          if (is_current) {
+                            flow_info("Choose the entrainment risk threshold (15–80%). The selected percentage is used for the risk-map contour and the Event Horizon distance prediction.")
+                          } else {
+                            tags$div(class = "flow-info-hover",
+                              tags$span(class = "flow-info-trigger", tabindex = "0", role = "button",
+                                `aria-label` = "Entrainment risk and Event Horizon threshold information", icon("info-circle")),
+                              tags$div(class = "flow-info-popover",
+                                tags$div(class = "flow-info-static",
+                                  "Choose the entrainment risk threshold (15–80%). It controls the risk-map contour and the Event Horizon distance prediction.")))
+                          },
                           selectInput(
                             paste0(prefix, "_ptm_threshold"),
                             "Entrainment Risk/Event Horizon Risk Threshold (%):",
@@ -519,13 +546,38 @@ run_page <- function(prefix, title, theme_class) {
                           "Read-only 7-day average EAST calculated from the selected archive week and flow source. EAST is the sum of Mokelumne, Calaveras, and Cosumnes River flows."
                         ),
                         weekly_value_card(
-                          "XGEO: Interior Delta Flow (cfs):",
-                          "forecast_ptm_xgeo_value",
-                          "Read-only 7-day average XGEO calculated from the selected archive week and flow source."
+                          "QGCD: Gross Delta Depletion (TAF/month):",
+                          "forecast_ptm_qgcd_value",
+                          "Source: DAYFLOW-based daily gross channel depletion reference. Each daily cfs value is converted to monthly-equivalent TAF/month using the calendar-month length; the seven daily values are averaged across assessment dates, including cross-month windows."
+                        ),
+                        weekly_value_card(
+                          "QPREC: Gross Delta Accretion (TAF/month):",
+                          "forecast_ptm_qprec_value",
+                          tagList("Measured windows use SCKC1 precipitation. Forecast windows combine earlier SCKC1 observations with historical CNRFC QPF issued on or before the archive cutoff. Precipitation is distributed over five days using 682,230 acres; each daily result is scaled by calendar-month length and averaged over seven days. CNRFC missing tail days are carried forward and flagged. No zero-filling.",
+                                  tags$hr(),uiOutput("forecast_ptm_qprec_source_note"))
+                        ),
+                        weekly_value_card(
+                          "DCC: Flow (cfs):",
+                          "forecast_ptm_dcc_flow_value",
+                          tagList("Closed gates: 0 cfs. Open measured dates: observed CDEC DLC flow when available; missing days use 0.1846 × measured Freeport SAC + 306.52 cfs. Open forecast dates: regression with forecast SAC.", tags$hr(), uiOutput("forecast_ptm_dcc_source_note"))
+                        ),
+                        weekly_value_card(
+                          "DCC Gate Status:",
+                          "forecast_ptm_dcc_status_value",
+                          "Forecast uses the first forecast day's recorded gate status for the entire week (0 closed, 1 open). Observed uses the last measured day's status. Missing/invalid status is not silently assumed closed."
                         ),
                         div(
                           class = "exploration-input-card exploration-threshold-card",
-                          tags$div(class = "input-card-spacer"),
+                          if (is_current) {
+                            flow_info("Choose the entrainment risk threshold (15–80%). The selected percentage is used for the risk-map contour and the Event Horizon distance prediction.")
+                          } else {
+                            tags$div(class = "flow-info-hover",
+                              tags$span(class = "flow-info-trigger", tabindex = "0", role = "button",
+                                `aria-label` = "Entrainment risk and Event Horizon threshold information", icon("info-circle")),
+                              tags$div(class = "flow-info-popover",
+                                tags$div(class = "flow-info-static",
+                                  "Choose the entrainment risk threshold (15–80%). It controls the risk-map contour and the Event Horizon distance prediction.")))
+                          },
                           selectInput(
                             paste0(prefix, "_ptm_threshold"),
                             "Entrainment Risk/Event Horizon Risk Threshold (%):",
@@ -899,17 +951,17 @@ run_page <- function(prefix, title, theme_class) {
                           "Scenario Name (User Defined):",
                           "Forecast Conditions Run 1"
                         ),
-                        numericInput(
+                        textInput(
                           paste0(prefix, "_eco_sac"),
                           "SAC: Sacramento River Flow at Freeport Flow (cfs):",
-                          18000
+                          "18,000"
                         ),
-                        numericInput(
+                        textInput(
                           paste0(prefix, "_eco_yol"),
                           "YOL: Yolo Bypass Flow (cfs):",
-                          1000
+                          "1,000"
                         ),
-                        numericInput(
+                        textInput(
                           paste0(prefix, "_eco_moke"),
                           "MOKE: Mokelumne Flow (cfs):",
                           800
@@ -1000,7 +1052,7 @@ run_page <- function(prefix, title, theme_class) {
                           weekly_value_card(
                             "Delta Cross Channel Status:",
                             "forecast_eco_dcc_value",
-                            "Read-only DCC status from the selected archive week. DCC is a status variable rather than a flow."
+                            "Forecast: the first forecast day determines Open (1) or Closed (0) for the whole seven-day week. Observed: use the last measured day's status. ECO-PTM requires a binary status, not an average."
                           )
                         )
                       )
@@ -1900,9 +1952,85 @@ ui <- dashboardPage(
           flex:0 0 auto;
           margin-left:0 !important;
         }
+        /* Six-point alignment update: identical control baselines and single-row grids. */
+        .current-theme .exploration-ptm-grid,
+        .forecast-theme .exploration-ptm-grid.weekly-input-grid {
+          display:grid;
+          grid-template-columns:repeat(9, minmax(174px, 1fr));
+          overflow-x:auto;
+          overflow-y:visible;
+          gap:12px;
+          align-items:stretch;
+          padding-bottom:10px;
+        }
+        .current-theme .exploration-input-card,
+        .forecast-theme .exploration-input-card {
+          display:flex;
+          flex-direction:column;
+          min-width:0;
+          height:100%;
+        }
+        .current-theme .exploration-input-card > .form-group,
+        .forecast-theme .exploration-input-card > .form-group {
+          display:flex;
+          flex-direction:column;
+          flex:1 1 auto;
+          margin:0;
+        }
+        .current-theme .exploration-input-card label.control-label,
+        .forecast-theme .exploration-input-card label.control-label,
+        .forecast-theme .weekly-static-input-card > label {
+          min-height:54px;
+          display:flex;
+          align-items:flex-end;
+          margin-bottom:8px;
+        }
+        .current-theme .exploration-input-card .form-group > input.form-control,
+        .current-theme .exploration-input-card .form-group > select.form-control,
+        .forecast-theme .exploration-input-card .form-group > select.form-control,
+        .forecast-theme .weekly-static-input-card .weekly-static-value {
+          width:100%;
+          min-height:36px;
+          height:36px;
+          margin-top:auto;
+          box-sizing:border-box;
+        }
+        .forecast-theme .weekly-static-input-card .weekly-static-value {flex:0 0 36px;}
+        .current-theme .exploration-threshold-card .flow-info-hover,
+        .forecast-theme .exploration-threshold-card .flow-info-hover {min-height:24px;}
+        .current-theme .exploration-eco-grid,
+        .forecast-theme .exploration-eco-grid.weekly-input-grid {
+          display:grid;
+          grid-template-columns:repeat(4, minmax(170px, 1fr));
+          gap:12px;
+          overflow-x:auto;
+        }
+        /* Do not let older responsive rules wrap Weekly Assessment inputs. */
+        @media (max-width:1100px) {
+          .forecast-theme .exploration-ptm-grid.weekly-input-grid {grid-template-columns:repeat(9, minmax(174px, 1fr));}
+          .forecast-theme .exploration-eco-grid.weekly-input-grid {grid-template-columns:repeat(4, minmax(170px, 1fr));}
+        }
+        @media (max-width:760px) {
+          .forecast-theme .exploration-ptm-grid.weekly-input-grid {grid-template-columns:repeat(9, minmax(174px, 1fr));}
+          .forecast-theme .exploration-eco-grid.weekly-input-grid {grid-template-columns:repeat(4, minmax(170px, 1fr));}
+        }
+        /* Scenario Comparison guidance: match the Exploration/Weekly panels. */
         .comparison-global-guide {
+          display:flex;
+          align-items:flex-start;
+          gap:9px;
+          padding:10px 12px;
+          background:#f4fafb;
+          border:1px solid #cfe3e7;
+          border-left:4px solid #0a7e8c;
+          border-radius:6px;
+          color:#344a52;
+          font-size:13px;
+          line-height:1.45;
           margin:0 0 14px 0 !important;
         }
+        .comparison-global-guide > i {margin-top:2px;color:#0a7e8c;}
+
         .comparison-section-heading {
           padding:4px 0 2px 0;
         }
@@ -1972,8 +2100,183 @@ ui <- dashboardPage(
           .comparison-action-item {padding-bottom:0;}
         }
         @media (max-width:900px) {.compare-input-grid {grid-template-columns:1fr;}}
+
+        /* 2026 improvements: uniform input alignment and one-row desktop layout. */
+        .current-theme .exploration-ptm-grid,
+        .forecast-theme .exploration-ptm-grid.weekly-input-grid {
+          grid-template-columns:repeat(9,minmax(0,1fr));
+          gap:7px;
+          overflow-x:visible;
+          align-items:stretch;
+        }
+        .current-theme .exploration-input-card,
+        .forecast-theme .exploration-input-card {padding:10px 8px;}
+        .current-theme .exploration-input-card label.control-label,
+        .forecast-theme .exploration-input-card label.control-label,
+        .forecast-theme .weekly-static-input-card > label {
+          align-items:flex-start;
+          min-height:86px;
+          font-size:11.5px;
+          line-height:1.3;
+          margin-top:0;
+          margin-bottom:6px;
+        }
+        .current-theme .exploration-input-card > .form-group,
+        .forecast-theme .exploration-input-card > .form-group {justify-content:flex-end;}
+        .current-theme .exploration-input-card .form-group > input.form-control,
+        .forecast-theme .exploration-input-card .form-group > input.form-control,
+        .forecast-theme .exploration-input-card .form-group > select.form-control {
+          width:100%;height:36px;min-height:36px;margin-top:auto;
+        }
+        /* Only display the viewport-positioned tooltip copy; never show the
+           hidden in-card popover simultaneously. */
+        .content-wrapper .flow-info-hover > .flow-info-popover,
+        .tab-content .flow-info-hover > .flow-info-popover,
+        .current-theme .flow-info-hover > .flow-info-popover,
+        .forecast-theme .flow-info-hover > .flow-info-popover {display:none !important;}
+        .compare-new-model-grid {grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0;}
+        .compare-new-model-grid .compare-ccwd-card {display:flex;flex-direction:column;min-width:0;padding:10px;}
+        .compare-new-model-grid .compare-ccwd-card .form-group {display:flex;flex-direction:column;flex:1;min-width:0;margin:0;}
+        .compare-new-model-grid .compare-ccwd-card label.control-label {min-height:66px;align-items:flex-start;display:flex;line-height:1.35;font-size:12px;margin:0 0 6px;}
+        .compare-new-model-grid .compare-ccwd-card .form-control {height:36px;min-height:36px;margin-top:auto;width:100%;}
+        .compare-new-model-grid .compare-ccwd-card .flow-info-hover {align-self:flex-end;min-height:22px;}
+        .compare-new-model-grid .compare-ccwd-card .radio-inline {font-size:12px;}
+        @media (max-width:1200px) {
+          .current-theme .exploration-ptm-grid,
+          .forecast-theme .exploration-ptm-grid.weekly-input-grid {grid-template-columns:repeat(9,minmax(112px,1fr));overflow-x:auto;}
+          .compare-new-model-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
+        }
+        @media (max-width:900px) {.compare-new-model-grid {grid-template-columns:1fr;}}
+
+        /* Use only the positioned, formatted tooltip: never reveal its original. */
+        body .flow-info-hover > .flow-info-popover,
+        body .flow-info-hover:hover > .flow-info-popover,
+        body .flow-info-hover:focus-within > .flow-info-popover {
+          display:none !important;visibility:hidden !important;
+        }
+        body > .ccwd-viewport-popover {
+          display:block !important;visibility:visible !important;
+          z-index:10000 !important;
+        }
+        /* Keep the radio control in the same bottom input row as text boxes. */
+        .current-theme .exploration-input-card .shiny-input-radiogroup > .shiny-options-group,
+        .forecast-theme .exploration-input-card .shiny-input-radiogroup > .shiny-options-group {
+          display:flex;align-items:center;justify-content:flex-start;
+          gap:8px;min-height:36px;height:36px;
+          margin-top:auto;white-space:nowrap;
+        }
+        .current-theme .exploration-input-card .shiny-input-radiogroup > .shiny-options-group .radio-inline,
+        .forecast-theme .exploration-input-card .shiny-input-radiogroup > .shiny-options-group .radio-inline {
+          margin:0;padding-top:0;line-height:20px;font-size:11.5px;
+        }
+        .current-theme .exploration-input-card .shiny-input-radiogroup > .shiny-options-group .radio-inline + .radio-inline {
+          margin-left:0;
+        }
+        .current-theme .exploration-input-card .shiny-input-radiogroup > label.control-label {
+          min-height:86px;align-items:flex-start;margin-top:0;margin-bottom:6px;
+        }
+        /* Modern two-column compare forms within the side-by-side scenario panels. */
+        .compare-scenario-panel {border-radius:7px;overflow:visible;}
+        .compare-scenario-panel > .box-body {position:relative;padding:16px 16px 18px;}
+        .compare-fields-heading {display:flex;justify-content:space-between;gap:8px;
+          align-items:center;margin:13px 0 10px;padding:9px 0 8px;
+          font-size:11px;font-weight:700;letter-spacing:.08em;color:#47717d;
+          border-bottom:1px solid #dce8ec;}
+        .compare-fields-heading > span {font-size:10px;letter-spacing:normal;
+          color:#778c96;font-weight:400;}
+        .compare-new-model-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;}
+        .compare-new-model-grid .compare-ccwd-card {
+          background:#fbfdfe;border:1px solid #dce6eb;border-radius:7px;
+          padding:11px 11px 12px;min-height:154px;
+          box-shadow:0 1px 2px rgba(24,66,81,.035);
+        }
+        .compare-new-model-grid .compare-ccwd-card:focus-within {
+          border-color:#56a6b4;box-shadow:0 0 0 2px rgba(50,147,165,.1);
+        }
+        .compare-new-model-grid .compare-ccwd-card label.control-label {
+          font-size:12px;line-height:1.35;min-height:53px;margin-bottom:8px;
+        }
+        .compare-new-model-grid .compare-ccwd-card .shiny-options-group {
+          min-height:36px;display:flex;align-items:center;gap:10px;
+          margin-top:auto;white-space:nowrap;
+        }
+        .compare-new-model-grid .compare-ccwd-card .radio-inline,
+        .compare-new-model-grid .compare-ccwd-card .radio-inline + .radio-inline {
+          margin:0;font-size:12px;
+        }
+        .compare-new-model-grid .compare-ccwd-card .flow-info-hover {min-height:22px;margin-bottom:5px;}
+        .compare-scenario-panel .compare-run-action {border-radius:5px;height:42px;font-weight:600;}
+        .compare-loading-cover {display:none;position:absolute;inset:0;z-index:1000;
+          background:rgba(250,253,254,.83);align-items:center;justify-content:center;
+          border-radius:6px;}
+        .compare-scenario-panel.is-comparing > .box-body > .compare-loading-cover {display:none;}
+        .compare-loading-pill {padding:15px 18px;background:white;border:1px solid #c7dce2;
+          border-radius:8px;box-shadow:0 3px 15px rgba(0,0,0,.1);color:#245a68;
+          font-weight:600;font-size:14px;}
+        .compare-loading-pill .fa {margin-right:8px;}
+        .compare-status {margin-top:10px;padding:10px 12px;border:1px solid #dbe3ea;
+          border-radius:6px;background:#f7fafc;color:#35465a;font-size:13px;
+          line-height:1.45;min-height:42px;}
+        .compare-status[data-state='running'] {background:#eef7fb;border-color:#aed8e7;color:#164b65;}
+        .compare-status[data-state='success'] {background:#eff9f2;border-color:#b9dfc2;color:#206335;}
+        .compare-status[data-state='error'] {background:#fff2f2;border-color:#ebadad;color:#962b2b;}
+        .compare-status[data-state='slow'] {background:#fff9e9;border-color:#edd49b;color:#765211;}
+        .compare-status .fa {margin-right:7px;}
+        .compare-scenario-panel.is-comparing .compare-run-action {opacity:.65;pointer-events:none;}
+
+        .comparison-map-container {position:relative;min-height:650px;}
+        .comparison-map-progress {display:none;position:absolute;inset:0;z-index:1500;
+          align-items:center;justify-content:center;background:rgba(249,252,254,.86);
+          border:1px solid #dce4ea;border-radius:5px;}
+        .comparison-map-progress.is-active {display:flex;}
+        .comparison-map-progress-content {background:white;border:1px solid #c8d8e1;
+          padding:22px 26px;border-radius:8px;box-shadow:0 4px 18px rgba(24,47,62,.09);
+          max-width:380px;text-align:center;color:#244a5e;font-size:14px;}
+        .comparison-map-progress-content .fa {font-size:25px;display:block;margin:0 auto 11px;color:#247b96;}
+        .comparison-map-progress-content strong {display:block;margin-bottom:8px;}
+        .comparison-map-progress-detail {font-size:12px;line-height:1.5;color:#526875;}
+        .comparison-map-message {font-size:12px;color:#576b7b;margin:8px 0 12px;min-height:18px;}
+        .comparison-map-message[data-state='error'] {color:#9d2929;}
+        @media(max-width:1160px) {.compare-new-model-grid {grid-template-columns:1fr;}}
 ")),
       tags$script(HTML("
+      // Thousands separators for editable flow and volume inputs.
+      // Applies only to numeric-like text fields, not names, dates, or selectors.
+      // The R model parser already strips commas before numeric conversion.
+      var ccwdNumberInputIds = /^(?:(?:current|forecast)_(?:ptm_(?:exp|ver|sac|east|qgcd|qprec|dcc_flow|xgeo)|eco_(?:sac|yol|moke))|compare_s[12]_(?:exp|ver|sac|east|qgcd|qprec|dcc_flow|yol|moke))$/;
+      function ccwdCommaFormat(raw) {
+        var v=String(raw).replace(/,/g,'').replace(/\\s/g,'');
+        if (!/^-?\\d*(?:\\.\\d*)?$/.test(v)) return raw;
+        var parts=v.split('.');
+        parts[0]=parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g,',');
+        return parts.join('.');
+      }
+      $(document).on('input change', 'input[type=text]', function() {
+        if (!ccwdNumberInputIds.test(this.id) || this.readOnly) return;
+        var before=this.value, after=ccwdCommaFormat(before);
+        if (before===after) return;
+        var start=this.selectionStart, end=this.selectionEnd;
+        this.value=after;
+        if (start!=null && end!=null) {
+          var newStart=ccwdCommaFormat(before.substring(0,start)).length;
+          var newEnd=ccwdCommaFormat(before.substring(0,end)).length;
+          try {this.setSelectionRange(newStart,newEnd);} catch(e) {}
+        }
+      });
+      // Server-driven defaults are applied after the initial input event.
+      // Format those too, without triggering new Shiny input updates.
+      $(document).on('shiny:inputchanged', function(e) {
+        if (!e.name || !ccwdNumberInputIds.test(e.name)) return;
+        var el=document.getElementById(e.name);
+        if (!el || el.type!=='text' || el===document.activeElement) return;
+        el.value=ccwdCommaFormat(el.value);
+      });
+      $(function() {
+        $('input[type=text]').filter(function(){return ccwdNumberInputIds.test(this.id);}).each(function(){
+          this.value=ccwdCommaFormat(this.value);
+        });
+      });
+
       function resizeLeafletMaps() {
         setTimeout(function() {
           window.dispatchEvent(new Event('resize'));
@@ -2057,6 +2360,180 @@ ui <- dashboardPage(
         $('body').tooltip({
           selector: '.flow-info-icon',
           container: 'body'
+        });
+      });
+
+      // Paint the comparison controls before starting blocking external HTTP reads.
+      // These requests are independent of a user's Run Scenario click.
+      $(document).one('shiny:connected', function() {
+        if (!window.Shiny || !Shiny.setInputValue) return;
+        window.setTimeout(function() {
+          Shiny.setInputValue('ccwd_load_observed', true, {priority:'event'});
+        }, 350);
+        window.setTimeout(function() {
+          Shiny.setInputValue('ccwd_load_noaa', true, {priority:'event'});
+        }, 750);
+        window.setTimeout(function() {
+          Shiny.setInputValue('ccwd_load_dcc', true, {priority:'event'});
+        }, 1150);
+      });
+
+      // Persistent per-scenario status: queued, processing, slow, success or error.
+      // These timers run in the browser even while R is busy with synchronous models.
+      var compareTimers = {};
+      var compareStarts = {};
+      function compareStatus(id, state, message) {
+        var $panel = $('#run_compare_' + id).closest('.compare-scenario-panel');
+        var $status = $('#compare_' + id + '_status');
+        $status.attr('data-state', state);
+        var icons = {queued:'fa-clock-o',running:'fa-spinner fa-spin',slow:'fa-exclamation-circle',
+                     success:'fa-check-circle',error:'fa-exclamation-triangle'};
+        $status.empty().append($('<i/>', {'class':'fa ' + (icons[state] || 'fa-info-circle'), 'aria-hidden':'true'}))
+          .append($('<span/>').text(message));
+        $panel.toggleClass('is-comparing', state === 'queued' || state === 'running' || state === 'slow');
+      }
+      function finishCompareTimer(id) {
+        if (compareTimers[id]) window.clearInterval(compareTimers[id]);
+        delete compareTimers[id];
+      }
+      $(document).on('click', '.compare-run-action', function() {
+        var id = this.id === 'run_compare_s1' ? 's1' : 's2';
+        if (compareTimers[id]) return;
+        compareStarts[id] = Date.now();
+        compareStatus(id, 'queued', 'Request sent. Waiting for R to start processing... 0 s');
+        compareTimers[id] = window.setInterval(function() {
+          var sec = Math.floor((Date.now()-compareStarts[id])/1000);
+          if (sec >= 90) {
+            compareStatus(id, 'slow', 'Still waiting after ' + sec + ' s. The app may be busy or a data/model operation may be stalled. Check the RStudio Console for errors; this message does not cancel the run.');
+          } else if (sec >= 30) {
+            compareStatus(id, 'slow', 'Processing for ' + sec + ' s. Longer than expected; check the RStudio Console if it continues.');
+          } else {
+            compareStatus(id, 'running', 'Running scenario models... ' + sec + ' s elapsed.');
+          }
+        }, 1000);
+      });
+      if (window.Shiny && Shiny.addCustomMessageHandler) {
+        Shiny.addCustomMessageHandler('ccwdComparisonStatus', function(data) {
+          if (!data || !data.id) return;
+          var id = data.id;
+          if (data.state === 'running') return; // Keep client elapsed clock running.
+          finishCompareTimer(id);
+          compareStatus(id, data.state || 'error', data.message || 'Unknown model status.');
+        });
+      }
+
+      // Map requests are synchronous on the R side. Keep the progress timer on
+      // the browser side, and finish it only when the matching Shiny output
+      // returns a value/error. A long interval is a warning, not a false success.
+      var ccwdMapTasks = {
+        generate_library_map: {key:'library', output:'comparison_spatial_map'},
+        generate_omri_map: {key:'omri', output:'omri_comparison_spatial_map'},
+        generate_compare_two_map: {key:'compare_two', output:'compare_two_spatial_map'}
+      };
+      var ccwdActiveMaps = {};
+      function ccwdSetMapStatus(key, state, description) {
+        var task = ccwdActiveMaps[key];
+        var $overlay = $('#' + key + '_map_progress');
+        var $msg = $('#' + key + '_map_message');
+        $overlay.toggleClass('is-active', state === 'running');
+        $overlay.find('.comparison-map-progress-detail').text(description);
+        $msg.attr('data-state', state).text(description);
+        if (task) {
+          var $button = $('#' + task.button);
+          $button.prop('disabled', state === 'running');
+        }
+      }
+      function ccwdStopMap(key, state, message) {
+        var task=ccwdActiveMaps[key];
+        if (!task) return;
+        window.clearInterval(task.interval);
+        ccwdSetMapStatus(key, state, message);
+        delete ccwdActiveMaps[key];
+      }
+      $(document).on('click', '.comparison-map-action', function() {
+        var button=this.id, config=ccwdMapTasks[button];
+        if (!config || ccwdActiveMaps[config.key]) return;
+        var key=config.key, started=Date.now();
+        ccwdActiveMaps[key]={button:button, output:config.output, started:started};
+        ccwdSetMapStatus(key, 'running', 'Map requested. Preparing spatial data...');
+        ccwdActiveMaps[key].interval=window.setInterval(function() {
+          var elapsed=Math.floor((Date.now()-started)/1000);
+          var description='Generating spatial map... '+elapsed+' seconds elapsed.';
+          if (elapsed>=300) description+=' This is taking over five minutes; check the RStudio Console for an error or heavy spatial computation.';
+          else if (elapsed>=90) description+=' Spatial interpolation is taking longer than expected; the calculation may still be running.';
+          ccwdSetMapStatus(key, 'running', description);
+        },1000);
+      });
+      $(document).on('shiny:value', function(event) {
+        var name=event.name || (event.target && event.target.id);
+        Object.keys(ccwdActiveMaps).forEach(function(key) {
+          if (ccwdActiveMaps[key].output===name)
+            ccwdStopMap(key,'success','Map response received. The map is ready to view.');
+        });
+      });
+      $(document).on('shiny:error', function(event) {
+        var name=event.name || (event.target && event.target.id);
+        Object.keys(ccwdActiveMaps).forEach(function(key) {
+          if (ccwdActiveMaps[key].output===name) {
+            function readableMapError(error) {
+              if (error == null) return 'Unknown map error; check the RStudio Console.';
+              if (typeof error === 'string') return error;
+              if (Array.isArray(error)) return error.map(readableMapError).join('; ');
+              if (typeof error.message === 'string') return error.message;
+              if (typeof error.error === 'string') return error.error;
+              if (error.error) return readableMapError(error.error);
+              try { return JSON.stringify(error); } catch (e) { return 'See RStudio Console for details.'; }
+            }
+            var info=readableMapError(event.error || event.message || null);
+            ccwdStopMap(key,'error','Spatial map failed: '+info);
+          }
+        });
+      });
+      $(document).on('shiny:disconnected',function() {
+        Object.keys(ccwdActiveMaps).forEach(function(key) {
+          ccwdStopMap(key,'error','R session disconnected before the map was generated.');
+        });
+      });
+
+      // OMRI progress is independent of chart rendering and library maps.
+      var omriStarted = 0, omriTimer = null;
+      function finishOMRITimer() { if (omriTimer) window.clearInterval(omriTimer); omriTimer = null; }
+      function setOMRIStatus(state, msg) {
+        var el = $('#omri_run_status_live');
+        var icons = {running:'fa-spinner fa-spin', slow:'fa-exclamation-circle',
+          success:'fa-check-circle', error:'fa-exclamation-triangle'};
+        el.attr('data-state', state).empty()
+          .append($('<i/>', {'class':'fa '+(icons[state]||'fa-info-circle')}))
+          .append($('<span/>').text(msg));
+      }
+      $(document).on('click', '#build_omri_comparison', function() {
+        finishOMRITimer(); omriStarted=Date.now();
+        setOMRIStatus('running', 'OMRI run requested; waiting for R... 0 s');
+        omriTimer=window.setInterval(function() {
+          var sec=Math.floor((Date.now()-omriStarted)/1000);
+          setOMRIStatus(sec>=30?'slow':'running', sec>=30?
+            ('Running OMRI scenarios for '+sec+' s. The server may be retrieving archived CSVs or calculating predictions; see the RStudio Console for per-scenario progress.'):
+            ('Running OMRI scenarios... '+sec+' s elapsed.'));
+        }, 1000);
+      });
+      if (window.Shiny && Shiny.addCustomMessageHandler) {
+        Shiny.addCustomMessageHandler('ccwdOMRIStatus', function(data) {
+          if (!data) return;
+          if (data.state === 'running') return;
+          finishOMRITimer(); setOMRIStatus(data.state||'error', data.message||'Run ended without details.');
+        });
+      }
+
+      $(document).on('shiny:disconnected', function() {
+        if (omriTimer) {
+          finishOMRITimer();
+          setOMRIStatus('error', 'Connection to R was lost before completion. Check the RStudio Console.');
+        }
+        ['s1','s2'].forEach(function(id) {
+          if (compareTimers[id]) {
+            finishCompareTimer(id);
+            compareStatus(id, 'error', 'Disconnected from the R session before completion. Reconnect and check the RStudio Console.');
+          }
         });
       });
 
@@ -2537,7 +3014,7 @@ ui <- dashboardPage(
           icon("info-circle"),
           tags$span(
             tags$b("How to use this page: "),
-            "Select a model and two or more compatible saved runs from this Shiny session. Review the comparison chart, spatial map, and detailed table below. PTM and Event Horizon runs support spatial comparison; ECO-PTM results are compared in the chart and table."
+            "Use Library of runs to compare saved scenarios, OMRI Comparison to compare archive forecasts, or Compare 2 Scenarios to run two user-defined sets of inputs. Run or select scenarios first; charts and tables appear independently of the map. To create a spatial comparison, click Generate Spatial Map in that section. Map interpolation may take longer than model predictions; a loading indicator shows its progress and any reported error. PTM and Event Horizon support maps; ECO-PTM results use charts and tables."
           )
         ),
         
@@ -2623,6 +3100,7 @@ ui <- dashboardPage(
                     )
                   )
                 ),
+                uiOutput("comparison_library_status"),
                 plotlyOutput("comparison_plot", height = 700)
               )
             ),
@@ -2653,7 +3131,16 @@ ui <- dashboardPage(
                     )
                   )
                 ),
-                leafletOutput("comparison_spatial_map", height = 650),
+                actionButton("generate_library_map", "Generate Spatial Map", icon=icon("map"), class="btn-primary comparison-map-action"),
+                tags$div(id="library_map_message", class="comparison-map-message", role="status", `aria-live`="polite", "Select Generate Spatial Map to build the map."),
+                tags$p(class="figure-note", "Spatial interpolation can take time. Charts and tables do not depend on the map."),
+                tags$div(class="comparison-map-container",
+                  leafletOutput("comparison_spatial_map", height = 650),
+                  tags$div(id="library_map_progress", class="comparison-map-progress", role="status", `aria-live`="polite",
+                           tags$div(class="comparison-map-progress-content",
+                                    icon("spinner", class="fa-spin"),
+                                    tags$strong("Generating spatial map"),
+                                    tags$div(class="comparison-map-progress-detail", "Preparing map...")))),
                 downloadButton(
                   "download_comparison_map",
                   "Download Comparison Map (PNG)",
@@ -2800,6 +3287,8 @@ ui <- dashboardPage(
                     )
                   )
                 ),
+                tags$div(id="omri_run_status_live", class="compare-status", `data-state`="idle",
+                         "Ready. Click Run All Available OMRI Scenarios to begin."),
                 uiOutput("omri_comparison_status"),
                 plotlyOutput("omri_comparison_plot", height = 750)
               )
@@ -2831,7 +3320,16 @@ ui <- dashboardPage(
                     )
                   )
                 ),
-                leafletOutput("omri_comparison_spatial_map", height = 650),
+                actionButton("generate_omri_map", "Generate Spatial Map", icon=icon("map"), class="btn-primary comparison-map-action"),
+                tags$div(id="omri_map_message", class="comparison-map-message", role="status", `aria-live`="polite", "Select Generate Spatial Map to build the map."),
+                tags$p(class="figure-note", "The map runs separately from forecast prediction, chart, and table generation."),
+                tags$div(class="comparison-map-container",
+                  leafletOutput("omri_comparison_spatial_map", height = 650),
+                  tags$div(id="omri_map_progress", class="comparison-map-progress", role="status", `aria-live`="polite",
+                           tags$div(class="comparison-map-progress-content",
+                                    icon("spinner", class="fa-spin"),
+                                    tags$strong("Generating spatial map"),
+                                    tags$div(class="comparison-map-progress-detail", "Preparing map...")))),
                 downloadButton(
                   "download_omri_comparison_map",
                   "Download OMRI Comparison Map (PNG)",
@@ -2887,7 +3385,8 @@ ui <- dashboardPage(
             "Compare 2 Scenarios",
             fluidRow(
               box(
-                width = 6, title = "Scenario 1", status = "warning", solidHeader = TRUE,
+                width = 6, title = "Scenario 1", status = "warning", solidHeader = TRUE, class="compare-scenario-panel",
+                tags$div(class="compare-loading-cover", tags$div(class="compare-loading-pill", icon("spinner", class="fa-spin"), " Running scenario 1 models...")), 
                 tags$div(
                   class = "section-heading-with-info",
                   tags$h4("Inputs"),
@@ -2902,21 +3401,27 @@ ui <- dashboardPage(
                   "Scenario Name:",
                   "COMPARE_01"
                 ),
-                div(class = "compare-input-grid",
-                    textInput("compare_s1_exp", "EXP: Combined CVP and SWP Export (cfs):", "6,000"),
-                    textInput("compare_s1_ver", "VER: San Joaquin River Flow at Vernalis (cfs):", "3,000"),
-                    textInput("compare_s1_sac", "SAC: Sacramento River Flow at Freeport (cfs):", "18,000"),
-                    textInput("compare_s1_east", "EAST: East-Side River Flow (cfs):", "1,500"),
-                    textInput("compare_s1_xgeo", "XGEO: Interior Delta Flow (cfs):", "3,000"),
-                    textInput("compare_s1_yol", "YOL: Yolo Bypass Flow (cfs):", "1,000"),
-                    textInput("compare_s1_moke", "MOKE: Mokelumne Flow (cfs):", "800"),
-                    radioButtons("compare_s1_dcc", "Delta Cross Channel Status:", choices = c("Closed" = 0, "Open" = 1), selected = 0, inline = TRUE),
-                    selectInput("compare_s1_risk", "Entrainment / Event Horizon Risk Threshold (%):", choices = seq(15,80,by=5), selected = 25)
+                tags$div(class="compare-fields-heading", "MODEL INPUTS", tags$span("Hover over an info icon for details")),
+                div(class = "compare-input-grid compare-new-model-grid",
+                    compare_ccwd_card("compare_s1_exp", "EXP: Combined CVP and SWP Export (cfs):", "6,000", "Latest observed 7-day average combined export; editable."),
+                    compare_ccwd_card("compare_s1_ver", "VER: San Joaquin River at Vernalis (cfs):", "3,000", "Latest observed 7-day average Vernalis flow."),
+                    compare_ccwd_card("compare_s1_sac", "SAC: Sacramento River at Freeport (cfs):", "18,000", "Latest observed 7-day average Freeport flow."),
+                    compare_ccwd_card("compare_s1_east", "EAST: East-Side River Flow (cfs):", "1,500", "Mokelumne + Calaveras + Cosumnes flows; observed 7-day average."),
+                    compare_ccwd_card("compare_s1_qgcd", "QGCD: Gross Delta Depletion (TAF/month):", if (is.finite(CCWD_QGCD_DEFAULT)) format(round(CCWD_QGCD_DEFAULT), big.mark=",", trim=TRUE) else "Unavailable", "Source: DAYFLOW-based daily gross channel depletion reference. Daily cfs is converted to monthly-equivalent TAF/month and averaged over seven days; the same default as Exploration."),
+                    compare_ccwd_card("compare_s1_qprec", "QPREC: Gross Delta Accretion (TAF/month):", "", "SCKC1 (Stockton Fire Station #4) IEM daily precip_in. For day d: average rainfall d−4 through d, multiply by 682,230 acres / 12,000 to obtain TAF/day, then multiply by calendar days in month. Average seven daily monthly-equivalent values. An isolated missing observation may be estimated from adjacent measured SCKC1 days and explicitly flagged; missing values are never automatically treated as zero."),
+                    compare_ccwd_card("compare_s1_dcc_flow", "DCC: Measured/Scenario Flow (cfs):", "", "Closed gates: 0 cfs. Open gates: use measured CDEC DCC flow when available; if missing, estimate from SAC as 0.1846 × SAC + 306.52 cfs."),
+                    compare_ccwd_card("compare_s1_dcc", "DCC Gate Status:", NULL, "0 = Closed, 1 = Open. In comparison scenarios the user chooses status.", kind="dcc"),
+                    compare_ccwd_card("compare_s1_risk", "Entrainment / Event Horizon Threshold (%):", NULL, "Threshold for PTM map and Event Horizon model.", kind="risk"),
+                    compare_ccwd_card("compare_s1_yol", "YOL: Yolo Bypass Flow (cfs):", "1,000", "SACWEIR plus FREWEIR, 7-day average for ECO-PTM."),
+                    compare_ccwd_card("compare_s1_moke", "MOKE: Mokelumne Flow (cfs):", "800", "7-day mean MOKE flow, for ECO-PTM.")
                 ),
-                actionButton("run_compare_s1", "Run Scenario 1", icon = icon("play"), class = "btn-success", width = "100%")
+                actionButton("run_compare_s1", "Run Scenario 1", icon = icon("play"), class = "btn-success compare-run-action", width = "100%"),
+                tags$div(id="compare_s1_status", class="compare-status", `data-state`="idle",
+                         icon("info-circle"), "Ready. Default inputs are available; live source updates may continue loading.")
               ),
               box(
-                width = 6, title = "Scenario 2", status = "warning", solidHeader = TRUE,
+                width = 6, title = "Scenario 2", status = "warning", solidHeader = TRUE, class="compare-scenario-panel",
+                tags$div(class="compare-loading-cover", tags$div(class="compare-loading-pill", icon("spinner", class="fa-spin"), " Running scenario 2 models...")), 
                 tags$div(
                   class = "section-heading-with-info",
                   tags$h4("Inputs"),
@@ -2931,18 +3436,23 @@ ui <- dashboardPage(
                   "Scenario Name:",
                   "COMPARE_02"
                 ),
-                div(class = "compare-input-grid",
-                    textInput("compare_s2_exp", "EXP: Combined CVP and SWP Export (cfs):", "6,000"),
-                    textInput("compare_s2_ver", "VER: San Joaquin River Flow at Vernalis (cfs):", "3,000"),
-                    textInput("compare_s2_sac", "SAC: Sacramento River Flow at Freeport (cfs):", "18,000"),
-                    textInput("compare_s2_east", "EAST: East-Side River Flow (cfs):", "1,500"),
-                    textInput("compare_s2_xgeo", "XGEO: Interior Delta Flow (cfs):", "3,000"),
-                    textInput("compare_s2_yol", "YOL: Yolo Bypass Flow (cfs):", "1,000"),
-                    textInput("compare_s2_moke", "MOKE: Mokelumne Flow (cfs):", "800"),
-                    radioButtons("compare_s2_dcc", "Delta Cross Channel Status:", choices = c("Closed" = 0, "Open" = 1), selected = 0, inline = TRUE),
-                    selectInput("compare_s2_risk", "Entrainment / Event Horizon Risk Threshold (%):", choices = seq(15,80,by=5), selected = 25)
+                tags$div(class="compare-fields-heading", "MODEL INPUTS", tags$span("Hover over an info icon for details")),
+                div(class = "compare-input-grid compare-new-model-grid",
+                    compare_ccwd_card("compare_s2_exp", "EXP: Combined CVP and SWP Export (cfs):", "6,000", "Latest observed 7-day average combined export; editable."),
+                    compare_ccwd_card("compare_s2_ver", "VER: San Joaquin River at Vernalis (cfs):", "3,000", "Latest observed 7-day average Vernalis flow."),
+                    compare_ccwd_card("compare_s2_sac", "SAC: Sacramento River at Freeport (cfs):", "18,000", "Latest observed 7-day average Freeport flow."),
+                    compare_ccwd_card("compare_s2_east", "EAST: East-Side River Flow (cfs):", "1,500", "Mokelumne + Calaveras + Cosumnes flows; observed 7-day average."),
+                    compare_ccwd_card("compare_s2_qgcd", "QGCD: Gross Delta Depletion (TAF/month):", if (is.finite(CCWD_QGCD_DEFAULT)) format(round(CCWD_QGCD_DEFAULT), big.mark=",", trim=TRUE) else "Unavailable", "Source: DAYFLOW-based daily gross channel depletion reference. Daily cfs is converted to monthly-equivalent TAF/month and averaged over seven days; the same default as Exploration."),
+                    compare_ccwd_card("compare_s2_qprec", "QPREC: Gross Delta Accretion (TAF/month):", "", "SCKC1 (Stockton Fire Station #4) IEM daily precip_in. For day d: average rainfall d−4 through d, multiply by 682,230 acres / 12,000 to obtain TAF/day, then multiply by calendar days in month. Average seven daily monthly-equivalent values. An isolated missing observation may be estimated from adjacent measured SCKC1 days and explicitly flagged; missing values are never automatically treated as zero."),
+                    compare_ccwd_card("compare_s2_dcc_flow", "DCC: Measured/Scenario Flow (cfs):", "", "Closed gates: 0 cfs. Open gates: use measured CDEC DCC flow when available; if missing, estimate from SAC as 0.1846 × SAC + 306.52 cfs."),
+                    compare_ccwd_card("compare_s2_dcc", "DCC Gate Status:", NULL, "0 = Closed, 1 = Open. In comparison scenarios the user chooses status.", kind="dcc"),
+                    compare_ccwd_card("compare_s2_risk", "Entrainment / Event Horizon Threshold (%):", NULL, "Threshold for PTM map and Event Horizon model.", kind="risk"),
+                    compare_ccwd_card("compare_s2_yol", "YOL: Yolo Bypass Flow (cfs):", "1,000", "SACWEIR plus FREWEIR, 7-day average for ECO-PTM."),
+                    compare_ccwd_card("compare_s2_moke", "MOKE: Mokelumne Flow (cfs):", "800", "7-day mean MOKE flow, for ECO-PTM.")
                 ),
-                actionButton("run_compare_s2", "Run Scenario 2", icon = icon("play"), class = "btn-success", width = "100%")
+                actionButton("run_compare_s2", "Run Scenario 2", icon = icon("play"), class = "btn-success compare-run-action", width = "100%"),
+                tags$div(id="compare_s2_status", class="compare-status", `data-state`="idle",
+                         icon("info-circle"), "Ready. Adjust inputs and click Run Scenario 2 when ready.")
               )
             ),
             fluidRow(
@@ -2952,6 +3462,7 @@ ui <- dashboardPage(
                                     tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "After both scenarios have been run, choose which emulator output to compare. PTM and Event Horizon outputs include a spatial comparison map; ECO-PTM outputs are compared in the chart and table."))
                            )
                   ),
+                  uiOutput("compare_two_readiness"),
                   selectInput("compare_two_model", "Model:", choices=c("PTM Emulator 7-Day Entrainment","PTM Emulator 30-Day Entrainment","ECO-PTM Emulator Survival","ECO-PTM Emulator Interior Routing","Event Horizon"), selected="PTM Emulator 7-Day Entrainment"),
                   conditionalPanel(condition="input.compare_two_model == 'PTM Emulator 7-Day Entrainment' || input.compare_two_model == 'PTM Emulator 30-Day Entrainment'",
                                    selectInput("compare_two_map_threshold", "Map Risk Threshold (%):", choices=seq(15,80,by=5), selected=25)
@@ -2969,7 +3480,16 @@ ui <- dashboardPage(
                                   tags$div(class="flow-info-hover", tags$span(class="flow-info-trigger", tabindex="0", role="button", `aria-label`="Spatial comparison information", icon("info-circle")),
                                            tags$div(class="flow-info-popover", tags$div(class="flow-info-static", "For PTM outputs, the map compares the two scenarios using the selected risk threshold. For Event Horizon, the predicted channel-path reaches are compared. ECO-PTM outputs do not have map geometry."))
                                   )
-                         ), leafletOutput("compare_two_spatial_map", height = 650),
+                         ), actionButton("generate_compare_two_map", "Generate Spatial Map", icon=icon("map"), class="btn-primary comparison-map-action"),
+                tags$div(id="compare_two_map_message", class="comparison-map-message", role="status", `aria-live`="polite", "Select Generate Spatial Map to build the map."),
+                         tags$p(class="figure-note", "Model results appear in the chart and table before spatial interpolation is requested."),
+                         tags$div(class="comparison-map-container",
+                  leafletOutput("compare_two_spatial_map", height = 650),
+                  tags$div(id="compare_two_map_progress", class="comparison-map-progress", role="status", `aria-live`="polite",
+                           tags$div(class="comparison-map-progress-content",
+                                    icon("spinner", class="fa-spin"),
+                                    tags$strong("Generating spatial map"),
+                                    tags$div(class="comparison-map-progress-detail", "Preparing map...")))),
               downloadButton(
                 "download_compare_two_map",
                 "Download Two-Scenario Map (PNG)",
