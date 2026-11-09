@@ -7460,6 +7460,39 @@ server <- function(input, output, session) {
       )
   }
 
+  threshold_centered_risk_palette <- function(threshold) {
+    threshold <- suppressWarnings(as.numeric(threshold)[1])
+    if (!is.finite(threshold)) threshold <- 25
+    threshold <- max(1, min(99, threshold))
+
+    colors <- c(
+      "#2166AC", "#4393C3", "#92C5DE", "#D1E5F0",
+      "#FFFFFF",
+      "#FDDBC7", "#F4A582", "#D6604D", "#B2182B"
+    )
+
+    positions <- c(
+      threshold * c(0, 0.38, 0.70, 0.90),
+      threshold,
+      threshold + (100 - threshold) * c(0.10, 0.30, 0.62, 1.00)
+    )
+    values <- positions / 100
+
+    list(
+      colors = colors,
+      values = values,
+      leaflet = leaflet::colorNumeric(
+        palette = scales::gradient_n_pal(
+          colours = colors,
+          values = values,
+          space = "Lab"
+        ),
+        domain = c(0, 100),
+        na.color = "transparent"
+      )
+    )
+  }
+
   make_ptm_map <- function(df, threshold) {
     
     validate(
@@ -7534,24 +7567,8 @@ server <- function(input, output, session) {
     
     # A fixed 0-100 domain ensures that the same color means the
     # same entrainment percentage in every scenario.
-    risk_palette <- leaflet::colorNumeric(
-      palette = grDevices::colorRampPalette(
-        c(
-          "#2166AC",
-          "#4393C3",
-          "#92C5DE",
-          "#D1E5F0",
-          "#F7F7F7",
-          "#FDDBC7",
-          "#F4A582",
-          "#D6604D",
-          "#B2182B"
-        ),
-        space = "Lab"
-      )(256),
-      domain = c(0, 100),
-      na.color = "transparent"
-    )
+    risk_palette_spec <- threshold_centered_risk_palette(threshold)
+    risk_palette <- risk_palette_spec$leaflet
     
     
     popup_html <- ~paste0(
@@ -7677,7 +7694,7 @@ server <- function(input, output, session) {
         position = "topright",
         pal = risk_palette,
         values = c(0, 100),
-        title = "Predicted entrainment (%)",
+        title = paste0("Predicted entrainment (%)<br>White = ", sprintf("%.0f", threshold), "%"),
         opacity = 0.85,
         group = "Interpolated Entrainment Risk"
       ) %>%
@@ -7844,24 +7861,8 @@ server <- function(input, output, session) {
     # Continuous blue-to-red palette
     # ------------------------------------------------------------
     
-    risk_palette <- leaflet::colorNumeric(
-      palette = grDevices::colorRampPalette(
-        c(
-          "#2166AC",
-          "#4393C3",
-          "#92C5DE",
-          "#D1E5F0",
-          "#F7F7F7",
-          "#FDDBC7",
-          "#F4A582",
-          "#D6604D",
-          "#B2182B"
-        ),
-        space = "Lab"
-      )(256),
-      domain = c(0, 100),
-      na.color = "transparent"
-    )
+    risk_palette_spec <- threshold_centered_risk_palette(threshold)
+    risk_palette <- risk_palette_spec$leaflet
     
     popup_html <- ~paste0(
       "<div style='font-size:16px;line-height:1.55;min-width:280px;'>",
@@ -8008,7 +8009,7 @@ server <- function(input, output, session) {
         position = "topright",
         pal = risk_palette,
         values = c(0, 100),
-        title = "Predicted entrainment (%)",
+        title = paste0("Predicted entrainment (%)<br>White = ", sprintf("%.0f", threshold), "%"),
         opacity = 0.88,
         group = "Interpolated Entrainment Risk"
       ) %>%
@@ -9405,20 +9406,8 @@ server <- function(input, output, session) {
     # Use the same continuous blue-to-red scale as Leaflet
     # ------------------------------------------------------------
     
-    risk_colors <- grDevices::colorRampPalette(
-      c(
-        "#2166AC",
-        "#4393C3",
-        "#92C5DE",
-        "#D1E5F0",
-        "#F7F7F7",
-        "#FDDBC7",
-        "#F4A582",
-        "#D6604D",
-        "#B2182B"
-      ),
-      space = "Lab"
-    )(256)
+    risk_palette_spec <- threshold_centered_risk_palette(threshold)
+    risk_colors <- risk_palette_spec$colors
     
     # ------------------------------------------------------------
     # Build the static publication-style image
@@ -9533,7 +9522,7 @@ server <- function(input, output, session) {
           80,
           100
         ),
-        name = "Predicted\nentrainment (%)",
+        name = paste0("Predicted\nentrainment (%)\nWhite = ", sprintf("%.0f", threshold), "%"),
         oob = scales::squish
       ) +
 
@@ -12519,25 +12508,28 @@ server <- function(input, output, session) {
     data <- data.frame(
       Name = c(
         "Adam Witt",
-        "Puneet Khatavkar",
         "Laura Manuel",
         "Roja Kaveh Garna",
+        "Ching-Fu Chang",
+        "Deanna Sereno",
         "Jo Anna Beck",
         "Josh Israel"
       ),
       Role = c(
         "Activity Lead",
-        "Quality review",
         "App Developer",
         "App Developer",
+        "Entrainment Emulator and Event Horizon Developer",
+        "Entrainment Emulator and Event Horizon Developer",
         "Contracting Officers Representative",
         "Reclamation Activity Oversight"
       ),
       Email = c(
         "adam.witt@stantec.com",
-        "Puneet.Khatavkar@stantec.com",
         "Laura.Manuel@stantec.com",
         "Roja.KavehGarna@stantec.com",
+        "CChang@ccwater.com",
+        "dsereno@ccwater.com",
         "jbeck@usbr.gov",
         "jaisrael@usbr.gov"
       )
@@ -12546,11 +12538,11 @@ server <- function(input, output, session) {
     about_info_table |>
       tab_row_group(
         label = html("<strong><em>Bureau of Reclamation,</strong><br>Bay-Delta Office</em>"), 
-        rows = 5:6
+        rows = 6:7
       )|>
       tab_row_group(
         label = html("<strong><em>Stantec Inc.,</strong><br>Sacramento C St. Office</em>"), 
-        rows = 1:4
+        rows = 1:5
       )|>
       cols_align(
         align = "center",

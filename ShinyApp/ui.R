@@ -2238,6 +2238,37 @@ ui <- dashboardPage(
         .comparison-map-message {font-size:12px;color:#576b7b;margin:8px 0 12px;min-height:18px;}
         .comparison-map-message[data-state='error'] {color:#9d2929;}
         @media(max-width:1160px) {.compare-new-model-grid {grid-template-columns:1fr;}}
+
+          /* About page: consistent typography, spacing, and responsive layout. */
+          .about-page-scroll {width:100%;height:calc(100vh - 100px);overflow:auto;box-sizing:border-box;}
+          .about-page {width:min(1120px,100%);margin:0 auto;padding:0 8px 32px;box-sizing:border-box;color:#30434b;}
+          .about-page .box {border-top-color:#0a7e8c;}
+          .about-page h1,.about-page h2,.about-page h3,.about-page h4,.about-page h5,.about-page p,.about-page li {font-family:Segoe UI,Arial,sans-serif;}
+          .about-page h1 {margin:0 0 10px;font-size:30px;line-height:1.2;font-weight:700;color:#163f49;}
+          .about-page h2 {margin:8px 0 14px;font-size:24px;line-height:1.3;font-weight:700;color:#075f6d;}
+          .about-page h3 {margin:28px 0 12px;font-size:19px;line-height:1.35;font-weight:700;color:#174f5b;}
+          .about-page h4 {margin:20px 0 8px;font-size:16px;line-height:1.4;font-weight:700;color:#2b5059;}
+          .about-page h5,.about-page p,.about-page li {font-size:14px;line-height:1.65;font-weight:400;color:#334a53;}
+          .about-page h5 {margin:7px 0 12px;}
+          .about-page code {font-size:.92em;color:#8b2342;background:#f8edf1;border:1px solid #edd7df;border-radius:4px;padding:2px 6px;}
+          .about-hero {display:grid;grid-template-columns:180px minmax(0,1fr);align-items:center;gap:28px;min-height:250px;padding:24px 30px;}
+          .about-hero-logo {display:block;width:160px;max-width:100%;height:auto;margin:auto;}
+          .about-hero-copy {min-width:0;}
+          .about-content {padding:8px 34px 28px;}
+          .about-section-content {margin-left:24px;padding-left:18px;border-left:2px solid #dce9ec;}
+          .about-foundation-section {margin-top:12px;}
+          .about-capability-list {margin-left:22px;padding-left:18px;}
+          .about-page .gt_table {font-family:Segoe UI,Arial,sans-serif!important;font-size:14px!important;}
+          .about-page a {color:#087784;font-weight:600;}
+          .about-page a:hover,.about-page a:focus {color:#055b65;text-decoration:underline;}
+          @media(max-width:760px) {
+            .about-page {padding:0 2px 24px;}
+            .about-hero {grid-template-columns:1fr;text-align:center;padding:22px 16px;}
+            .about-content {padding:6px 14px 22px;}
+            .about-section-content {margin-left:0;padding-left:12px;}
+            .about-page h1 {font-size:26px;}
+            .about-page h2 {font-size:21px;}
+          }
 ")),
       tags$script(HTML("
       // Thousands separators for editable flow and volume inputs.
@@ -2568,8 +2599,8 @@ ui <- dashboardPage(
       # -----------------------------
       tabItem(
         tabName = "about",
-        div(style = "width: 100%;height: calc(100vh - 100px);overflow-x: auto;overflow-y: auto;box-sizing: border-box;",
-            div(style = "width: 1100px;min-width: 1100px;margin: 0 auto;box-sizing: border-box;",
+        div(class = "about-page-scroll",
+            div(class = "about-page",
                 fluidRow(
                   box(
                     width = 12,
