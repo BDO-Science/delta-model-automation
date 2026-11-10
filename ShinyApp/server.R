@@ -12562,555 +12562,436 @@ server <- function(input, output, session) {
       )
   })
   
-  output$ecoptm_inputs_table <- gt::render_gt({
-    
-    badge <- function(text) sprintf(
-      "<span style='display:inline-block;background:#f9e9ee;color:#c7254e;border:1px solid #efcbd5;border-radius:4px;padding:3px 8px;font-family:monospace;white-space:nowrap;'>%s</span>",
-      text
-    )
-    
-    link <- function(text, url) sprintf(
-      "<a href='%s' target='_blank' rel='noopener noreferrer'>%s</a>",
-      url, text
-    )
-    
-    group_label <- function(number, content = "") sprintf(
-      "<div style='display:flex;align-items:center;gap:12px;width:100%%;min-height:46px;'><strong>Input Number %s</strong>%s</div>",
-      number, content
-    )
-    
-    arrow <- "<span style='display:inline-flex;align-items:center;margin-left:6px;color:#0a7e8c;font-size:30px;line-height:1;transform:translateY(12px);'><i class='fa fa-level-down' aria-hidden='true'></i></span>"
-    
-    yol_equation <- sprintf(
-      "<div style='display:flex;align-items:center;gap:8px;white-space:nowrap;'>%s<strong>=</strong>%s<strong>+</strong>%s%s</div>",
-      badge("YOL"), badge("SACWEIR"), badge("FREWEIR"), arrow
-    )
-    
-    qaqc_source_values <- c(
-      link("USGS - 11447650", "https://waterdata.usgs.gov/monitoring-location/USGS-11447650/#dataTypeId=daily-72137-0&period=P1Y&showFieldMeasurements=true"),
-      link("USGS - 11426000", "https://waterdata.usgs.gov/monitoring-location/11426000/"),
-      link("WDL - A02170", "https://wdl.water.ca.gov/waterdatalibrary/StationDetails.aspx?dateFrom2=01%2f01%2f1900&StationTypeCode=&Station=A02170&IncludeVarData=False&SelectedAll=False&dateTo2=01%2f01%2f1900&source=search"),
-      link("USGS - 11325500", "https://waterdata.usgs.gov/monitoring-location/USGS-11325500/"),
-      "0 = closed; 1 = open"
-    )
-    
-    realtime_source_values <- c(
-      link("CDEC - FPT", "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=FPT"),
-      link("USGS - 11426000", "https://waterdata.usgs.gov/monitoring-location/11426000/"),
-      link("CDEC - FRE", "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=FRE"),
-      link("USACE - CA00173", "https://water.usace.army.mil/overview/spk/locations/camanche"),
-      "0 = closed; 1 = open"
-    )
-    
-    input_data <- data.frame(
-      Group_ID = c("input_1", "input_2", "input_2", "input_3", "input_4"),
-      Acronym = c("FPT", "SACWEIR", "FREWEIR", "MOK", "DCC"),
-      Full_Name = c(
-        "Freeport",
-        "Sacramento Weir",
-        "Fremont Weir",
-        "Mokelumne River",
-        "Delta Cross Channel"
-      ),
-      Description = c(
-        "Sacramento River flow at Freeport",
-        "Sacramento Weir flow spill to Yolo Bypass",
-        "Fremont Weir flow spill to Yolo Bypass",
-        "Mokelumne River before its confluence with Cosumnes River",
-        "Delta Cross Channel gate opening status recorded as a Boolean value"
-      ),
-      QAQC_Stage_Level_Data = qaqc_source_values,
-      Real_Time_Data = realtime_source_values,
-      stringsAsFactors = FALSE
-    )
-    
-    input_data$QAQC_Stage_Level_Data <- lapply(
-      input_data$QAQC_Stage_Level_Data,
-      gt::html
-    )
-    
-    input_data$Real_Time_Data <- lapply(
-      input_data$Real_Time_Data,
-      gt::html
-    )
-    
-    input_data |>
+  make_data_access_table <- function(data, source_note = NULL) {
+    table <- data |>
       gt::gt() |>
-      gt::cols_hide(columns = Group_ID) |>
-      gt::cols_label(
-        Acronym = "Model Input Acronym",
-        Full_Name = "Full Name",
-        Description = "Description",
-        QAQC_Stage_Level_Data = "QA/QC Daily Data",
-        Real_Time_Data = "Real-Time Data"
-      ) |>
-      gt::tab_row_group(
-        label = gt::html(group_label(1)),
-        rows = Group_ID == "input_1",
-        id = "input_1"
-      ) |>
-      gt::tab_row_group(
-        label = gt::html(group_label(2, yol_equation)),
-        rows = Group_ID == "input_2",
-        id = "input_2"
-      ) |>
-      gt::tab_row_group(
-        label = gt::html(group_label(3)),
-        rows = Group_ID == "input_3",
-        id = "input_3"
-      ) |>
-      gt::tab_row_group(
-        label = gt::html(group_label(4)),
-        rows = Group_ID == "input_4",
-        id = "input_4"
-      ) |>
-      gt::row_group_order(
-        groups = c("input_1", "input_2", "input_3", "input_4")
-      ) |>
-      gt::text_transform(
-        locations = gt::cells_body(columns = Acronym),
-        fn = function(x) vapply(x, badge, character(1))
-      ) |>
-      gt::text_transform(
-        locations = gt::cells_body(
-          columns = c(QAQC_Stage_Level_Data, Real_Time_Data)
-        ),
-        fn = identity
-      ) |>
-      gt::cols_width(
-        Acronym ~ gt::px(160),
-        Full_Name ~ gt::px(210),
-        Description ~ gt::px(420),
-        QAQC_Stage_Level_Data ~ gt::px(300),
-        Real_Time_Data ~ gt::px(300)
-      ) |>
-      gt::cols_align(
-        align = "center",
-        columns = everything()
-      ) |>
-      gt::tab_style(
-        style = list(
-          gt::cell_text(
-            align = "center",
-            v_align = "middle"
-          ),
-          gt::cell_borders(
-            sides = c("left", "right", "bottom"),
-            color = "#c7d7da",
-            weight = gt::px(1)
-          )
-        ),
-        locations = gt::cells_body(columns = everything())
-      ) |>
-      gt::tab_style(
-        style = list(
-          gt::cell_fill(color = "#eef7f9"),
-          gt::cell_text(
-            align = "left",
-            v_align = "middle",
-            size = "medium"
-          ),
-          gt::cell_borders(
-            sides = c("top", "bottom"),
-            color = "#0a7e8c",
-            weight = gt::px(1)
-          )
-        ),
-        locations = gt::cells_row_groups()
-      ) |>
+      gt::fmt_markdown(columns = dplyr::everything()) |>
+      gt::cols_align(align = "left", columns = dplyr::everything()) |>
       gt::tab_style(
         style = list(
           gt::cell_fill(color = "#0a7e8c"),
-          gt::cell_text(
-            color = "white",
-            weight = "bold",
-            align = "center",
-            v_align = "middle"
-          ),
+          gt::cell_text(color = "white", weight = "bold", align = "center"),
           gt::cell_borders(
             sides = c("left", "right", "top", "bottom"),
             color = "#c7d7da",
             weight = gt::px(1)
           )
         ),
-        locations = gt::cells_column_labels(columns = everything())
-      ) |>
-      gt::tab_source_note(
-        source_note = gt::html(
-          "<strong>Note:</strong> For some QA/QC data sources, only reviewed or approved stage data are available. Corresponding discharge values are calculated using a stage-discharge rating curve."
-        )
+        locations = gt::cells_column_labels(columns = dplyr::everything())
       ) |>
       gt::tab_style(
-        style = gt::cell_text(
-          align = "left",
-          color = "#555555",
-          size = gt::px(12)
+        style = list(
+          gt::cell_borders(
+            sides = c("left", "right", "top", "bottom"),
+            color = "#d7e1e3",
+            weight = gt::px(1)
+          ),
+          gt::cell_text(
+            v_align = "middle"
+          )
         ),
-        locations = gt::cells_source_notes()
+        locations = gt::cells_body(columns = dplyr::everything())
       ) |>
       gt::tab_options(
         table.width = gt::pct(100),
         table.font.names = "Segoe UI",
-        table.font.size = gt::px(14),
-        data_row.padding = gt::px(10),
-        row_group.padding = gt::px(10)
+        table.font.size = gt::px(13),
+        data_row.padding = gt::px(9),
+        heading.align = "left",
+        source_notes.font.size = gt::px(12)
+      )
+    
+    if (!is.null(source_note)) {
+      table <- table |>
+        gt::tab_source_note(source_note = gt::md(source_note)) |>
+        gt::tab_style(
+          style = gt::cell_text(
+            color = "#555555"
+          ),
+          locations = gt::cells_source_notes()
+        )
+    }
+    
+    table
+  }
+  # ============================================================================
+  # Official model-input data-source URLs
+  # ============================================================================
+  
+  cdec_station_url <- function(station_id) {
+    paste0(
+      "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=",
+      station_id
+    )
+  }
+  
+  cdec_link <- function(station_id, label = NULL) {
+    
+    if (is.null(label)) {
+      label <- paste("CDEC", station_id)
+    }
+    
+    paste0(
+      "[",
+      label,
+      "](",
+      cdec_station_url(station_id),
+      ")"
+    )
+  }
+  
+  usgs_link <- function(site_number, label = NULL) {
+    
+    if (is.null(label)) {
+      label <- paste("USGS", site_number)
+    }
+    
+    paste0(
+      "[",
+      label,
+      "](https://waterdata.usgs.gov/monitoring-location/USGS-",
+      site_number,
+      "/)"
+    )
+  }
+  
+  output$ecoptm_inputs_table <- gt::render_gt({
+    data.frame(
+      `Model input` = c(
+        "**SAC** (cfs)",
+        "**YOL** (cfs)",
+        "**MOKE** (cfs)",
+        "**DCC Gate Status** (0/1)"
+      ),
+      `Definition / requirement` = c(
+        "Sacramento River flow at Freeport.",
+        "Yolo Bypass flow. Calculated as **SACWEIR + FREWEIR**.",
+        "Mokelumne River contribution.",
+        "Binary Delta Cross Channel gate status: **0 = closed; 1 = open**. This is distinct from the continuous DCC Flow input used by PTM 30-day."
+      ),
+      `Required by` = c(
+        "ECO-PTM Survival; ECO-PTM Interior Routing",
+        "ECO-PTM Survival; ECO-PTM Interior Routing",
+        "ECO-PTM Survival; ECO-PTM Interior Routing",
+        "ECO-PTM Survival; ECO-PTM Interior Routing"
+      ),
+      Exploration = c(
+        "Editable current-condition default based on the latest complete observed 7-day window.",
+        "Editable current-condition default calculated from observed SACWEIR and FREWEIR data.",
+        "Editable current-condition default based on the latest complete observed 7-day window.",
+        "User-selected open or closed status."
+      ),
+      `Weekly measured` = c(
+        "Arithmetic mean of the seven measured FPT values in the assessment window.",
+        "Arithmetic mean of the seven daily measured SACWEIR + FREWEIR sums.",
+        "Arithmetic mean of the seven measured MOKE values in the assessment window.",
+        "Archived status on the last measured day. If missing or invalid, an explicit user assumption is required."
+      ),
+      `Weekly OMRI forecast` = c(
+        "Arithmetic mean of the selected scenario's first seven forecast FPT values.",
+        "Arithmetic mean of the selected scenario's first seven daily forecast SACWEIR + FREWEIR sums.",
+        "Arithmetic mean of the selected scenario's first seven forecast MOKE values.",
+        "Archived status on the first forecast day, applied to the 7-day forecast window. If missing or invalid, an explicit user assumption is required."
+      ),
+      `Source / provenance` = c(
+        
+        paste0(
+          cdec_link("FPT", "CDEC FPT - Sacramento River at Freeport"),
+          " for current observed defaults; measured or OMRI archive values ",
+          "for Weekly Assessments."
+        ),
+        
+        paste0(
+          "Measured or OMRI archive components: ",
+          cdec_link("SAC", "CDEC SACWEIR source"),
+          " and ",
+          cdec_link("FRE", "CDEC FREWEIR source"),
+          ". Verify the exact archive-to-station mapping against the weekly ",
+          "archive data contract."
+        ),
+        
+        paste0(
+          "Current observed or local daily Mokelumne source for Exploration; ",
+          "measured or OMRI archive MOKE values for Weekly Assessments."
+        ),
+        
+        paste0(
+          "User-selected gate status in Exploration; archived measured or ",
+          "forecast status in Weekly Assessments. Consult the ",
+          cdec_link("DLC", "CDEC Delta Cross Channel station"),
+          " when reviewing available DCC observations."
+        )
+      ),
+      check.names = FALSE
+    ) |>
+      make_data_access_table(
+        paste0(
+          "**Interpretation:** Both ECO-PTM emulators use the same four predictors. ",
+          "Displayed percentages are machine-learning predictions of simulated ECO-PTM responses, not direct observations or real-time fish forecasts."
+        )
+      ) |>
+      gt::cols_width(
+        `Model input` ~ gt::px(130),
+        `Definition / requirement` ~ gt::px(235),
+        `Required by` ~ gt::px(180),
+        Exploration ~ gt::px(250),
+        `Weekly measured` ~ gt::px(270),
+        `Weekly OMRI forecast` ~ gt::px(290),
+        `Source / provenance` ~ gt::px(310)
       )
   })
   
-  
   output$ptm_inputs_table <- gt::render_gt({
-    
-    badge <- function(text) sprintf(
-      "<span style='display:inline-block;background:#f9e9ee;color:#c7254e;border:1px solid #efcbd5;border-radius:4px;padding:3px 8px;font-family:monospace;white-space:nowrap;'>%s</span>",
-      text
-    )
-    
-    link <- function(text, url) sprintf(
-      "<a href='%s' target='_blank' rel='noopener noreferrer'>%s</a>",
-      url, text
-    )
-    
-    group_label <- function(number, content = "") sprintf(
-      "<div style='display:flex;align-items:center;gap:12px;width:100%%;min-height:46px;'><strong>Input Number %s</strong>%s</div>",
-      number, content
-    )
-    
-    arrow <- "<span style='display:inline-flex;align-items:center;margin-left:6px;color:#0a7e8c;font-size:30px;line-height:1;transform:translateY(12px);'><i class='fa fa-level-down' aria-hidden='true'></i></span>"
-    
-    equation <- function(result, terms, operators) {
-      rhs <- badge(terms[1])
-      if (length(terms) > 1) {
-        for (i in seq_len(length(terms) - 1)) {
-          rhs <- paste0(rhs, sprintf("<strong style='color:#333333;'>%s</strong>", operators[i]), badge(terms[i + 1]))
-        }
-      }
-      paste0(
-        "<div style='display:flex;align-items:center;gap:8px;white-space:nowrap;'>",
-        badge(result), "<strong style='color:#333333;'>=</strong>", rhs, arrow, "</div>"
-      )
-    }
-    
-    exp_equation <- equation("EXP", c("CCF", "TPP"), "+")
-    east_equation <- equation("EAST", c("MOK", "CAL", "COS"), c("+", "+"))
-    xgeo_equation <- equation("XGEO", c("XGEO_A", "XGEO_C"), "-")
-    
-    qaqc_source_values <- c(
-      "Click the link in <strong> Model Parameters </strong> to view the map",
-      link("Historical O & M Reports - Available by Request", "https://water.ca.gov/Programs/State-Water-Project/Operations-and-Maintenance/Monthly-and-Annual-Operations-Reports"),
-      link("Historical O & M Reports - Available by Request", "https://water.ca.gov/Programs/State-Water-Project/Operations-and-Maintenance/Monthly-and-Annual-Operations-Reports"),
-      link("USGS - 11303500", "https://waterdata.usgs.gov/monitoring-location/USGS-11303500/#dataTypeId=daily-00060-0&period=P1Y&showFieldMeasurements=true"),
-      link("USGS - 11447650", "https://waterdata.usgs.gov/monitoring-location/USGS-11447650/#dataTypeId=daily-72137-0&period=P1Y&showFieldMeasurements=true"),
-      link("USGS - 11325500", "https://waterdata.usgs.gov/monitoring-location/11325500/"),
-      link("USACE - CA10109", "https://water.usace.army.mil/overview/spk/locations/new%20hogan"),
-      link("USGS - 11335000", "https://waterdata.usgs.gov/monitoring-location/USGS-11335000/#dataTypeId=daily-00060-0&period=P1Y&showFieldMeasurements=true"),
-      link("USGS - 11447890", "https://waterdata.usgs.gov/monitoring-location/USGS-11447890/#dataTypeId=daily-72137-0&period=P1Y&showFieldMeasurements=true"),
-      link("USGS - 11447905", "https://waterdata.usgs.gov/monitoring-location/USGS-11447905/#dataTypeId=daily-72137-0&period=P1Y&showFieldMeasurements=true")
-    )
-    
-    realtime_source_values <- c(
-      "Click the link in <strong> Model Parameters </strong> to view the map",
-      link("CDEC - CLC", "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=CLC"),
-      link("CDEC - TRP", "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=TRP"),
-      link("CDEC - VNS", "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=VNS"),
-      link("CDEC - FPT", "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=FPT"),
-      link("USACE - CA00173", "https://water.usace.army.mil/overview/spk/locations/camanche"),
-      link("CDEC - NHG", "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=NHG"),
-      link("USGS - 11335000", "https://waterdata.usgs.gov/monitoring-location/USGS-11335000"),
-      link("USGS - 11447890", "https://waterdata.usgs.gov/monitoring-location/USGS-11447890"),
-      link("USGS - 11447905", "https://waterdata.usgs.gov/monitoring-location/USGS-11447905")
-    )
-    
-    input_data <- data.frame(
-      Group_ID = c("input_1", "input_2", "input_2", "input_3", "input_4", "input_5", "input_5", "input_5", "input_6", "input_6"),
-      Acronym = c("Location", "CCF", "TPP", "VNS", "SAC", "MOK", "CAL", "COS", "XGEO_A", "XGEO_C"),
-      Full_Name = c(
-        "Location nodes", "Clifton Court Forebay", "Tracy Pumping Plant", "Vernalis", "= FPT",
-        "Mokelumne River", "Calaveras River", "Cosumnes River", "Georgiana Slough", "Georgiana Slough"
+    data.frame(
+      `Model input` = c(
+        "**DSM2 Node**",
+        "**EXP** (cfs)",
+        "**VER** (cfs)",
+        "**SAC** (cfs)",
+        "**EAST** (cfs)",
+        "**QGCD** (TAF/month-equivalent)",
+        "**QPREC** (TAF/month-equivalent)",
+        "**DCC Flow** (cfs)"
       ),
-      Description = c(
-        "One or a list of location node numbers from DSM2 model",
-        "Reservoir inflow of the export facility Clifton Court Forebay",
-        "Reservoir inflow of the export facility Tracy Pumping Plant",
-        "San Joaquin River flow at Vernalis",
-        "Sacramento River flow at Freeport",
-        "Mokelumne River before its confluence with Cosumnes River",
-        "Calaveras River flow from New Hogan Lake Reservoir outflow",
-        "Cosumnes River at Michigan Bar",
-        "Sacramento River above Delta Cross Channel",
-        "Sacramento River below Georgiana Slough"
+      `Definition / requirement` = c(
+        "Categorical DSM2 particle-release/location identifier.",
+        "Combined Banks and Jones pumping: **CCF + TPP**. When source values are AF/day, the application converts the total to cfs.",
+        "San Joaquin River flow at Vernalis.",
+        "Sacramento River flow at Freeport.",
+        "Eastern boundary flow: **MOKE + CAL + COS**.",
+        "Gross Delta channel depletion. Daily cfs reference values are converted to monthly-equivalent TAF/month and averaged across the 7-day input window.",
+        "Precipitation-derived Delta runoff. Uses a 5-day rainfall distribution and converts daily runoff to monthly-equivalent TAF/month before 7-day averaging.",
+        "Continuous Delta Cross Channel flow. Required only by the PTM 30-day emulator. Gate closure forces flow to 0 cfs."
       ),
-      QAQC_Daily_Data = qaqc_source_values,
-      Real_Time_Data = realtime_source_values,
-      stringsAsFactors = FALSE
-    )
-    
-    input_data$QAQC_Daily_Data <- lapply(input_data$QAQC_Daily_Data, gt::html)
-    input_data$Real_Time_Data <- lapply(input_data$Real_Time_Data, gt::html)
-    
-    input_data |>
-      gt::gt() |>
-      gt::cols_hide(columns = Group_ID) |>
-      gt::cols_label(
-        Acronym = "Model Input Acronyms",
-        Full_Name = "Full Name",
-        Description = "Description",
-        QAQC_Daily_Data = "QA/QC Daily Data",
-        Real_Time_Data = "Real-Time Data"
-      ) |>
-      gt::tab_row_group(label = gt::html(group_label(1)), rows = Group_ID == "input_1", id = "input_1") |>
-      gt::tab_row_group(label = gt::html(group_label(2, exp_equation)), rows = Group_ID == "input_2", id = "input_2") |>
-      gt::tab_row_group(label = gt::html(group_label(3)), rows = Group_ID == "input_3", id = "input_3") |>
-      gt::tab_row_group(label = gt::html(group_label(4)), rows = Group_ID == "input_4", id = "input_4") |>
-      gt::tab_row_group(label = gt::html(group_label(5, east_equation)), rows = Group_ID == "input_5", id = "input_5") |>
-      gt::tab_row_group(label = gt::html(group_label(6, xgeo_equation)), rows = Group_ID == "input_6", id = "input_6") |>
-      gt::row_group_order(groups = paste0("input_", 1:6)) |>
-      gt::text_transform(
-        locations = gt::cells_body(columns = Acronym),
-        fn = function(x) vapply(x, badge, character(1))
-      ) |>
-      gt::text_transform(
-        locations = gt::cells_body(columns = c(QAQC_Daily_Data, Real_Time_Data)),
-        fn = identity
-      ) |>
-      gt::cols_width(
-        Acronym ~ gt::px(170),
-        Full_Name ~ gt::px(220),
-        Description ~ gt::px(480),
-        QAQC_Daily_Data ~ gt::px(280),
-        Real_Time_Data ~ gt::px(280)
-      ) |>
-      gt::cols_align(align = "center", columns = everything()) |>
-      gt::tab_style(
-        style = list(
-          gt::cell_text(align = "center", v_align = "middle"),
-          gt::cell_borders(sides = c("left", "right", "bottom"), color = "#c7d7da", weight = gt::px(1))
+      `Required by` = c(
+        "PTM 7-day; PTM 30-day",
+        "PTM 7-day; PTM 30-day",
+        "PTM 7-day; PTM 30-day",
+        "PTM 7-day; PTM 30-day",
+        "PTM 7-day; PTM 30-day",
+        "PTM 7-day; PTM 30-day",
+        "PTM 7-day; PTM 30-day",
+        "PTM 30-day only"
+      ),
+      Exploration = c(
+        "Supported reference nodes evaluated by the application.",
+        "Editable trailing 7-day observed default from CLC + TRP.",
+        "Editable trailing 7-day observed default from CDEC VNS.",
+        "Editable trailing 7-day observed default from CDEC FPT.",
+        "Editable trailing 7-day observed default calculated from MOKE + CAL + COS.",
+        "Editable average for the last seven complete calendar dates from the daily reference series.",
+        "Editable average for the latest complete 7-day SCKC1 rainfall window, including four antecedent dates for the 5-day distribution.",
+        "Closed gate: 0 cfs. Open gate: editable measured DLC default when available; otherwise a measured-SAC regression estimate."
+      ),
+      `Weekly measured` = c(
+        "Supported reference nodes evaluated by the application.",
+        "Mean of seven measured archive CCF + TPP totals.",
+        "Mean of seven measured VNS values.",
+        "Mean of seven measured FPT values.",
+        "Mean of seven daily measured MOKE + CAL + COS sums.",
+        "Mean of seven daily monthly-equivalent reference values for the measured dates.",
+        "Mean of seven SCKC1-derived daily monthly-equivalent values; the calculation includes four antecedent rainfall dates.",
+        "Closed gate: 0 cfs. Open gate: observed daily CDEC DLC means where available; missing dates use measured-SAC regression estimates; then average seven daily flows."
+      ),
+      `Weekly OMRI forecast` = c(
+        "Supported reference nodes evaluated by the application.",
+        "Mean of the selected scenario's first seven forecast CCF + TPP totals.",
+        "Mean of the selected scenario's first seven forecast VNS values.",
+        "Mean of the selected scenario's first seven forecast FPT values.",
+        "Mean of the selected scenario's first seven daily forecast MOKE + CAL + COS sums.",
+        "Mean of seven daily monthly-equivalent reference values for the forecast dates; common to all OMRI scenarios for that week.",
+        "Antecedent observed SCKC1 rainfall plus archived CNRFC QPF. If validated QPF is unavailable, use a labeled persistence estimate based on the last measured SCKC1-derived daily runoff rate.",
+        "Closed gate: 0 cfs. Open gate: calculate daily flow as **0.1846 x forecast SAC + 306.52**, then average seven daily flows."
+      ),
+      `Source / fallback` = c(
+        
+        paste0(
+          "Application DSM2 node-reference data. The node identifier is a ",
+          "categorical model feature rather than an external monitoring station."
         ),
-        locations = gt::cells_body(columns = everything())
-      ) |>
-      gt::tab_style(
-        style = list(
-          gt::cell_fill(color = "#eef7f9"),
-          gt::cell_text(align = "left", v_align = "middle", size = "medium"),
-          gt::cell_borders(sides = c("top", "bottom"), color = "#0a7e8c", weight = gt::px(1))
+        
+        paste0(
+          cdec_link("CLC", "CDEC CLC - Clifton Court"),
+          " and ",
+          cdec_link("TRP", "CDEC TRP - Jones Pumping Plant"),
+          " for current Exploration defaults; measured or OMRI archive CCF ",
+          "and TPP values for Weekly Assessments."
         ),
-        locations = gt::cells_row_groups()
-      ) |>
-      gt::tab_style(
-        style = list(
-          gt::cell_fill(color = "#0a7e8c"),
-          gt::cell_text(color = "white", weight = "bold", align = "center", v_align = "middle"),
-          gt::cell_borders(sides = c("left", "right", "top", "bottom"), color = "#c7d7da", weight = gt::px(1))
+        
+        paste0(
+          cdec_link("VNS", "CDEC VNS - San Joaquin River at Vernalis"),
+          " for current defaults; measured or OMRI archive VNS values for ",
+          "Weekly Assessments."
         ),
-        locations = gt::cells_column_labels(columns = everything())
-      ) |>
-      gt::tab_source_note(
-        source_note = gt::html(
-          "<strong>Note:</strong> For some QA/QC data sources, only reviewed or approved stage data are available. Corresponding discharge values are calculated using a stage-discharge rating curve."
+        
+        paste0(
+          cdec_link("FPT", "CDEC FPT - Sacramento River at Freeport"),
+          " for current defaults; measured or OMRI archive FPT values for ",
+          "Weekly Assessments."
+        ),
+        
+        paste0(
+          "MOKE plus CAL plus COS. COS is supported by ",
+          usgs_link(
+            "11335000",
+            "USGS 11335000 - Cosumnes River at Michigan Bar"
+          ),
+          ". The MOKE and CAL links should use the exact stations called by ",
+          "the current observed-flow retrieval functions."
+        ),
+        
+        paste0(
+          "DAYFLOW-based daily QGCD reference workbook. Daily cfs values are ",
+          "converted to monthly-equivalent TAF/month before averaging. QGCD ",
+          "is a reference-series input, not an observed monthly total."
+        ),
+        
+        paste0(
+          "Observed precipitation is taken from the SCKC1 source used by the ",
+          "application. Forecast assessments use archived CNRFC QPF when ",
+          "validated. Imputation, carry-forward, or persistence use must be ",
+          "identified in the assessment provenance."
+        ),
+        
+        paste0(
+          cdec_link("DLC", "CDEC DLC - Delta Cross Channel flow"),
+          " supplies observed DCC flow where applicable. Regression-derived ",
+          "values must be labeled as estimates. A missing gate status is not ",
+          "silently interpreted as open."
+        )
+      ),
+      check.names = FALSE
+    ) |>
+      make_data_access_table(
+        paste0(
+          "**Model schemas:** PTM 7-day = DSM2 Node, EXP, VER, SAC, QGCD, QPREC, EAST. ",
+          "PTM 30-day uses the same predictors plus DCC Flow. The weekly PTM 30-day emulator uses a 7-day hydrologic input window despite its 30-day prediction horizon."
         )
       ) |>
-      gt::tab_style(
-        style = gt::cell_text(align = "left", color = "#555555", size = gt::px(12)),
-        locations = gt::cells_source_notes()
-      ) |>
-      gt::tab_options(
-        table.width = gt::pct(100),
-        table.font.names = "Segoe UI",
-        table.font.size = gt::px(14),
-        data_row.padding = gt::px(10),
-        row_group.padding = gt::px(10)
+      gt::cols_width(
+        `Model input` ~ gt::px(150),
+        `Definition / requirement` ~ gt::px(285),
+        `Required by` ~ gt::px(160),
+        Exploration ~ gt::px(270),
+        `Weekly measured` ~ gt::px(290),
+        `Weekly OMRI forecast` ~ gt::px(320),
+        `Source / fallback` ~ gt::px(330)
       )
   })
   
   output$horizon_inputs_table <- gt::render_gt({
-    
-    badge <- function(text) sprintf(
-      "<span style='display:inline-block;background:#f9e9ee;color:#c7254e;border:1px solid #efcbd5;border-radius:4px;padding:3px 8px;font-family:monospace;white-space:nowrap;'>%s</span>",
-      text
-    )
-    
-    link <- function(text, url) sprintf(
-      "<a href='%s' target='_blank' rel='noopener noreferrer'>%s</a>",
-      url, text
-    )
-    
-    group_label <- function(number, content = "") sprintf(
-      "<div style='display:flex;align-items:center;gap:12px;width:100%%;min-height:46px;'><strong>Input Number %s</strong>%s</div>",
-      number, content
-    )
-    
-    arrow <- "<span style='display:inline-flex;align-items:center;margin-left:6px;color:#0a7e8c;font-size:30px;line-height:1;transform:translateY(12px);'><i class='fa fa-level-down' aria-hidden='true'></i></span>"
-    
-    equation <- function(result, terms, operators) {
-      rhs <- badge(terms[1])
-      if (length(terms) > 1) {
-        for (i in seq_len(length(terms) - 1)) {
-          rhs <- paste0(
-            rhs,
-            sprintf("<strong style='color:#333333;'>%s</strong>", operators[i]),
-            badge(terms[i + 1])
-          )
-        }
-      }
-      paste0(
-        "<div style='display:flex;align-items:center;gap:8px;white-space:nowrap;'>",
-        badge(result), "<strong style='color:#333333;'>=</strong>", rhs, arrow, "</div>"
-      )
-    }
-    
-    exp_equation <- equation("EXP", c("CCF", "TPP"), "+")
-    east_equation <- equation("EAST", c("MOK", "CAL", "COS"), c("+", "+"))
-    xgeo_equation <- equation("XGEO", c("XGEO_A", "XGEO_C"), "-")
-    
-    xgeo_group <- paste0(
-      "<span style='white-space:nowrap;'>Combined interior Delta flow</span>",
-      "<strong style='color:#333333;'>=</strong>",
-      xgeo_equation
-    )
-    
-    qaqc_source_values <- c(
-      link("USGS - 11447650", "https://waterdata.usgs.gov/monitoring-location/USGS-11447650/#dataTypeId=daily-72137-0&period=P1Y&showFieldMeasurements=true"),
-      link("Historical O & M Reports - Available by Request", "https://water.ca.gov/Programs/State-Water-Project/Operations-and-Maintenance/Monthly-and-Annual-Operations-Reports"),
-      link("Historical O & M Reports - Available by Request", "https://water.ca.gov/Programs/State-Water-Project/Operations-and-Maintenance/Monthly-and-Annual-Operations-Reports"),
-      link("USGS - 11325500", "https://waterdata.usgs.gov/monitoring-location/USGS-11325500/"),
-      link("USACE - CA10109", "https://water.usace.army.mil/overview/spk/locations/new%20hogan"),
-      link("USGS - 11335000", "https://waterdata.usgs.gov/monitoring-location/USGS-11335000/#dataTypeId=daily-00060-0&period=P1Y&showFieldMeasurements=true"),
-      link("USGS - 11447890", "https://waterdata.usgs.gov/monitoring-location/USGS-11447890/#dataTypeId=daily-72137-0&period=P1Y&showFieldMeasurements=true"),
-      link("USGS - 11447905", "https://waterdata.usgs.gov/monitoring-location/USGS-11447905/#dataTypeId=daily-72137-0&period=P1Y&showFieldMeasurements=true"),
-      "{15+5k???k=0,1,???,13}"
-    )
-    
-    realtime_source_values <- c(
-      link("CDEC - FPT", "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=FPT"),
-      link("CDEC - CLC", "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=CLC"),
-      link("CDEC - TRP", "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=TRP"),
-      link("USACE - CA00173", "https://water.usace.army.mil/overview/spk/locations/camanche"),
-      link("CDEC - NHG", "https://cdec.water.ca.gov/dynamicapp/staMeta?station_id=NHG"),
-      link("USGS - 11335000", "https://waterdata.usgs.gov/monitoring-location/USGS-11335000/"),
-      link("USGS - 11447890", "https://waterdata.usgs.gov/monitoring-location/USGS-11447890/"),
-      link("USGS - 11447905", "https://waterdata.usgs.gov/monitoring-location/USGS-11447905/"),
-      "{15+5k???k=0,1,???,13}"
-    )
-    
-    input_data <- data.frame(
-      Group_ID = c("input_1", "input_2", "input_2", "input_3", "input_3", "input_3", "input_4", "input_4", "input_5"),
-      Acronym = c("SAC", "CCF", "TPP", "MOK", "CAL", "COS", "XGEO_A", "XGEO_C", "ERL"),
-      Full_Name = c(
-        "= FPT", "Clifton Court Forebay", "Tracy Pumping Plant",
-        "Mokelumne River", "Calaveras River", "Cosumnes River",
-        "Georgiana Slough", "Georgiana Slough", "Entrainment Risk Level"
+    data.frame(
+      `Model input` = c(
+        "**Risk Threshold** (%)",
+        "**EXP** (cfs)",
+        "**VER** (cfs)",
+        "**SAC** (cfs)",
+        "**EAST** (cfs)",
+        "**QGCD** (TAF/month-equivalent)",
+        "**QPREC** (TAF/month-equivalent)"
       ),
-      Description = c(
-        "Sacramento River flow at Freeport",
-        "Reservoir inflow of the export facility Clifton Court Forebay",
-        "Reservoir inflow of the export facility Tracy Pumping Plant",
-        "Mokelumne River before its confluence with Cosumnes River",
-        "Calaveras River flow from New Hogan Lake Reservoir outflow",
-        "Cosumnes River flow at Michigan Bar",
-        "Sacramento River above Delta Cross Channel",
-        "Sacramento River below Georgiana Slough",
-        "ERL expressed as an entrainment percentage from 15 to 80 in increments of 5"
+      `Definition / requirement` = c(
+        "Selected entrainment-risk criterion used to predict the upstream Event Horizon distance.",
+        "Combined Banks and Jones pumping: CCF + TPP.",
+        "San Joaquin River flow at Vernalis.",
+        "Sacramento River flow at Freeport.",
+        "Eastern boundary flow: MOKE + CAL + COS.",
+        "Gross Delta channel depletion, represented as a 7-day mean of daily monthly-equivalent values.",
+        "Precipitation-derived Delta runoff, represented as a 7-day mean of daily monthly-equivalent values."
       ),
-      QAQC_Daily_Data = qaqc_source_values,
-      Real_Time_Data = realtime_source_values,
-      stringsAsFactors = FALSE
-    )
-    
-    input_data$QAQC_Daily_Data <- lapply(input_data$QAQC_Daily_Data, gt::html)
-    input_data$Real_Time_Data <- lapply(input_data$Real_Time_Data, gt::html)
-    
-    input_data |>
-      gt::gt() |>
-      gt::cols_hide(columns = Group_ID) |>
-      gt::cols_label(
-        Acronym = "Model Input Acronyms",
-        Full_Name = "Full Name",
-        Description = "Description",
-        QAQC_Daily_Data = "QA/QC Daily Data",
-        Real_Time_Data = "Real-Time Data"
-      ) |>
-      gt::tab_row_group(label = gt::html(group_label(1)), rows = Group_ID == "input_1", id = "input_1") |>
-      gt::tab_row_group(label = gt::html(group_label(2, exp_equation)), rows = Group_ID == "input_2", id = "input_2") |>
-      gt::tab_row_group(label = gt::html(group_label(3, east_equation)), rows = Group_ID == "input_3", id = "input_3") |>
-      gt::tab_row_group(label = gt::html(group_label(4, xgeo_group)), rows = Group_ID == "input_4", id = "input_4") |>
-      gt::tab_row_group(label = gt::html(group_label(5)), rows = Group_ID == "input_5", id = "input_5") |>
-      gt::row_group_order(groups = paste0("input_", 1:5)) |>
-      gt::text_transform(
-        locations = gt::cells_body(columns = Acronym),
-        fn = function(x) vapply(x, badge, character(1))
-      ) |>
-      gt::text_transform(
-        locations = gt::cells_body(columns = c(QAQC_Daily_Data, Real_Time_Data)),
-        fn = identity
-      ) |>
-      gt::cols_width(
-        Acronym ~ gt::px(170),
-        Full_Name ~ gt::px(220),
-        Description ~ gt::px(480),
-        QAQC_Daily_Data ~ gt::px(280),
-        Real_Time_Data ~ gt::px(280)
-      ) |>
-      gt::cols_align(align = "center", columns = everything()) |>
-      gt::tab_style(
-        style = list(
-          gt::cell_text(align = "center", v_align = "middle"),
-          gt::cell_borders(
-            sides = c("left", "right", "bottom"),
-            color = "#c7d7da",
-            weight = gt::px(1)
-          )
+      Exploration = c(
+        "User selected from 15% through 80% in 5-percentage-point increments.",
+        "Editable trailing 7-day observed default.",
+        "Editable trailing 7-day observed default.",
+        "Editable trailing 7-day observed default.",
+        "Editable trailing 7-day observed component sum.",
+        "Editable last-seven-date reference average.",
+        "Editable latest complete SCKC1-derived 7-day average."
+      ),
+      `Weekly measured` = c(
+        "User selected.",
+        "Mean of seven measured archive values.",
+        "Mean of seven measured archive values.",
+        "Mean of seven measured archive values.",
+        "Mean of seven measured daily component sums.",
+        "Mean of the corresponding seven daily reference values.",
+        "Mean of seven SCKC1-derived values, using the required antecedent rainfall dates."
+      ),
+      `Weekly OMRI forecast` = c(
+        "User selected.",
+        "Mean of the selected scenario's first seven forecast values.",
+        "Mean of the selected scenario's first seven forecast values.",
+        "Mean of the selected scenario's first seven forecast values.",
+        "Mean of the selected scenario's first seven daily forecast component sums.",
+        "Mean of seven forecast-date reference values; common across OMRI scenarios.",
+        "Antecedent SCKC1 observations plus archived CNRFC QPF; labeled persistence fallback when QPF cannot be validated."
+      ),
+      `Source / provenance` = c(
+        
+        paste0(
+          "Explicit user selection; not retrieved from an external data service."
         ),
-        locations = gt::cells_body(columns = everything())
-      ) |>
-      gt::tab_style(
-        style = list(
-          gt::cell_fill(color = "#eef7f9"),
-          gt::cell_text(align = "left", v_align = "middle", size = "medium"),
-          gt::cell_borders(
-            sides = c("top", "bottom"),
-            color = "#0a7e8c",
-            weight = gt::px(1)
-          )
+        
+        paste0(
+          cdec_link("CLC", "CDEC CLC - Clifton Court"),
+          " and ",
+          cdec_link("TRP", "CDEC TRP - Jones Pumping Plant"),
+          " for current defaults; measured or OMRI archive values for Weekly ",
+          "Assessments."
         ),
-        locations = gt::cells_row_groups()
-      ) |>
-      gt::tab_style(
-        style = list(
-          gt::cell_fill(color = "#0a7e8c"),
-          gt::cell_text(
-            color = "white",
-            weight = "bold",
-            align = "center",
-            v_align = "middle"
+        
+        paste0(
+          cdec_link("VNS", "CDEC VNS - San Joaquin River at Vernalis"),
+          " for current defaults; measured or OMRI archive values for Weekly ",
+          "Assessments."
+        ),
+        
+        paste0(
+          cdec_link("FPT", "CDEC FPT - Sacramento River at Freeport"),
+          " for current defaults; measured or OMRI archive values for Weekly ",
+          "Assessments."
+        ),
+        
+        paste0(
+          "MOKE plus CAL plus COS. COS is supported by ",
+          usgs_link(
+            "11335000",
+            "USGS 11335000 - Cosumnes River at Michigan Bar"
           ),
-          gt::cell_borders(
-            sides = c("left", "right", "top", "bottom"),
-            color = "#c7d7da",
-            weight = gt::px(1)
-          )
+          ". MOKE and CAL should link to the exact stations used by the ",
+          "current observed-data functions."
         ),
-        locations = gt::cells_column_labels(columns = everything())
-      ) |>
-      gt::tab_source_note(
-        source_note = gt::html(
-          "<strong>Note:</strong> For some QA/QC data sources, only reviewed or approved stage data are available. Corresponding discharge values are calculated using a stage-discharge rating curve."
+        
+        paste0(
+          "DAYFLOW-based daily QGCD reference series; not an observed monthly ",
+          "total."
+        ),
+        
+        paste0(
+          "Observed SCKC1 precipitation and, for forecast assessments, ",
+          "archived CNRFC QPF. Persistence use must be labeled when QPF ",
+          "cannot be validated."
+        )
+      ),
+      check.names = FALSE
+    ) |>
+      make_data_access_table(
+        paste0(
+          "**Model schema:** Risk Threshold, EXP, VER, SAC, QGCD, QPREC, and EAST. ",
+          "The output is a machine-learning prediction of Event Horizon distance in river miles. ",
+          "XGEO is not an input to the updated Event Horizon emulator."
         )
       ) |>
-      gt::tab_style(
-        style = gt::cell_text(
-          align = "left",
-          color = "#555555",
-          size = gt::px(12)
-        ),
-        locations = gt::cells_source_notes()
-      ) |>
-      gt::tab_options(
-        table.width = gt::pct(100),
-        table.font.names = "Segoe UI",
-        table.font.size = gt::px(14),
-        data_row.padding = gt::px(10),
-        row_group.padding = gt::px(10)
+      gt::cols_width(
+        `Model input` ~ gt::px(165),
+        `Definition / requirement` ~ gt::px(300),
+        Exploration ~ gt::px(270),
+        `Weekly measured` ~ gt::px(285),
+        `Weekly OMRI forecast` ~ gt::px(320),
+        `Source / provenance` ~ gt::px(330)
       )
   })
+  
   
   node_data <- readr::read_csv(
     file.path("STN_EMULATOR", "models", "delta_locations_coordinates.csv"),

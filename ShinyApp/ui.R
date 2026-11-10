@@ -2270,327 +2270,7 @@ ui <- dashboardPage(
             .about-page h2 {font-size:21px;}
           }
 ")),
-      tags$script(HTML("
-      // Thousands separators for editable flow and volume inputs.
-      // Applies only to numeric-like text fields, not names, dates, or selectors.
-      // The R model parser already strips commas before numeric conversion.
-      var ccwdNumberInputIds = /^(?:(?:current|forecast)_(?:ptm_(?:exp|ver|sac|east|qgcd|qprec|dcc_flow|xgeo)|eco_(?:sac|yol|moke))|compare_s[12]_(?:exp|ver|sac|east|qgcd|qprec|dcc_flow|yol|moke))$/;
-      function ccwdCommaFormat(raw) {
-        var v=String(raw).replace(/,/g,'').replace(/\\s/g,'');
-        if (!/^-?\\d*(?:\\.\\d*)?$/.test(v)) return raw;
-        var parts=v.split('.');
-        parts[0]=parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g,',');
-        return parts.join('.');
-      }
-      $(document).on('input change', 'input[type=text]', function() {
-        if (!ccwdNumberInputIds.test(this.id) || this.readOnly) return;
-        var before=this.value, after=ccwdCommaFormat(before);
-        if (before===after) return;
-        var start=this.selectionStart, end=this.selectionEnd;
-        this.value=after;
-        if (start!=null && end!=null) {
-          var newStart=ccwdCommaFormat(before.substring(0,start)).length;
-          var newEnd=ccwdCommaFormat(before.substring(0,end)).length;
-          try {this.setSelectionRange(newStart,newEnd);} catch(e) {}
-        }
-      });
-      // Server-driven defaults are applied after the initial input event.
-      // Format those too, without triggering new Shiny input updates.
-      $(document).on('shiny:inputchanged', function(e) {
-        if (!e.name || !ccwdNumberInputIds.test(e.name)) return;
-        var el=document.getElementById(e.name);
-        if (!el || el.type!=='text' || el===document.activeElement) return;
-        el.value=ccwdCommaFormat(el.value);
-      });
-      $(function() {
-        $('input[type=text]').filter(function(){return ccwdNumberInputIds.test(this.id);}).each(function(){
-          this.value=ccwdCommaFormat(this.value);
-        });
-      });
-
-      function resizeLeafletMaps() {
-        setTimeout(function() {
-          window.dispatchEvent(new Event('resize'));
-        }, 250);
-    
-        setTimeout(function() {
-          window.dispatchEvent(new Event('resize'));
-        }, 750);
-      }
-    
-      $(document).on('shown.bs.tab', 'a[data-toggle=\"tab\"]', function() {
-        resizeLeafletMaps();
-      });
-    
-      $(document).on('shown.bs.tab', 'a[data-toggle=\"pill\"]', function() {
-        resizeLeafletMaps();
-      });
-    
-      $(document).on('click', '.sidebar-menu a', function() {
-        resizeLeafletMaps();
-      });
-
-      // Exploration/Weekly/Comparison information popovers: render a read-only
-      // visual copy directly under <body>. This avoids clipping by the
-      // horizontally scrollable inputs row, tab panels, or dashboard margins.
-      // The original Shiny UI output stays in place and remains reactive.
-      var ccwdInfoPopup = null;
-      var ccwdInfoHost = null;
-      function ccwdHideInfoPopup() {
-        if (ccwdInfoPopup) ccwdInfoPopup.remove();
-        ccwdInfoPopup = null;
-        ccwdInfoHost = null;
-      }
-      function ccwdPositionInfoPopup() {
-        if (!ccwdInfoPopup || !ccwdInfoHost || !ccwdInfoHost.length) return;
-        var anchor = ccwdInfoHost.find('.flow-info-trigger').first()[0];
-        if (!anchor) return;
-        var rect = anchor.getBoundingClientRect();
-        var width = Math.min(420, window.innerWidth - 24);
-        ccwdInfoPopup.css({width: width + 'px', maxWidth: width + 'px'});
-        var height = ccwdInfoPopup.outerHeight();
-        var left = Math.min(Math.max(12, rect.left - 4), window.innerWidth - width - 12);
-        var below = rect.bottom + 8;
-        var top = (below + height <= window.innerHeight - 12 || below < 70)
-          ? below : Math.max(12, rect.top - height - 8);
-        top = Math.max(12, Math.min(top, window.innerHeight - 30));
-        ccwdInfoPopup.css({left: left + 'px', top: top + 'px'});
-      }
-      function ccwdShowInfoPopup(host) {
-        ccwdHideInfoPopup();
-        ccwdInfoHost = $(host);
-        var source = ccwdInfoHost.children('.flow-info-popover').first();
-        if (!source.length) return;
-        ccwdInfoPopup = source.clone(false, false);
-        // Cloned informational content is inert. Avoid duplicate Shiny output IDs.
-        ccwdInfoPopup.find('[id]').addBack('[id]').removeAttr('id');
-        ccwdInfoPopup.removeClass('flow-info-popover')
-          .addClass('ccwd-viewport-popover').appendTo('body');
-        ccwdPositionInfoPopup();
-      }
-      $(document).on('mouseenter focusin', '.flow-info-hover', function() {
-        ccwdShowInfoPopup(this);
-      });
-      $(document).on('mouseleave', '.flow-info-hover', function() {
-        if (ccwdInfoHost && ccwdInfoHost[0] === this) ccwdHideInfoPopup();
-      });
-      $(document).on('focusout', '.flow-info-hover', function() {
-        var host = this;
-        setTimeout(function() {
-          if (!host.contains(document.activeElement) &&
-              ccwdInfoHost && ccwdInfoHost[0] === host) ccwdHideInfoPopup();
-        }, 0);
-      });
-      $(window).on('resize scroll', ccwdPositionInfoPopup);
-      $('.content-wrapper, .exploration-ptm-grid').on('scroll', ccwdPositionInfoPopup);
-
-      var modelRunWaiting = false;
-      var modelRunBecameBusy = false;
-
-      $(function() {
-        $('body').tooltip({
-          selector: '.flow-info-icon',
-          container: 'body'
-        });
-      });
-
-      // Paint the comparison controls before starting blocking external HTTP reads.
-      // These requests are independent of a user's Run Scenario click.
-      $(document).one('shiny:connected', function() {
-        if (!window.Shiny || !Shiny.setInputValue) return;
-        window.setTimeout(function() {
-          Shiny.setInputValue('ccwd_load_observed', true, {priority:'event'});
-        }, 350);
-        window.setTimeout(function() {
-          Shiny.setInputValue('ccwd_load_noaa', true, {priority:'event'});
-        }, 750);
-        window.setTimeout(function() {
-          Shiny.setInputValue('ccwd_load_dcc', true, {priority:'event'});
-        }, 1150);
-      });
-
-      // Persistent per-scenario status: queued, processing, slow, success or error.
-      // These timers run in the browser even while R is busy with synchronous models.
-      var compareTimers = {};
-      var compareStarts = {};
-      function compareStatus(id, state, message) {
-        var $panel = $('#run_compare_' + id).closest('.compare-scenario-panel');
-        var $status = $('#compare_' + id + '_status');
-        $status.attr('data-state', state);
-        var icons = {queued:'fa-clock-o',running:'fa-spinner fa-spin',slow:'fa-exclamation-circle',
-                     success:'fa-check-circle',error:'fa-exclamation-triangle'};
-        $status.empty().append($('<i/>', {'class':'fa ' + (icons[state] || 'fa-info-circle'), 'aria-hidden':'true'}))
-          .append($('<span/>').text(message));
-        $panel.toggleClass('is-comparing', state === 'queued' || state === 'running' || state === 'slow');
-      }
-      function finishCompareTimer(id) {
-        if (compareTimers[id]) window.clearInterval(compareTimers[id]);
-        delete compareTimers[id];
-      }
-      $(document).on('click', '.compare-run-action', function() {
-        var id = this.id === 'run_compare_s1' ? 's1' : 's2';
-        if (compareTimers[id]) return;
-        compareStarts[id] = Date.now();
-        compareStatus(id, 'queued', 'Request sent. Waiting for R to start processing... 0 s');
-        compareTimers[id] = window.setInterval(function() {
-          var sec = Math.floor((Date.now()-compareStarts[id])/1000);
-          if (sec >= 90) {
-            compareStatus(id, 'slow', 'Still waiting after ' + sec + ' s. The app may be busy or a data/model operation may be stalled. Check the RStudio Console for errors; this message does not cancel the run.');
-          } else if (sec >= 30) {
-            compareStatus(id, 'slow', 'Processing for ' + sec + ' s. Longer than expected; check the RStudio Console if it continues.');
-          } else {
-            compareStatus(id, 'running', 'Running scenario models... ' + sec + ' s elapsed.');
-          }
-        }, 1000);
-      });
-      if (window.Shiny && Shiny.addCustomMessageHandler) {
-        Shiny.addCustomMessageHandler('ccwdComparisonStatus', function(data) {
-          if (!data || !data.id) return;
-          var id = data.id;
-          if (data.state === 'running') return; // Keep client elapsed clock running.
-          finishCompareTimer(id);
-          compareStatus(id, data.state || 'error', data.message || 'Unknown model status.');
-        });
-      }
-
-      // Map requests are synchronous on the R side. Keep the progress timer on
-      // the browser side, and finish it only when the matching Shiny output
-      // returns a value/error. A long interval is a warning, not a false success.
-      var ccwdMapTasks = {
-        generate_library_map: {key:'library', output:'comparison_spatial_map'},
-        generate_omri_map: {key:'omri', output:'omri_comparison_spatial_map'},
-        generate_compare_two_map: {key:'compare_two', output:'compare_two_spatial_map'}
-      };
-      var ccwdActiveMaps = {};
-      function ccwdSetMapStatus(key, state, description) {
-        var task = ccwdActiveMaps[key];
-        var $overlay = $('#' + key + '_map_progress');
-        var $msg = $('#' + key + '_map_message');
-        $overlay.toggleClass('is-active', state === 'running');
-        $overlay.find('.comparison-map-progress-detail').text(description);
-        $msg.attr('data-state', state).text(description);
-        if (task) {
-          var $button = $('#' + task.button);
-          $button.prop('disabled', state === 'running');
-        }
-      }
-      function ccwdStopMap(key, state, message) {
-        var task=ccwdActiveMaps[key];
-        if (!task) return;
-        window.clearInterval(task.interval);
-        ccwdSetMapStatus(key, state, message);
-        delete ccwdActiveMaps[key];
-      }
-      $(document).on('click', '.comparison-map-action', function() {
-        var button=this.id, config=ccwdMapTasks[button];
-        if (!config || ccwdActiveMaps[config.key]) return;
-        var key=config.key, started=Date.now();
-        ccwdActiveMaps[key]={button:button, output:config.output, started:started};
-        ccwdSetMapStatus(key, 'running', 'Map requested. Preparing spatial data...');
-        ccwdActiveMaps[key].interval=window.setInterval(function() {
-          var elapsed=Math.floor((Date.now()-started)/1000);
-          var description='Generating spatial map... '+elapsed+' seconds elapsed.';
-          if (elapsed>=300) description+=' This is taking over five minutes; check the RStudio Console for an error or heavy spatial computation.';
-          else if (elapsed>=90) description+=' Spatial interpolation is taking longer than expected; the calculation may still be running.';
-          ccwdSetMapStatus(key, 'running', description);
-        },1000);
-      });
-      $(document).on('shiny:value', function(event) {
-        var name=event.name || (event.target && event.target.id);
-        Object.keys(ccwdActiveMaps).forEach(function(key) {
-          if (ccwdActiveMaps[key].output===name)
-            ccwdStopMap(key,'success','Map response received. The map is ready to view.');
-        });
-      });
-      $(document).on('shiny:error', function(event) {
-        var name=event.name || (event.target && event.target.id);
-        Object.keys(ccwdActiveMaps).forEach(function(key) {
-          if (ccwdActiveMaps[key].output===name) {
-            function readableMapError(error) {
-              if (error == null) return 'Unknown map error; check the RStudio Console.';
-              if (typeof error === 'string') return error;
-              if (Array.isArray(error)) return error.map(readableMapError).join('; ');
-              if (typeof error.message === 'string') return error.message;
-              if (typeof error.error === 'string') return error.error;
-              if (error.error) return readableMapError(error.error);
-              try { return JSON.stringify(error); } catch (e) { return 'See RStudio Console for details.'; }
-            }
-            var info=readableMapError(event.error || event.message || null);
-            ccwdStopMap(key,'error','Spatial map failed: '+info);
-          }
-        });
-      });
-      $(document).on('shiny:disconnected',function() {
-        Object.keys(ccwdActiveMaps).forEach(function(key) {
-          ccwdStopMap(key,'error','R session disconnected before the map was generated.');
-        });
-      });
-
-      // OMRI progress is independent of chart rendering and library maps.
-      var omriStarted = 0, omriTimer = null;
-      function finishOMRITimer() { if (omriTimer) window.clearInterval(omriTimer); omriTimer = null; }
-      function setOMRIStatus(state, msg) {
-        var el = $('#omri_run_status_live');
-        var icons = {running:'fa-spinner fa-spin', slow:'fa-exclamation-circle',
-          success:'fa-check-circle', error:'fa-exclamation-triangle'};
-        el.attr('data-state', state).empty()
-          .append($('<i/>', {'class':'fa '+(icons[state]||'fa-info-circle')}))
-          .append($('<span/>').text(msg));
-      }
-      $(document).on('click', '#build_omri_comparison', function() {
-        finishOMRITimer(); omriStarted=Date.now();
-        setOMRIStatus('running', 'OMRI run requested; waiting for R... 0 s');
-        omriTimer=window.setInterval(function() {
-          var sec=Math.floor((Date.now()-omriStarted)/1000);
-          setOMRIStatus(sec>=30?'slow':'running', sec>=30?
-            ('Running OMRI scenarios for '+sec+' s. The server may be retrieving archived CSVs or calculating predictions; see the RStudio Console for per-scenario progress.'):
-            ('Running OMRI scenarios... '+sec+' s elapsed.'));
-        }, 1000);
-      });
-      if (window.Shiny && Shiny.addCustomMessageHandler) {
-        Shiny.addCustomMessageHandler('ccwdOMRIStatus', function(data) {
-          if (!data) return;
-          if (data.state === 'running') return;
-          finishOMRITimer(); setOMRIStatus(data.state||'error', data.message||'Run ended without details.');
-        });
-      }
-
-      $(document).on('shiny:disconnected', function() {
-        if (omriTimer) {
-          finishOMRITimer();
-          setOMRIStatus('error', 'Connection to R was lost before completion. Check the RStudio Console.');
-        }
-        ['s1','s2'].forEach(function(id) {
-          if (compareTimers[id]) {
-            finishCompareTimer(id);
-            compareStatus(id, 'error', 'Disconnected from the R session before completion. Reconnect and check the RStudio Console.');
-          }
-        });
-      });
-
-      $(document).on('click', '.model-run-button', function() {
-        modelRunWaiting = true;
-        modelRunBecameBusy = false;
-        $('body').addClass('model-run-requested');
-      });
-
-      $(document).on('shiny:busy', function() {
-        if (modelRunWaiting) {
-          modelRunBecameBusy = true;
-          $('body').addClass('model-run-requested');
-        }
-      });
-
-      $(document).on('shiny:idle', function() {
-        if (modelRunWaiting && modelRunBecameBusy) {
-          setTimeout(function() {
-            $('body').removeClass('model-run-requested');
-            modelRunWaiting = false;
-            modelRunBecameBusy = false;
-          }, 150);
-        }
-      });
-    "))
+      tags$script(src = "ccwd-ui.js")
     ),
     
     tabItems(
@@ -3553,95 +3233,174 @@ ui <- dashboardPage(
         div(style = "width: 100%;height: calc(100vh - 100px);overflow-x: auto;overflow-y: auto;box-sizing: border-box;",
             div(style = "width: 1800px;min-width: 1800px;margin: 0 auto;box-sizing: border-box;",        
                 fluidRow(
-                  box(
-                    style = "margin-left: 20px;",
-                    width = 6,
-                    h1("Data Access", style = "margin-left: 10px;"),
-                    solidHeader = FALSE,
-                    h3("Quick Overview", style = "margin-left: 10px;"),
-                    style = "text-align: Justify;margin-left: 10px;margin-right:60px;",
-                    p(style = "margin-left: 10px;", "This ShinyApp makes forecast and/or presents hindcast results on the particle entrainment within the Sacramento-San Joaquin Delta. The real-time simulations and predictions are used for providing quick assessment and help with the potential effects of CVP and SWP alternative operations on listed species. This interactive application is designed based on the machine learning models that were originally developed for the Contra Costa Water District (CCWD)'s hydraulic footprint project."),
-                    h5("Here are three types of models:", style = "margin-left: 10px;"),
-                    div(style = "margin-left:60px",
-                        h5("- DSM2 ECO-PTM emulator models",
-                           tags$a(" (part 1)", href = "#intro-eco-ptm")
+                    box(
+                      style = "margin-left:20px;",
+                      width = 12,
+                      solidHeader = FALSE,
+                      
+                      div(
+                        class = "data-access-intro",
+                        
+                        h1("Data Access"),
+                        
+                        h3("Quick Overview"),
+                        
+                        p(
+                          "The Entrainment Dashboard uses five updated LightGBM emulators ",
+                          "to estimate particle entrainment, salmonid response, and Event ",
+                          "Horizon distance in the Sacramento-San Joaquin Delta. Input ",
+                          "definitions remain consistent across the application, but input ",
+                          "source and timing depend on the selected workflow."
                         ),
-                        h5("- DSM2 PTM emulator models",
-                           tags$a(" (part 2)", href = "#intro-ptm")
+                        
+                        tags$ul(
+                          tags$li(
+                            tags$strong("Exploration: "),
+                            "starts with editable current-condition defaults derived from ",
+                            "observed data, reference data, or documented calculations."
+                          ),
+                          
+                          tags$li(
+                            tags$strong("Weekly Assessments - Measured: "),
+                            "uses archived measured values for each 7-day assessment window."
+                          ),
+                          
+                          tags$li(
+                            tags$strong("Weekly Assessments - Forecast OMRI: "),
+                            "uses the selected OMRI scenario's first seven forecast dates, ",
+                            "together with documented reference-series, QPF, regression, ",
+                            "or persistence methods where required."
+                          )
                         ),
-                        h5("- Model for the Entrainment Event Horizon",
-                           tags$a(" (part 3)", href = "#intro-event-horizon")
+                        
+                        div(
+                          class = "data-access-note",
+                          
+                          tags$strong("How to read the tables: "),
+                          
+                          "The tables distinguish observed measurements, archived forecasts, ",
+                          "reference-series values, calculated values, regression estimates, ",
+                          "persistence estimates, and explicit user assumptions. Model outputs ",
+                          "are machine-learning predictions of simulated DSM2 PTM or ECO-PTM ",
+                          "responses; they are not direct observations."
+                        ),
+                        
+                        h3("Model Input and Source Tables"),
+                        
+                        p(
+                          "The updated tables below document the inputs required by each ",
+                          "emulator and explain how each input is obtained for Exploration, ",
+                          "Weekly Measured assessments, and Weekly OMRI Forecast assessments."
+                        ),
+                        
+                        div(
+                          class = "data-access-model-links",
+                          
+                          tags$a(
+                            href = "#intro-eco-ptm",
+                            icon("fish"),
+                            " ECO-PTM models"
+                          ),
+                          
+                          tags$a(
+                            href = "#intro-ptm",
+                            icon("project-diagram"),
+                            " PTM models"
+                          ),
+                          
+                          tags$a(
+                            href = "#intro-event-horizon",
+                            icon("ruler-horizontal"),
+                            " Entrainment Event Horizon"
+                          )
+                        ),
+                        
+                        tags$hr(),
+                        
+                        h3("Data and Supporting Tools"),
+                        
+                        p(
+                          "The following resources provide the model-automation code, ",
+                          "post-processing tools, weekly assessment products, and supporting ",
+                          "technical materials."
+                        ),
+                        
+                        fluidRow(
+                          column(
+                            width = 6,
+                            
+                            div(
+                              class = "data-access-resource-card",
+                              
+                              tags$h4(
+                                icon("github"),
+                                " Model Automation Repository"
+                              ),
+                              
+                              p(
+                                "Access the DSM2 weekly modeling workflow, PTM and ECO-PTM ",
+                                "post-processing tools, SacPAS reporting code, model ",
+                                "documentation, and Emulator/Event Horizon Shiny application."
+                              ),
+                              
+                              tags$a(
+                                class = "btn btn-success",
+                                href = "https://github.com/BDO-Science/delta-model-automation",
+                                target = "_blank",
+                                rel = "noopener noreferrer",
+                                title = paste(
+                                  "Open the BDO-Science delta-model-automation",
+                                  "repository in a new browser tab"
+                                ),
+                                icon("github"),
+                                " View on GitHub"
+                              )
+                            )
+                          ),
+                          
+                          column(
+                            width = 6,
+                            
+                            div(
+                              class = "data-access-resource-card",
+                              
+                              tags$h4(
+                                icon("chart-line"),
+                                " SacPAS Weekly Assessment"
+                              ),
+                              
+                              p(
+                                "Open the weekly Sacramento River Winter-Run assessment ",
+                                "forecast and supporting model-evaluation products."
+                              ),
+                              
+                              tags$a(
+                                class = "btn btn-primary",
+                                href = paste0(
+                                  "https://can01.safelinks.protection.outlook.com/?",
+                                  "url=https%3A%2F%2Fcbr.washington.edu%2Fsacramento%2F",
+                                  "assessments%2Ftest%2Fforecast_sacpas.html&",
+                                  "data=05%7C02%7CLaura.Manuel%40stantec.com%7C",
+                                  "7d690048e1804ee4cc7408deccc5ac84%7C",
+                                  "413c6f2c219a469297d3f2b4d80281e7%7C0%7C0%7C",
+                                  "639173346569845423%7CUnknown%7C",
+                                  "TWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIs",
+                                  "IlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C",
+                                  "%7C%7C&sdata=OIZCfSzN%2BkO8UrHo3QV4D4Aike6mQpP7LvkmfgoCKa0%3D&",
+                                  "reserved=0"
+                                ),
+                                target = "_blank",
+                                rel = "noopener noreferrer",
+                                title = "Open the SacPAS weekly assessment in a new browser tab",
+                                icon("external-link-alt"),
+                                " Open SacPAS Assessment"
+                              )
+                            )
+                          )
                         )
-                    ),
-                    h3("Data Availability", style = "margin-left: 10px;"),
-                    
-                    p(style = "margin-left: 10px;",
-                      "Data and tools supporting the PTM Emulator dashboard are provided below."
-                    ),
-                    
-                    tags$hr(),
-                    
-                    # ---------------------
-                    # GitHub
-                    # ---------------------
-                    div(
-                      style = "
-          padding:15px;
-          border:1px solid #d9d9d9;
-          border-radius:6px;
-          margin-bottom:15px;
-          background:white;
-        ",
-                      
-                      tags$h4("PTM Emulator GitHub Repository"),
-                      
-                      p(
-                        paste(
-                          "Access the DSM2 weekly modeling workflow, PTM and ECO-PTM",
-                          "post-processing tools, SacPAS reporting code, model documentation,",
-                          "and the Emulator/Event Horizon Shiny application."
-                        )
-                      ),
-                      
-                      tags$a(
-                        class = "btn btn-success",
-                        href = "https://github.com/BDO-Science/delta-model-automation",
-                        target = "_blank",
-                        rel = "noopener noreferrer",
-                        title = paste(
-                          "Open the BDO-Science delta-model-automation",
-                          "repository in a new browser tab"
-                        ),
-                        icon("github"),
-                        " View on GitHub"
                       )
-                    ),
-                    
-                    # ---------------------
-                    # SacPAS
-                    # ---------------------
-                    div(
-                      style = "
-          padding:15px;
-          border:1px solid #d9d9d9;
-          border-radius:6px;
-          background:white;
-        ",
-                      
-                      tags$h4("SacPAS Weekly Assessment"),
-                      
-                      p(
-                        "Weekly Sacramento River Winter-Run assessment forecasts and supporting evaluation products."
-                      ),
-                      
-                      tags$a(
-                        class = "btn btn-primary",
-                        href = "https://can01.safelinks.protection.outlook.com/?url=https%3A%2F%2Fcbr.washington.edu%2Fsacramento%2Fassessments%2Ftest%2Fforecast_sacpas.html&data=05%7C02%7CLaura.Manuel%40stantec.com%7C7d690048e1804ee4cc7408deccc5ac84%7C413c6f2c219a469297d3f2b4d80281e7%7C0%7C0%7C639173346569845423%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=OIZCfSzN%2BkO8UrHo3QV4D4Aike6mQpP7LvkmfgoCKa0%3D&reserved=0",
-                        target = "_blank",
-                        icon("external-link-alt"),
-                        " Open SacPAS Assessment"
-                      )
-                    )
+                   
+                   
                   ),
                   box(style = "margin-left:20px;",width = 12,solidHeader = FALSE,
                       h3(id = "intro-eco-ptm","P1 DSM2 ECO-PTM emulator models",style = "margin-left:10px;"),
@@ -3649,7 +3408,7 @@ ui <- dashboardPage(
                       tags$hr(),
                       fluidRow(
                         column(width = 7,
-                               box(title = "Model Visualization Tool",width = 12,height = "720px",status = "primary",solidHeader = TRUE,
+                               box(title = "ECO-PTM Emulator Model Input Stations",width = 12,height = "720px",status = "primary",solidHeader = TRUE,
                                    leaflet::leafletOutput("eco_ptm_map", width = "100%", height = "650px")
                                )
                         ),
@@ -3666,7 +3425,7 @@ ui <- dashboardPage(
                       tags$hr(),
                       fluidRow(
                         column(width = 7,
-                               box(title = "DSM2 Nodes and Model Input Stations",width = 12,height = "720px",status = "primary",solidHeader = TRUE,
+                               box(title = "PTM Emulator Release Nodes and Model Input Stations",width = 12,height = "720px",status = "primary",solidHeader = TRUE,
                                    tabsetPanel(id = "ptm_map_tabs",type = "tabs",
                                                tabPanel(title = "7-Day",leaflet::leafletOutput("node_station_map_7day",width = "100%",height = "620px")),
                                                tabPanel(title = "30-Day",leaflet::leafletOutput("node_station_map_30day",width = "100%",height = "620px"))
@@ -3688,7 +3447,7 @@ ui <- dashboardPage(
                       tags$hr(),
                       fluidRow(
                         column(width = 7,
-                               box(title = "Model Input Locations",width = 12,height = "740px",status = "primary",solidHeader = TRUE,
+                               box(title = "Event Horizon Model Input Stations",width = 12,height = "740px",status = "primary",solidHeader = TRUE,
                                    leaflet::leafletOutput("horizon_map",width = "100%",height = "670px")
                                )
                         ),
