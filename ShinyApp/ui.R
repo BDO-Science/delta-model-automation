@@ -1130,6 +1130,88 @@ ui <- dashboardPage(
   dashboardBody(
     tags$head(
       tags$style(HTML("
+
+        /* Data Access: supplementary hydrologic methodology, matching existing teal design. */
+        .ccwd-data-methodology {padding:8px 12px 18px; font-size:14px; line-height:1.6; color:#36474f;}
+        .ccwd-data-methodology > h3 {margin:5px 0 11px; color:#174f5b; font-size:21px;}
+        .ccwd-data-methodology > p {margin-bottom:16px; max-width:1250px;}
+        .ccwd-data-methodology .nav-tabs {border-bottom:2px solid #cce5e9; margin-bottom:20px;}
+        .ccwd-data-methodology .nav-tabs > li > a {font-weight:600; color:#147b89;}
+        .ccwd-data-methodology .nav-tabs > li.active > a {border-top:3px solid #0a7e8c; color:#125664;}
+        .ccwd-data-methodology .tab-pane {max-width:1380px; padding:2px 8px 10px;}
+        .ccwd-data-methodology .tab-pane h4 {margin:22px 0 9px; color:#176271; font-weight:700; font-size:16px;}
+        .ccwd-data-methodology .tab-pane p,.ccwd-data-methodology .tab-pane li {font-size:13.5px; line-height:1.65;}
+        .ccwd-data-methodology .tab-pane ol,.ccwd-data-methodology .tab-pane ul {padding-left:24px;}
+        .ccwd-data-methodology .tab-pane li {margin-bottom:6px;}
+        .ccwd-data-methodology .ccwd-method-equation {padding:12px 15px; background:#f2f8fa; border-left:3px solid #0a7e8c; font-weight:600; overflow-wrap:anywhere;}
+        .ccwd-data-methodology .ccwd-method-caution {padding:11px 14px; border-left:3px solid #c39441; background:#fffaf1; color:#685632; margin-top:16px;}
+        .ccwd-data-methodology .ccwd-method-example-table-wrap {max-width:100%; overflow-x:auto; margin:12px 0 5px; border:1px solid #d6e6ea; border-radius:6px;}
+        .ccwd-data-methodology .ccwd-method-example-table {width:100%; min-width:680px; margin:0; font-size:13px; white-space:normal;}
+        .ccwd-data-methodology .ccwd-method-example-table th {background:#e8f4f6; color:#185965; border-color:#d4e4e8; vertical-align:middle;}
+        .ccwd-data-methodology .ccwd-method-example-table td {vertical-align:middle; border-color:#e0e9ed;}
+        .ccwd-data-methodology .ccwd-method-example-total {background:#edf7f8; color:#174e5b;}
+        .ccwd-data-methodology .ccwd-method-example-caption {font-size:12px !important; color:#63747c; margin:8px 0 15px;}
+        .ccwd-data-methodology .ccwd-method-links a {color:#087784; font-weight:600;}
+        .ccwd-data-methodology .ccwd-method-links .fa {font-size:10px; margin-left:3px;}
+
+        /* Data Access: fluid page width, scrolling limited to wide model input tables. */
+        .data-access-layout {
+          width:100%; min-width:0; max-width:100%;
+          box-sizing:border-box;
+        }
+        .data-access-content {
+          width:100%; max-width:1640px; min-width:0;
+          margin:0 auto; box-sizing:border-box;
+        }
+        .data-access-layout .row, .data-access-layout [class*='col-'] {
+          min-width:0;
+        }
+        .data-access-layout .box {
+          margin-left:0 !important;
+          max-width:100%;
+        }
+        .data-access-layout .box-body {
+          min-width:0;
+        }
+        .data-access-table-section {
+          min-width:0; width:100%; margin:8px 0 20px;
+        }
+        .data-access-table-hint {
+          display:flex; align-items:center; gap:7px;
+          font-size:12px; color:#486674; margin:0 0 7px;
+        }
+        .data-access-table-hint .fa { color:#087d8d; }
+        .data-access-table-scroll {
+          display:block; width:100%; max-width:100%; min-width:0;
+          overflow-x:auto; overflow-y:hidden;
+          border:1px solid #d7e4e8; border-radius:5px;
+          scrollbar-width:auto;
+          scrollbar-color:#8cb6c0 #edf5f7;
+          -webkit-overflow-scrolling:touch;
+        }
+        .data-access-table-scroll:focus-visible {
+          outline:3px solid #2c96aa; outline-offset:3px;
+        }
+        .data-access-table-scroll::-webkit-scrollbar { height:13px; }
+        .data-access-table-scroll::-webkit-scrollbar-track { background:#edf5f7; }
+        .data-access-table-scroll::-webkit-scrollbar-thumb {
+          background:#8cb6c0; border-radius:7px; border:2px solid #edf5f7;
+        }
+        .data-access-table-scroll .gt_table {
+          width:max-content !important;
+          min-width:1380px !important;
+          max-width:none !important;
+        }
+        .data-access-table-scroll .gt_table th,
+        .data-access-table-scroll .gt_table td {
+          overflow-wrap:break-word;
+          vertical-align:top;
+        }
+        @media (max-width:850px) {
+          .data-access-content { max-width:100%; }
+          .data-access-table-scroll .gt_table { min-width:1300px !important; }
+        }
+
         /* Keep figure and table headings visually prominent throughout the app. */
         .tab-content h4,
         .box-title,
@@ -3230,8 +3312,8 @@ ui <- dashboardPage(
       # -----------------------------
       tabItem(
         tabName = "data",
-        div(style = "width: 100%;height: calc(100vh - 100px);overflow-x: auto;overflow-y: auto;box-sizing: border-box;",
-            div(style = "width: 1800px;min-width: 1800px;margin: 0 auto;box-sizing: border-box;",        
+        div(class = "data-access-layout",
+            div(class = "data-access-content",        
                 fluidRow(
                     box(
                       style = "margin-left:20px;",
@@ -3404,7 +3486,13 @@ ui <- dashboardPage(
                   ),
                   box(style = "margin-left:20px;",width = 12,solidHeader = FALSE,
                       h3(id = "intro-eco-ptm","P1 DSM2 ECO-PTM emulator models",style = "margin-left:10px;"),
-                      gt::gt_output("ecoptm_inputs_table"),
+                      div(class = "data-access-table-section",
+                          tags$p(class = "data-access-table-hint", icon("arrows-alt-h"),
+                                 "Scroll within this table to view all seven columns, including Source / provenance."),
+                          div(class = "data-access-table-scroll", tabindex = "0", role = "region",
+                              `aria-label` = "ECO-PTM model inputs: horizontally scrollable table",
+                              gt::gt_output("ecoptm_inputs_table"))
+                      ),
                       tags$hr(),
                       fluidRow(
                         column(width = 7,
@@ -3421,7 +3509,13 @@ ui <- dashboardPage(
                   ),
                   box(style = "margin-left:20px;",width = 12,solidHeader = FALSE,
                       h3(id = "intro-ptm","P2 DSM2 PTM emulator models",style = "margin-left:10px;"),
-                      gt::gt_output("ptm_inputs_table"),
+                      div(class = "data-access-table-section",
+                          tags$p(class = "data-access-table-hint", icon("arrows-alt-h"),
+                                 "Scroll within this table to view all seven columns, including Source / provenance."),
+                          div(class = "data-access-table-scroll", tabindex = "0", role = "region",
+                              `aria-label` = "PTM model inputs: horizontally scrollable table",
+                              gt::gt_output("ptm_inputs_table"))
+                      ),
                       tags$hr(),
                       fluidRow(
                         column(width = 7,
@@ -3443,7 +3537,13 @@ ui <- dashboardPage(
                   ),        
                   box(style = "margin-left:20px;",width = 12,solidHeader = FALSE,
                       h3(id = "intro-event-horizon","P3 Model for the Entrainment Event Horizon",style = "margin-left:10px;"),
-                      gt::gt_output("horizon_inputs_table"),
+                      div(class = "data-access-table-section",
+                          tags$p(class = "data-access-table-hint", icon("arrows-alt-h"),
+                                 "Scroll within this table to view all seven columns, including Source / provenance."),
+                          div(class = "data-access-table-scroll", tabindex = "0", role = "region",
+                              `aria-label` = "Event Horizon model inputs: horizontally scrollable table",
+                              gt::gt_output("horizon_inputs_table"))
+                      ),
                       tags$hr(),
                       fluidRow(
                         column(width = 7,
@@ -3466,7 +3566,189 @@ ui <- dashboardPage(
                                )
                         )
                       )
-                  )  
+                  ),
+                  # Client-facing methodology supplement; no model or server calculations are changed.
+                  box(
+                    style = "margin-left:20px;",
+                    width = 12,
+                    solidHeader = FALSE,
+                    div(
+                      class = "ccwd-data-methodology",
+                      tags$h3(id = "ccwd-input-methodology", "Additional Data Sources and Calculation Methods"),
+                      tags$p(
+                        "The model input tables above identify the required variables and their sources. ",
+                        "The sections below explain the preparation of three derived inputs: Gross Delta Accretion (QPREC), ",
+                        "gross channel depletion (QGCD), and Delta Cross Channel flow (DCC). ",
+                        "Observed measurements, forecasts, and estimates are distinguished throughout."
+                      ),
+                      tabsetPanel(
+                        id = "data_methodology_tabs",
+                        type = "tabs",
+                        tabPanel(
+                          title = "QPREC | Gross Delta Accretion (TAF/month)",
+                          tags$h4("Observed precipitation"),
+                          tags$p(
+                            "Source: Stockton Fire Station No. 4 (SCKC1), the precipitation station ",
+                            "identified in DWR DAYFLOW documentation. Daily observations are obtained through ",
+                            "the Iowa Environmental Mesonet (IEM). Exploration uses the latest complete observed ",
+                            "calculation window, while Weekly Measured uses observations corresponding to the ",
+                            "selected archive dates. A recorded zero is valid; a missing observation is not assumed zero."
+                          ),
+                          tags$p(class = "ccwd-method-links",
+                            tags$a(href = "https://mesonet.agron.iastate.edu/sites/site.php?network=CA_DCP&station=SCKC1", target = "_blank", rel = "noopener noreferrer", "SCKC1 observations", icon("external-link-alt")),
+                            "  |  ",
+                            tags$a(href = "https://data.ca.gov/@california-department-of-water-resources/dayflow/r/e8410426-9cdc-4ef4-8699-83836b0ed73f", target = "_blank", rel = "noopener noreferrer", "DWR DAYFLOW documentation", icon("external-link-alt"))
+                          ),
+                          tags$h4("Forecast precipitation for Weekly OMRI scenarios"),
+                          tags$p(
+                            "Archived California-Nevada River Forecast Center (CNRFC) Quantitative Precipitation ",
+                            "Forecast (QPF) grids provide six-hour forecast precipitation. The script selects ",
+                            "the appropriate historical forecast issuance, extracts precipitation at the grid ",
+                            "cell nearest SCKC1, and aggregates the six-hour intervals to California-local ",
+                            "daily totals. These forecast totals are combined with preceding SCKC1 observations ",
+                            "for the five-day runoff calculation. All OMRI scenarios for an assessment use the ",
+                            "same forecast precipitation series."
+                          ),
+                          tags$p(class = "ccwd-method-links",
+                            tags$a(href = "https://www.cnrfc.noaa.gov/arc_search.php", target = "_blank", rel = "noopener noreferrer", "CNRFC forecast archive", icon("external-link-alt")),
+                            "  |  ",
+                            tags$a(href = "https://www.cnrfc.noaa.gov/netcdfInfo.php", target = "_blank", rel = "noopener noreferrer", "NetCDF grid documentation", icon("external-link-alt"))
+                          ),
+                          tags$h4("Gross Delta Accretion (QPREC): five-day distribution and monthly-equivalent conversion"),
+                          tags$p(
+                            "QPREC is expressed in TAF/month for model input. The method distributes each day's " ,
+                            "measured or forecast rainfall evenly over five days (the rainfall day plus four following days). " ,
+                            "When rainfall occurs on consecutive days, the distributed contributions overlap and are added."
+                          ),
+                          tags$h4("Worked example: rainfall on two consecutive days"),
+                          tags$p(
+                            "Suppose Day 1 receives 10 inches of rainfall and Day 2 receives 7 inches, with no additional " ,
+                            "rainfall on Days 3 through 6. The Day 1 event contributes 10 / 5 = 2.0 inches " ,
+                            "per day on Days 1-5. The Day 2 event contributes 7 / 5 = 1.4 inches " ,
+                            "per day on Days 2-6. On Day 2, both contributions are included: 2.0 + 1.4 = 3.4 inches."
+                          ),
+                          div(class = "ccwd-method-example-table-wrap",
+                            tags$table(class = "table table-bordered table-striped ccwd-method-example-table",
+                              tags$thead(tags$tr(
+                                tags$th("Day"),
+                                tags$th("Measured rainfall (in)"),
+                                tags$th("From Day 1 event (in)"),
+                                tags$th("From Day 2 event (in)"),
+                                tags$th("Distributed daily depth (in)")
+                              )),
+                              tags$tbody(
+                                tags$tr(tags$td("1"), tags$td("10"), tags$td("2.0"), tags$td("0"),   tags$td(tags$strong("2.0"))),
+                                tags$tr(tags$td("2"), tags$td("7"),  tags$td("2.0"), tags$td("1.4"), tags$td(tags$strong("3.4"))),
+                                tags$tr(tags$td("3"), tags$td("0"),  tags$td("2.0"), tags$td("1.4"), tags$td(tags$strong("3.4"))),
+                                tags$tr(tags$td("4"), tags$td("0"),  tags$td("2.0"), tags$td("1.4"), tags$td(tags$strong("3.4"))),
+                                tags$tr(tags$td("5"), tags$td("0"),  tags$td("2.0"), tags$td("1.4"), tags$td(tags$strong("3.4"))),
+                                tags$tr(tags$td("6"), tags$td("0"),  tags$td("0"),   tags$td("1.4"), tags$td(tags$strong("1.4"))),
+                                tags$tr(class = "ccwd-method-example-total",
+                                  tags$td(tags$strong("Total")), tags$td(tags$strong("17")),
+                                  tags$td(tags$strong("10.0")), tags$td(tags$strong("7.0")),
+                                  tags$td(tags$strong("17.0")))
+                              )
+                            )
+                          ),
+                          tags$p(class = "ccwd-method-example-caption",
+                            "Illustrative rainfall events (not actual station observations). The distributed depth represents " ,
+                            "each day's rainfall contribution to the runoff calculation, not newly measured rainfall. " ,
+                            "The total distributed depth remains 17 inches, equal to the original rainfall total."
+                          ),
+                          tags$h4("Converting the distributed depth to the QPREC model input"),
+                          tags$ol(
+                            tags$li("For each assessment date, add contributions from rainfall on that date and the four preceding dates. Equivalently: distributed depth = (today's rainfall + rainfall on previous four days) / 5."),
+                            tags$li("Convert the daily distributed depth to volume over the assumed Delta area: QPREC (TAF/day) = distributed depth (inches) x 682,230 acres / 12,000."),
+                            tags$li("Convert the result to a monthly-equivalent rate: daily QPREC (TAF/month) = QPREC (TAF/day) x calendar days in the month of that date."),
+                            tags$li("For a seven-day model input window, average the seven daily monthly-equivalent QPREC values. For a window spanning two months, use each day's own month length.")
+                          ),
+                          tags$p(class = "ccwd-method-equation",
+                            tags$strong("Day 2 worked calculation: "),
+                            "Distributed depth = (10 + 7) / 5 = 3.4 in; ",
+                            "QPREC = 3.4 x 682,230 / 12,000 = 193.30 TAF/day; ",
+                            "if Day 2 occurs in a 30-day month, monthly-equivalent QPREC = 193.30 x 30 = approximately 5,799 TAF/month."
+                          ),
+                          tags$p(class = "ccwd-method-example-caption",
+                            "The monthly-equivalent value is a daily runoff rate expressed on a monthly scale; " ,
+                            "it is not an observed full-month runoff volume."
+                          ),
+                          tags$p(
+                            class = "ccwd-method-caution",
+                            tags$strong("Forecast and missing-data assumptions: "),
+                            "When archived forecast coverage is shorter than seven complete days, the last complete ",
+                            "forecast day's rainfall is carried forward to the remaining days and identified as ",
+                            "an assumption. If a valid CNRFC forecast cannot be retrieved, the application may use ",
+                            "a labeled persistence estimate based on the latest observed SCKC1-derived daily runoff. ",
+                            "Limited isolated gaps in observed rainfall may be interpolated and identified. ",
+                            "These monthly-equivalent inputs are application estimates, not published DAYFLOW ",
+                            "calendar-month totals."
+                          )
+                        ),
+                        tabPanel(
+                          title = "QGCD | Channel Depletion",
+                          tags$h4("Gross Delta channel depletion"),
+                          tags$p(
+                            "Source: DAYFLOW-based daily gross channel depletion reference values. ",
+                            "The underlying daily series is expressed in cubic feet per second (cfs) and varies by ",
+                            "calendar day. QGCD is supplied separately from QPREC; this input is gross channel ",
+                            "depletion rather than net channel depletion."
+                          ),
+                          tags$h4("Calculation"),
+                          tags$p(class = "ccwd-method-equation",
+                            "Daily monthly-equivalent QGCD (TAF/month) = daily QGCD (cfs) x 86,400 / 43,560 x days in month / 1,000"
+                          ),
+                          tags$p(
+                            "Exploration uses the latest seven complete calendar days. Weekly Measured and Weekly ",
+                            "Forecast OMRI use the reference values corresponding to their respective seven dates. ",
+                            "For each window, the seven daily monthly-equivalent values are averaged; for ",
+                            "cross-month windows, each date uses its own month's length. The reference is ",
+                            "independent of the selected OMRI export scenario."
+                          ),
+                          tags$p(class = "ccwd-method-links",
+                            tags$a(href = "https://data.ca.gov/@california-department-of-water-resources/dayflow/r/e8410426-9cdc-4ef4-8699-83836b0ed73f", target = "_blank", rel = "noopener noreferrer", "DWR DAYFLOW reference", icon("external-link-alt"))
+                          ),
+                          tags$p(class = "ccwd-method-caution",
+                            "The resulting TAF/month quantity is a daily rate converted to a monthly-equivalent ",
+                            "value, not a directly observed full-month total."
+                          )
+                        ),
+                        tabPanel(
+                          title = "DCC | Delta Cross Channel Flow",
+                          tags$h4("Gate status and flow are separate inputs"),
+                          tags$p(
+                            "DCC gate status is a binary indicator (0 = closed; 1 = open). Exploration allows ",
+                            "users to select the gate status. For Weekly Measured, the archived status on the ",
+                            "last measured day of each assessment window is used; for Weekly Forecast OMRI, the ",
+                            "first forecast day's archived status is applied across the seven-day window."
+                          ),
+                          tags$h4("Measured and estimated DCC flow (cfs)"),
+                          tags$ul(
+                            tags$li(tags$strong("Gates closed: "), "DCC flow is always forced to 0 cfs."),
+                            tags$li(tags$strong("Gates open - observed dates: "),
+                              "The app retrieves measured hourly FLOW data from CDEC station DLC (sensor 20), ",
+                              "aggregates valid hourly measurements into daily mean cfs, and calculates the ",
+                              "assessment-window mean. Where an observed daily DCC flow is unavailable, ",
+                              "a regression estimate is substituted using measured Sacramento River flow at Freeport (SAC) for that date."),
+                            tags$li(tags$strong("Gates open - forecast dates: "),
+                              "DCC flow is estimated using the same regression with scenario-specific forecast SAC ",
+                              "at Freeport. Daily estimates are averaged for the seven-day input.")
+                          ),
+                          tags$p(class = "ccwd-method-equation",
+                            "DCC flow (cfs) = 0.1846 x SAC at Freeport (cfs) + 306.52"
+                          ),
+                          tags$p(class = "ccwd-method-links",
+                            tags$a(href = "https://cdec.water.ca.gov/dynamicapp/QueryF?s=DLC", target = "_blank", rel = "noopener noreferrer", "CDEC DLC flow station", icon("external-link-alt")),
+                            "  |  ",
+                            tags$a(href = "https://cdec.water.ca.gov/", target = "_blank", rel = "noopener noreferrer", "CDEC data portal", icon("external-link-alt"))
+                          ),
+                          tags$p(class = "ccwd-method-caution",
+                            "Regression values are estimates, not measured DCC discharge. ",
+                            "The PTM 30-day emulator uses DCC flow (cfs); ECO-PTM uses gate status (0/1)."
+                          )
+                        )
+                      )
+                    )
+                  )
                 )
             )
         )
