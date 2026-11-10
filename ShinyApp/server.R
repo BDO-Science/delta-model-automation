@@ -1820,7 +1820,7 @@ server <- function(input, output, session) {
       isTRUE(state$EAST$ok)
     ) {
       special_note <- paste0(
-        "EAST = MOK + CAL + COS. MOK uses the trailing 7-day average of ",
+        "EAST = **MOKE + CAL + COS**. MOK uses the trailing 7-day average of ",
         "EBMUD Mokelumne River below WID daily flow; it is combined with the ",
         "current CAL and COS trailing averages."
       )
@@ -12726,7 +12726,7 @@ server <- function(input, output, session) {
     ) |>
       make_data_access_table(
         paste0(
-          "**Interpretation:** Both ECO-PTM emulators use the same four predictors. ",
+          "**Interpretation:**  ",
           "Displayed percentages are machine-learning predictions of simulated ECO-PTM responses, not direct observations or real-time fish forecasts."
         )
       ) |>
@@ -12778,27 +12778,27 @@ server <- function(input, output, session) {
         "Editable trailing 7-day observed default from CLC + TRP.",
         "Editable trailing 7-day observed default from CDEC VNS.",
         "Editable trailing 7-day observed default from CDEC FPT.",
-        "Editable trailing 7-day observed default calculated from MOKE + CAL + COS.",
+        "Editable trailing 7-day observed default calculated from **MOKE + CAL + COS**.",
         "Editable average for the last seven complete calendar dates from the daily reference series.",
         "Editable average for the latest complete 7-day SCKC1 rainfall window, including four antecedent dates for the 5-day distribution.",
         "Closed gate: 0 cfs. Open gate: editable measured DLC default when available; otherwise a measured-SAC regression estimate."
       ),
       `Weekly measured` = c(
         "Supported reference nodes evaluated by the application.",
-        "Mean of seven measured archive CCF + TPP totals.",
+        "Mean of seven measured archive **CCF + TPP** totals.",
         "Mean of seven measured VNS values.",
         "Mean of seven measured FPT values.",
-        "Mean of seven daily measured MOKE + CAL + COS sums.",
+        "Mean of seven daily measured **MOKE + CAL + COS** sums.",
         "Mean of seven daily monthly-equivalent reference values for the measured dates.",
         "Mean of seven SCKC1-derived daily monthly-equivalent values; the calculation includes four antecedent rainfall dates.",
         "Closed gate: 0 cfs. Open gate: observed daily CDEC DLC means where available; missing dates use measured-SAC regression estimates; then average seven daily flows."
       ),
       `Weekly OMRI forecast` = c(
         "Supported reference nodes evaluated by the application.",
-        "Mean of the selected scenario's first seven forecast CCF + TPP totals.",
+        "Mean of the selected scenario's first seven forecast **CCF + TPP** totals.",
         "Mean of the selected scenario's first seven forecast VNS values.",
         "Mean of the selected scenario's first seven forecast FPT values.",
-        "Mean of the selected scenario's first seven daily forecast MOKE + CAL + COS sums.",
+        "Mean of the selected scenario's first seven daily forecast **MOKE + CAL + COS** sums.",
         "Mean of seven daily monthly-equivalent reference values for the forecast dates; common to all OMRI scenarios for that week.",
         "Antecedent observed SCKC1 rainfall plus archived CNRFC QPF. If validated QPF is unavailable, use a labeled persistence estimate based on the last measured SCKC1-derived daily runoff rate.",
         "Closed gate: 0 cfs. Open gate: calculate daily flow as **0.1846 x forecast SAC + 306.52**, then average seven daily flows."
@@ -12865,7 +12865,7 @@ server <- function(input, output, session) {
       make_data_access_table(
         paste0(
           "**Model schemas:** PTM 7-day = DSM2 Node, EXP, VER, SAC, QGCD, QPREC, EAST. ",
-          "PTM 30-day uses the same predictors plus DCC Flow. The weekly PTM 30-day emulator uses a 7-day hydrologic input window despite its 30-day prediction horizon."
+          "PTM 30-day uses the same predictors plus DCC Flow. The weekly PTM 30-day emulator uses a 7-day hydrologic input window."
         )
       ) |>
       gt::cols_width(
@@ -12892,10 +12892,10 @@ server <- function(input, output, session) {
       ),
       `Definition / requirement` = c(
         "Selected entrainment-risk criterion used to predict the upstream Event Horizon distance.",
-        "Combined Banks and Jones pumping: CCF + TPP.",
+        "Combined Banks and Jones pumping: **CCF + TPP**.",
         "San Joaquin River flow at Vernalis.",
         "Sacramento River flow at Freeport.",
-        "Eastern boundary flow: MOKE + CAL + COS.",
+        "Eastern boundary flow: **MOKE + CAL + COS**.",
         "Gross Delta channel depletion, represented as a 7-day mean of daily monthly-equivalent values.",
         "Precipitation-derived Delta runoff, represented as a 7-day mean of daily monthly-equivalent values."
       ),
@@ -12978,8 +12978,8 @@ server <- function(input, output, session) {
       make_data_access_table(
         paste0(
           "**Model schema:** Risk Threshold, EXP, VER, SAC, QGCD, QPREC, and EAST. ",
-          "The output is a machine-learning prediction of Event Horizon distance in river miles. ",
-          "XGEO is not an input to the updated Event Horizon emulator."
+          "The output is a machine-learning prediction of Event Horizon distance in river miles. "
+          
         )
       ) |>
       gt::cols_width(

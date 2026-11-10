@@ -2276,7 +2276,7 @@ ui <- dashboardPage(
     tabItems(
       # -----------------------------
       # About
-      # -----------------------------
+      # -----------------------------3
       tabItem(
         tabName = "about",
         div(class = "about-page-scroll",
