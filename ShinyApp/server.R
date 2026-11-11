@@ -13320,20 +13320,22 @@ server <- function(input, output, session) {
     
     map_link <- function(label, input_id) {
       paste0(
-        "<a href='#' ",
-        "onclick=\"Shiny.setInputValue('",
+        "<a href='#' onclick=\"Shiny.setInputValue('",
         input_id,
-        "', Date.now(), {priority: 'event'}); ",
-        "return false;\">",
+        "', Date.now(), {priority: 'event'}); return false;\">",
         label,
         "</a>"
       )
     }
     
     data <- data.frame(
+      Section = c(
+        rep("Model Structure", 9),
+        rep("Input Range", 8)
+      ),
       Names = c(
         "Number of Boosted Trees",
-        "Number of Model Features",
+        "Number of Predictor Features",
         "Configured Maximum Leaves per Tree",
         "Total Leaf Nodes",
         "Total Split Nodes",
@@ -13350,83 +13352,40 @@ server <- function(input, output, session) {
         "`QPREC`",
         "`DCC Flow`"
       ),
-      
       `7-day` = c(
-        "1,000",
-        "7",
-        "255",
-        "255,000",
-        "254,000",
-        "509,000",
-        "46",
-        "0.10",
-        "Regression",
-        
-        map_link(
-          "15 available nodes",
-          "open_node_map_7day"
-        ),
-        
-        "321.580 - 14,763.154",
-        "639.961 - 62,032.795",
-        "6,155.703 - 86,690.764",
-        "13.438 - 24,552.754",
-        "See current model training metadata",
-        "See current model training metadata",
+        "1,000", "7", "255", "255,000", "254,000", "509,000",
+        "46", "0.10", "Regression",
+        map_link("15 available nodes", "open_node_map_7day"),
+        "322 - 14,763 cfs",
+        "640 - 62,033 cfs",
+        "6,156 - 86,691 cfs",
+        "13 - 24,553 cfs",
+        "49 - 223 TAF/month-equivalent",
+        "0 - 500 TAF/month-equivalent",
         "Not used"
       ),
-      
       `30-day` = c(
-        "1,000",
-        "8",
-        "255",
-        "255,000",
-        "254,000",
-        "509,000",
-        "42",
-        "0.10",
-        "Regression",
-        
-        map_link(
-          "39 available nodes",
-          "open_node_map_30day"
-        ),
-        
-        "321.580 - 14,763.154",
-        "639.961 - 62,032.795",
-        "6,155.703 - 86,690.764",
-        "13.438 - 24,552.754",
-        "See current model training metadata",
-        "See current model training metadata",
-        "See current model training metadata"
+        "1,000", "8", "255", "255,000", "254,000", "509,000",
+        "42", "0.10", "Regression",
+        map_link("39 available nodes", "open_node_map_30day"),
+        "322 - 14,763 cfs",
+        "640 - 62,033 cfs",
+        "6,156 - 86,691 cfs",
+        "13 - 24,553 cfs",
+        "49 - 223 TAF/month-equivalent",
+        "0 - 500 TAF/month-equivalent",
+        "See PTM 30-day model metadata"
       ),
-      
       check.names = FALSE
     )
     
-    data$`7-day` <- lapply(
-      data$`7-day`,
-      gt::html
-    )
+    data$`7-day` <- lapply(data$`7-day`, gt::html)
+    data$`30-day` <- lapply(data$`30-day`, gt::html)
     
-    data$`30-day` <- lapply(
-      data$`30-day`,
-      gt::html
-    )
-    
-    gt::gt(data) |>
-      gt::tab_row_group(
-        label = gt::html(
-          "<strong><em>Model Structure</em></strong>"
-        ),
-        rows = 1:9
-      ) |>
-      gt::tab_row_group(
-        label = gt::html(
-          "<strong><em>Input Range</em></strong>"
-        ),
-        rows = 10:17
-      ) |>
+    gt::gt(
+      data,
+      groupname_col = "Section"
+    ) |>
       gt::fmt_markdown(
         columns = Names,
         rows = 10:17
@@ -13436,27 +13395,19 @@ server <- function(input, output, session) {
         columns = dplyr::everything()
       ) |>
       gt::tab_style(
-        style = gt::cell_text(
-          weight = "bold",
-          align = "center"
-        ),
+        style = gt::cell_text(weight = "bold", align = "center"),
         locations = gt::cells_column_labels()
       ) |>
       gt::tab_style(
-        style = gt::cell_text(
-          align = "center",
-          size = "medium"
+        style = list(
+          gt::cell_fill(color = "#f5f7f8"),
+          gt::cell_text(weight = "bold", style = "italic", align = "center")
         ),
         locations = gt::cells_row_groups()
       ) |>
       gt::tab_style(
         style = gt::cell_borders(
-          sides = c(
-            "left",
-            "right",
-            "top",
-            "bottom"
-          ),
+          sides = c("left", "right", "top", "bottom"),
           color = "#c7d7da",
           weight = gt::px(1)
         ),
@@ -13473,20 +13424,20 @@ server <- function(input, output, session) {
       gt::tab_source_note(
         source_note = gt::md(
           paste0(
-            "**Model files:** PTM7_lightgbm.txt and ",
-            "PTM30_lightgbm.txt. Tree counts and node totals ",
-            "are calculated from the serialized LightGBM trees. ",
-            "The model files retain the internal feature names ",
-            "`SEA` and `STC`; the dashboard documents these ",
-            "inputs using the current QGCD and QPREC terminology."
+            "**Model files:** `PTM7_lightgbm.txt` and `PTM30_lightgbm.txt`. ",
+            "Input ranges are rounded to the nearest whole number for display ",
+            "and describe the serialized training-feature domain rather than ",
+            "operational limits. The serialized model names `SEA` and `STC` ",
+            "map to dashboard inputs QGCD and QPREC."
           )
         )
       ) |>
       gt::tab_options(
-        table.width = gt::pct(100),
+        table.width = gt::px(640),
         table.font.names = "Segoe UI",
         table.font.size = gt::px(14),
         data_row.padding = gt::px(8),
+        row_group.padding = gt::px(8),
         source_notes.font.size = gt::px(12)
       )
   })
@@ -13494,65 +13445,70 @@ server <- function(input, output, session) {
   output$ecoptm_parameters_table <- gt::render_gt({
     
     data <- data.frame(
+      Section = c(
+        rep("Model Structure", 9),
+        rep("Input Range", 4)
+      ),
       Names = c(
         "Number of Boosted Trees",
-        "Number of Model Features",
+        "Number of Predictor Features",
         "Configured Maximum Leaves per Tree",
         "Total Leaf Nodes",
         "Total Split Nodes",
         "Total Nodes",
         "Maximum Observed Tree Depth",
         "Learning Rate",
-        "Objective"
+        "Objective",
+        "`FPT`",
+        "`YOL`",
+        "`MOK`",
+        "`DCC`"
       ),
-      
-      `Survival` = c(
-        "500",
-        "4",
-        "128",
-        "63,988",
-        "63,488",
-        "127,476",
-        "30",
-        "0.05",
-        "Regression"
+      Survival = c(
+        "500", "4", "128", "63,988", "63,488", "127,476",
+        "30", "0.05", "Regression",
+        "6,312 - 86,691 cfs",
+        "55 - 192,338 cfs",
+        "66 - 8,653 cfs",
+        "0 or 1"
       ),
-      
       `Interior Routing` = c(
-        "500",
-        "4",
-        "128",
-        "63,994",
-        "63,494",
-        "127,488",
-        "31",
-        "0.05",
-        "Regression"
+        "500", "4", "128", "63,994", "63,494", "127,488",
+        "31", "0.05", "Regression",
+        "6,312 - 86,691 cfs",
+        "55 - 192,338 cfs",
+        "66 - 8,653 cfs",
+        "0 or 1"
       ),
-      
       check.names = FALSE
     )
     
-    gt::gt(data) |>
+    gt::gt(
+      data,
+      groupname_col = "Section"
+    ) |>
+      gt::fmt_markdown(
+        columns = Names,
+        rows = 10:13
+      ) |>
       gt::cols_align(
         align = "center",
         columns = dplyr::everything()
       ) |>
       gt::tab_style(
-        style = gt::cell_text(
-          weight = "bold",
-          align = "center"
-        ),
+        style = gt::cell_text(weight = "bold", align = "center"),
         locations = gt::cells_column_labels()
       ) |>
       gt::tab_style(
+        style = list(
+          gt::cell_fill(color = "#f5f7f8"),
+          gt::cell_text(weight = "bold", style = "italic", align = "center")
+        ),
+        locations = gt::cells_row_groups()
+      ) |>
+      gt::tab_style(
         style = gt::cell_borders(
-          sides = c(
-            "left",
-            "right",
-            "top",
-            "bottom"
-          ),
+          sides = c("left", "right", "top", "bottom"),
           color = "#c7d7da",
           weight = gt::px(1)
         ),
@@ -13562,94 +13518,59 @@ server <- function(input, output, session) {
         )
       ) |>
       gt::cols_width(
-        Names ~ gt::px(290),
-        Survival ~ gt::px(185),
-        `Interior Routing` ~ gt::px(185)
+        Names ~ gt::px(280),
+        Survival ~ gt::px(180),
+        `Interior Routing` ~ gt::px(180)
       ) |>
       gt::tab_source_note(
         source_note = gt::md(
           paste0(
-            "**Model files:** ECOPTM_survival_lightgbm.txt and ",
-            "ECOPTM_interior_lightgbm.txt. Both models use ",
-            "`FPT`, `YOL`, `MOK`, and `DCC`. Some trees stop ",
-            "below the configured maximum of 128 leaves, so the ",
-            "reported leaf and split totals are exact model totals."
+            "**Model files:** `ECOPTM_survival_lightgbm.txt` and ",
+            "`ECOPTM_interior_lightgbm.txt`. Input ranges are rounded ",
+            "to the nearest whole number for display and come from the ",
+            "serialized feature metadata. Flow ranges are in cfs. `DCC` ",
+            "is Boolean, where 0 indicates closed and 1 indicates open."
           )
         )
       ) |>
       gt::tab_options(
-        table.width = gt::pct(100),
+        table.width = gt::px(640),
         table.font.names = "Segoe UI",
         table.font.size = gt::px(14),
         data_row.padding = gt::px(8),
+        row_group.padding = gt::px(8),
         source_notes.font.size = gt::px(12)
-      )
-  })
-  
-  output$horizon_datarange_table <- render_gt({
-    
-    badge <- function(text) sprintf(
-      "<span style='display:inline-block;background:#f9e9ee;color:#c7254e;border:1px solid #efcbd5;border-radius:4px;padding:3px 8px;font-family:monospace;white-space:nowrap;'>%s</span>",
-      text
-    )
-    
-    data <- data.frame(
-      Names = c("SAC", "EXP", "EAST", "XGEO", "ERL"),
-      `Data Range` = c(
-        "6155.703 - 86690.764",
-        "321.580 - 14763.154",
-        "13.438 - 24552.754",
-        "1808.487 - 14164.103",
-        "15:5:80, int"
-      ),
-      check.names = FALSE
-    )
-    
-    gt(data) |>
-      text_transform(
-        locations = cells_body(columns = Names),
-        fn = function(x) vapply(x, badge, character(1))
-      ) |>
-      cols_align(align = "center", columns = everything()) |>
-      tab_style(
-        style = cell_text(weight = "bold", align = "center"),
-        locations = cells_column_labels()
-      ) |>
-      tab_style(
-        style = cell_borders(
-          sides = c("left", "right", "top", "bottom"),
-          color = "#c7d7da",
-          weight = px(1)
-        ),
-        locations = list(cells_column_labels(), cells_body())
-      ) |>
-      cols_width(Names ~ px(220), `Data Range` ~ px(300)) |>
-      tab_options(
-        table.width = pct(100),
-        table.font.names = "Segoe UI",
-        table.font.size = px(14),
-        data_row.padding = px(8)
       )
   })
   
   output$horizon_parameter_table <- gt::render_gt({
     
     data <- data.frame(
+      Section = c(
+        rep("Model Structure", 10),
+        rep("Input Range", 7)
+      ),
       Names = c(
         "Algorithm",
         "Objective",
         "Number of Boosted Trees",
-        "Number of Model Features",
+        "Number of Predictor Features",
         "Configured Maximum Leaves per Tree",
         "Total Leaf Nodes",
         "Total Split Nodes",
         "Total Nodes",
         "Maximum Observed Tree Depth",
-        "Learning Rate"
+        "Learning Rate",
+        "`Risk Threshold`",
+        "`EXP`",
+        "`VER`",
+        "`SAC`",
+        "`QGCD`",
+        "`QPREC`",
+        "`EAST`"
       ),
-      
       Parameters = c(
-        "LightGBM gradient-boosted decision trees",
+        "LightGBM boosted trees",
         "Regression",
         "500",
         "7",
@@ -13658,32 +13579,44 @@ server <- function(input, output, session) {
         "31,000",
         "62,500",
         "24",
-        "0.10"
+        "0.10",
+        "15 - 80% in 5% increments",
+        "322 - 14,763 cfs",
+        "640 - 62,033 cfs",
+        "6,156 - 86,691 cfs",
+        "49 - 223 TAF/month-equivalent",
+        "0 - 500 TAF/month-equivalent",
+        "13 - 24,553 cfs"
       ),
-      
       check.names = FALSE
     )
     
-    gt::gt(data) |>
+    gt::gt(
+      data,
+      groupname_col = "Section"
+    ) |>
+      gt::fmt_markdown(
+        columns = Names,
+        rows = 11:17
+      ) |>
       gt::cols_align(
         align = "center",
         columns = dplyr::everything()
       ) |>
       gt::tab_style(
-        style = gt::cell_text(
-          weight = "bold",
-          align = "center"
-        ),
+        style = gt::cell_text(weight = "bold", align = "center"),
         locations = gt::cells_column_labels()
       ) |>
       gt::tab_style(
+        style = list(
+          gt::cell_fill(color = "#f5f7f8"),
+          gt::cell_text(weight = "bold", style = "italic", align = "center")
+        ),
+        locations = gt::cells_row_groups()
+      ) |>
+      gt::tab_style(
         style = gt::cell_borders(
-          sides = c(
-            "left",
-            "right",
-            "top",
-            "bottom"
-          ),
+          sides = c("left", "right", "top", "bottom"),
           color = "#c7d7da",
           weight = gt::px(1)
         ),
@@ -13693,28 +13626,31 @@ server <- function(input, output, session) {
         )
       ) |>
       gt::cols_width(
-        Names ~ gt::px(330),
-        Parameters ~ gt::px(300)
+        Names ~ gt::px(280),
+        Parameters ~ gt::px(360)
       ) |>
       gt::tab_source_note(
         source_note = gt::md(
           paste0(
-            "**Model file:** EH_lightgbm.txt. The updated model ",
-            "uses seven features: Risk Threshold, EXP, VER, SAC, ",
-            "QGCD, QPREC, and EAST. The serialized model retains ",
-            "the internal feature names `level`, `EXP`, `VER`, ",
-            "`SAC`, `SEA`, `STC`, and `EAST`."
+            "**Model file:** `EH_lightgbm.txt`. Input ranges are rounded ",
+            "to the nearest whole number for display and were derived from ",
+            "the serialized feature metadata. Serialized names `level`, ",
+            "`SEA`, and `STC` correspond to Risk Threshold, QGCD, and QPREC. ",
+            "Ranges describe the recorded training-feature domain rather ",
+            "than operational limits."
           )
         )
       ) |>
       gt::tab_options(
-        table.width = gt::pct(100),
+        table.width = gt::px(640),
         table.font.names = "Segoe UI",
         table.font.size = gt::px(14),
         data_row.padding = gt::px(8),
+        row_group.padding = gt::px(8),
         source_notes.font.size = gt::px(12)
       )
   })
+  
   ptm_maps_server(input = input,output = output,session = session)
   
 }

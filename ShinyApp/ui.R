@@ -1153,7 +1153,24 @@ ui <- dashboardPage(
         .ccwd-data-methodology .ccwd-method-example-caption {font-size:12px !important; color:#63747c; margin:8px 0 15px;}
         .ccwd-data-methodology .ccwd-method-links a {color:#087784; font-weight:600;}
         .ccwd-data-methodology .ccwd-method-links .fa {font-size:10px; margin-left:3px;}
-
+        .data-access-parameter-table {
+          width: 100%;
+          box-sizing: border-box;
+          padding-right: 3px;
+        }
+        
+        .data-access-parameter-table .gt_table {
+          min-width: 640px;
+        }
+        
+        .data-access-parameter-table .gt_sourcenotes {
+          white-space: normal !important;
+          overflow-wrap: anywhere;
+        }
+        
+        .data-access-parameter-table .gt_row {
+          white-space: normal;
+        }
         /* Data Access: fluid page width, scrolling limited to wide model input tables. */
         .data-access-layout {
           width:100%; min-width:0; max-width:100%;
@@ -3576,15 +3593,50 @@ ui <- dashboardPage(
                       ),
                       tags$hr(),
                       fluidRow(
-                        column(width = 7,
-                               box(title = "ECO-PTM Emulator Model Input Stations",width = 12,height = "720px",status = "primary",solidHeader = TRUE,
-                                   leaflet::leafletOutput("eco_ptm_map", width = "100%", height = "650px")
-                               )
+                        column(
+                          width = 7,
+                          
+                          box(
+                            title = tagList(
+                              icon("map-marker-alt"),
+                              " ECO-PTM Emulator Model Input Stations"
+                            ),
+                            width = 12,
+                            height = "720px",
+                            status = "primary",
+                            solidHeader = TRUE,
+                            
+                            leaflet::leafletOutput(
+                              "eco_ptm_map",
+                              width = "100%",
+                              height = "650px"
+                            )
+                          )
                         ),
-                        column(width = 5,
-                               box(title = "Model Parameters",width = 12,height = "720px",status = "primary",solidHeader = TRUE,
-                                   div(style = "height:650px;overflow-y:auto;",gt::gt_output("ecoptm_parameters_table"))
-                               )
+                        
+                        column(
+                          width = 5,
+                          
+                          box(
+                            title = "Model Parameters",
+                            width = 12,
+                            height = "720px",
+                            status = "primary",
+                            solidHeader = TRUE,
+                            
+                            div(
+                              class = "data-access-parameter-table",
+                              style = paste0(
+                                "height:650px;",
+                                "overflow-y:auto;",
+                                "overflow-x:auto;"
+                              ),
+                              
+                              gt::gt_output(
+                                "ecoptm_parameters_table"
+                              )
+                            )
+                          )
                         )
                       )
                   ),
@@ -3599,20 +3651,67 @@ ui <- dashboardPage(
                       ),
                       tags$hr(),
                       fluidRow(
-                        column(width = 7,
-                               box(title = "PTM Emulator Release Nodes and Model Input Stations",width = 12,height = "720px",status = "primary",solidHeader = TRUE,
-                                   tabsetPanel(id = "ptm_map_tabs",type = "tabs",
-                                               tabPanel(title = "7-Day",leaflet::leafletOutput("node_station_map_7day",width = "100%",height = "620px")),
-                                               tabPanel(title = "30-Day",leaflet::leafletOutput("node_station_map_30day",width = "100%",height = "620px"))
-                                   )
-                               )
+                        column(
+                          width = 7,
+                          
+                          box(
+                            title = tagList(
+                              icon("map-marked-alt"),
+                              " PTM Emulator Release Nodes and Model Input Stations"
+                            ),
+                            width = 12,
+                            height = "720px",
+                            status = "primary",
+                            solidHeader = TRUE,
+                            
+                            tabsetPanel(
+                              id = "ptm_map_tabs",
+                              type = "tabs",
+                              
+                              tabPanel(
+                                title = "7-Day",
+                                leaflet::leafletOutput(
+                                  "node_station_map_7day",
+                                  width = "100%",
+                                  height = "620px"
+                                )
+                              ),
+                              
+                              tabPanel(
+                                title = "30-Day",
+                                leaflet::leafletOutput(
+                                  "node_station_map_30day",
+                                  width = "100%",
+                                  height = "620px"
+                                )
+                              )
+                            )
+                          )
                         ),
-                        column(width = 5,
-                               box(title = "Model Parameters",width = 12,height = "720px",status = "primary",solidHeader = TRUE,
-                                   div(style = "height:650px;overflow-y:auto;",
-                                       gt::gt_output("ptm_parameters_table")
-                                   )
-                               )
+                        
+                        column(
+                          width = 5,
+                          
+                          box(
+                            title = "Model Parameters",
+                            width = 12,
+                            height = "720px",
+                            status = "primary",
+                            solidHeader = TRUE,
+                            
+                            div(
+                              class = "data-access-parameter-table",
+                              style = paste0(
+                                "height:650px;",
+                                "overflow-y:auto;",
+                                "overflow-x:auto;"
+                              ),
+                              
+                              gt::gt_output(
+                                "ptm_parameters_table"
+                              )
+                            )
+                          )
                         )
                       )
                   ),        
@@ -3627,24 +3726,50 @@ ui <- dashboardPage(
                       ),
                       tags$hr(),
                       fluidRow(
-                        column(width = 7,
-                               box(title = "Event Horizon Model Input Stations",width = 12,height = "740px",status = "primary",solidHeader = TRUE,
-                                   leaflet::leafletOutput("horizon_map",width = "100%",height = "670px")
-                               )
+                        column(
+                          width = 7,
+                          
+                          box(
+                            title = tagList(
+                              icon("route"),
+                              " Entrainment Event Horizon Model Input Stations"
+                            ),
+                            width = 12,
+                            height = "720px",
+                            status = "primary",
+                            solidHeader = TRUE,
+                            
+                            leaflet::leafletOutput(
+                              "horizon_map",
+                              width = "100%",
+                              height = "650px"
+                            )
+                          )
                         ),
                         
-                        column(width = 5,
-                               box(title = "Inputs Data Range",width = 12,height = "320px",status = "primary",solidHeader = TRUE,
-                                   div(style = "height:350px;overflow-y:auto;",
-                                       gt::gt_output("horizon_datarange_table")
-                                   )
-                               ),
-                               
-                               box(title = "Model Parameters",width = 12,height = "400px",status = "primary",solidHeader = TRUE,
-                                   div(style = "height:350px;overflow-y:auto;",
-                                       gt::gt_output("horizon_parameter_table")
-                                   )
-                               )
+                        column(
+                          width = 5,
+                          
+                          box(
+                            title = "Model Parameters",
+                            width = 12,
+                            height = "720px",
+                            status = "primary",
+                            solidHeader = TRUE,
+                            
+                            div(
+                              class = "data-access-parameter-table",
+                              style = paste0(
+                                "height:650px;",
+                                "overflow-y:auto;",
+                                "overflow-x:auto;"
+                              ),
+                              
+                              gt::gt_output(
+                                "horizon_parameter_table"
+                              )
+                            )
+                          )
                         )
                       )
                   ),
