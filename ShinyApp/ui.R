@@ -2400,7 +2400,7 @@ ui <- dashboardPage(
                             "Default flow values for observed conditions will be retrieved daily",
                             "through APIs from public sources and updated based on the trailing",
                             "7-day average flow. Data used by the Weekly Assessments page will",
-                            "be updated weekly during the OMR entrainment management season.",
+                            "be updated weekly during the OMR entrainment management season (December through June).",
                             "For additional information on data sources, please go to the",
                             "Data Access page."
                           )
@@ -2413,189 +2413,66 @@ ui <- dashboardPage(
                       width = 12,
                       div(style = "margin-left: 60px;margin-right:120px",
                           h2("Overview"),
-                          h5(
-                            style = "text-align: justify;",
+                          div(
+                            class = "about-overview-text",
                             
-                            "This ShinyApp makes forecast and/or presents hindcast results of particle entrainment and hydraulic footprint metrics within the Sacramento-San Joaquin Delta based on either 7-day or 30-day average flows. The observed conditions simulations and predictions are used for estimating entrainment and hydraulic footprint metrics based on actual conditions, with the option for users to modify flow variables to user-defined values. The forecast conditions simulations are used for estimating entrainment and hydraulic footprint metrics based on previously forecasted conditions during the OMR entrainment management season. The scenario comparison allows users to compare particle entrainment and hydraulic footprint metrics for different scenarios generated using either observed conditions or forecast conditions.",
-                            
-                            tags$br(),
-                            tags$br(),
-                            
-                            "This interactive application is designed based on machine learning models developed by the Contra Costa Water District's (CCWD) ",
-                            
-                            tags$a(
-                              "hydraulic footprint project",
-                              href = "https://github.com/cchang-ccwater/CCWD_Hydraulic_Footprints",
-                              target = "_blank",
-                              rel = "noopener noreferrer"
+                            p(
+                              "This interactive application uses hydrodynamic model emulators to ",
+                              "develop quick and intuitive outputs that support real-time and ",
+                              "large-scale assessments of the potential effects of Central Valley ",
+                              "Project (CVP) and State Water Project (SWP) export operations on ",
+                              "listed species in the Sacramento-San Joaquin Delta. The hydrodynamic ",
+                              "model emulators are machine-learning models trained on DSM2 PTM and ",
+                              "ECO-PTM outputs. The models produce end-of-7-day and end-of-30-day ",
+                              "percent entrainment estimates for surface-oriented particles entering ",
+                              "the CVP and SWP export facilities, hydraulic-footprint metrics, and ",
+                              "salmon survival and routing estimates."
                             ),
                             
-                            ". Further details on the model development, original training datasets, and comparative evaluation of model results are available in the CCWD report ",
-                            tags$sup(
+                            p(
+                              "Users can interact with the application through the following tabs:"
+                            ),
+                            
+                            tags$ul(
+                              class = "about-workflow-list",
+                              
+                              tags$li(
+                                tags$strong("Exploration. "),
+                                "Produces output metrics using current Delta conditions or ",
+                                "user-defined inputs."
+                              ),
+                              
+                              tags$li(
+                                tags$strong("Weekly Assessments. "),
+                                "Produces output metrics using forecasted, previously forecasted, ",
+                                "or previously observed Delta conditions during the OMR entrainment ",
+                                "management season."
+                              ),
+                              
+                              tags$li(
+                                tags$strong("Scenario Comparison. "),
+                                "Compares output metrics across two or more scenarios from the ",
+                                "Exploration and Weekly Assessments tabs, or from user-defined ",
+                                "scenarios."
+                              )
+                            ),
+                            
+                            p(
+                              "This interactive application is based on machine-learning models ",
+                              "developed through the Contra Costa Water District's (CCWD) hydraulic ",
+                              "footprint project. Further details on model development, original ",
+                              "training datasets, and comparative evaluation of model results are ",
+                              "available in the CCWD report and supporting model repository  ",
+                              
                               tags$a(
                                 "(1)",
-                                href = "#ref-1"
-                              )
-                            ),
-                            "."
-                          ),
-                          
-                          h3("Author & Contact Information"),
-                          gt_output("about_info_table"),
-                          h3("Technical Guidelines:"),
-                          div(style = "margin-left: 60px;",
-                              h4("Visual Identity Compliance:"),
-                              h5(style = "text-align: justify;", "The application framework is built using the ", 
-                                 tags$code("shiny"), 
-                                 "and ", 
-                                 tags$code("shinydashboard"),
-                                 "packages. Figures are generated using the", 
-                                 tags$code("ggplot"),
-                                 "and ", 
-                                 tags$code("viridis"),
-                                 "packages. Additional packages including",
-                                 tags$code("leaflet"),
-                                 ", ", 
-                                 tags$code("sf"),
-                                 ", ",                        
-                                 tags$code("lwgeom"),  
-                                 ", and ", 
-                                 tags$code("dplyr"),                                 
-                                 ", are used for interactive mapping, spatial data processing, and geometric calculations. Most interface text uses font sizes between 13px and 16px to ensure good readability under normal viewing conditions. The application primarily uses the Segoe UI font family, with,",
-                                 tags$b("Regular", style = "font-family: Segoe UI"),
-                                 tags$b(","),
-                                 tags$b("Semibold", style = "font-family: Segoe UI Semibold"),
-                                 tags$b(","),
-                                 tags$b("Italic", style = "font-style: italic"),
-                                 "styles applied where appropriate. Additional accessibility features have been implemented or are planned for future releases to further improve accessibility:"
-                              ),
-                              h5(style = "margin-left: 60px; text-align: justify;","	- Adjustable text size: A text size adjustment option is available, allowing users to change the font size from small to large to improve readability. The default text size is Medium."),
-                              p(style = "text-align: center;",
-                                tags$span(style = "font-size: 0.83em;margin-right:20px;","Small"),
-                                tags$span(style = "font-size: 1.17em;margin-right:20px;","Medium"),
-                                tags$span(style = "font-size: 2.00em;","Large")
-                              ),
-                              h5(style = "margin-left: 60px; text-align: justify;","  - Colorblind-friendly color palette: A color palette option is available, allowing users to switch between different plot color schemes. By default, the application uses the Viridis color palette, which is designed to be perceptually uniform and accessible for users with color vision deficiency. Users may also switch to a high-contrast color palette to enhance visibility."),
-                              h4("Browser Compatibility:"),
-                              h5(
-                                "This app can work on Edge, Chrome, Safari, and Firefox, as tested through version ",
-                                tags$code(paste0("v", APP_VERSION)),
-                                "."
-                              ),
-                              h4("Performance Standards: "),
-                              h5(style = "text-align: justify;","The application provides reasonable load times under normal operating conditions. The ECO-PTM Emulator page typically loads in less than 1 second; the PTM Emulator page in approximately 2-3 seconds; and the Event Horizon page in approximately 7-9 seconds because it loads Leaflet maps, geo-spatial files, and multiple plots. Standard weekly prediction tasks are generally completed almost immediately, while large prediction requests involving long time series and many input features, e.g., 190k records, may require substantially more processing and rendering time."),
-                              h5(style = "text-align: justify;","Concurrent-user capacity depends on the deployment environment, including available CPU, memory, and the number of Shiny worker processes. The application is expected to support multiple users performing normal navigation, data exploration, and standard predictions, although several simultaneous computationally intensive prediction requests may increase response times. Final concurrent-user capacity should therefore be confirmed through load testing in the production environment."),
-                              h4("Mobile Responsiveness:"),
-                              h5("This application is usable also on mobile devices.")
-                              
-                          ),
-                          h3(
-                            id = "reference",
-                            "References"
-                          ),
-                          
-                          div(
-                            style = "margin-left: 60px;",
-                            
-                            h5(
-                              id = "ref-1",
-                              style = "text-align: justify; line-height: 1.6;",
-                              
-                              "Contra Costa Water District. (2026). ",
-                              
-                              tags$em(
-                                paste(
-                                  "Intuitive Quantitative Metrics for Rapid Assessment",
-                                  "of Entrainment Risks and Salmonid Responses in The Delta."
-                                )
-                              ),
-                              
-                              " ",
-                              
-                              tags$a(
-                                "[View PDF]",
-                                href = "20260512_CCWD_Entrainment_TM_Final.pdf",
+                                href = "https://github.com/cchang-ccwater/CCWD_Hydraulic_Footprints",
                                 target = "_blank",
-                                rel = "noopener noreferrer"
-                              )
-                            )
-                          ),
-                          h3(
-                            id = "release-notes",
-                            "Release Notes:"
-                          ),
-                          
-                          div(
-                            style = "margin-left: 60px;",
-                            
-                            tags$div(
-                              style = paste(
-                                "margin-bottom: 24px;",
-                                "padding-left: 12px;",
-                                "border-left: 4px solid #3c8dbc;"
+                                rel = "noopener noreferrer",
+                                title = "Open the CCWD Hydraulic Footprints model repository in a new browser tab"
                               ),
                               
-                              h4(
-                                style = paste(
-                                  "margin-bottom: 8px;",
-                                  "font-weight: 600;"
-                                ),
-                                
-                                "Version ",
-                                
-                                tags$code(
-                                  "1.1.0",
-                                  style = paste(
-                                    "font-weight: 400;",
-                                    "margin-left: 10px;"
-                                  )
-                                ),
-                                
-                                tags$small(
-                                  style = paste(
-                                    "margin-left: 10px;",
-                                    "color: #777777;",
-                                    "font-weight: normal;"
-                                  ),
-                                  "December 1, 2026"
-                                )
-                              ),
-                              
-                              h5(
-                                style = paste(
-                                  "line-height: 1.6;",
-                                  "margin-top: 6px;",
-                                  "margin-bottom: 6px;",
-                                  "margin-left: 30px;",
-                                  "font-weight: normal;"
-                                ),
-                                tags$b("-Added: "),
-                                "First installment of Shiny app"
-                              ),
-                              
-                              h5(
-                                style = paste(
-                                  "line-height: 1.6;",
-                                  "margin-top: 6px;",
-                                  "margin-bottom: 6px;",
-                                  "margin-left: 30px;",
-                                  "font-weight: normal;"
-                                ),
-                                tags$b("-Improved: "),
-                                "NA"
-                              ),
-                              
-                              h5(
-                                style = paste(
-                                  "line-height: 1.6;",
-                                  "margin-top: 6px;",
-                                  "margin-bottom: 6px;",
-                                  "margin-left: 30px;",
-                                  "font-weight: normal;"
-                                ),
-                                tags$b("-Fixed: "),
-                                "NA"
-                              )
+                              "."
                             )
                           ),
                           h3(
@@ -2787,7 +2664,172 @@ ui <- dashboardPage(
                                 "model limitations, and other available technical evidence."
                               )
                             )
+                          ),
+                          
+                          h3("Author & Contact Information"),
+                          gt_output("about_info_table"),
+                          h3("Technical Guidelines:"),
+                          div(style = "margin-left: 60px;",
+                              h4("Visual Identity Compliance:"),
+                              h5(style = "text-align: justify;", "The application framework is built using the ", 
+                                 tags$code("shiny"), 
+                                 "and ", 
+                                 tags$code("shinydashboard"),
+                                 "packages. Figures are generated using the", 
+                                 tags$code("ggplot"),
+                                 "and ", 
+                                 tags$code("viridis"),
+                                 "packages. Additional packages including",
+                                 tags$code("leaflet"),
+                                 ", ", 
+                                 tags$code("sf"),
+                                 ", ",                        
+                                 tags$code("lwgeom"),  
+                                 ", and ", 
+                                 tags$code("dplyr"),                                 
+                                 ", are used for interactive mapping, spatial data processing, and geometric calculations. Most interface text uses font sizes between 13px and 16px to ensure good readability under normal viewing conditions. The application primarily uses the Segoe UI font family, with,",
+                                 tags$b("Regular", style = "font-family: Segoe UI"),
+                                 tags$b(","),
+                                 tags$b("Semibold", style = "font-family: Segoe UI Semibold"),
+                                 tags$b(","),
+                                 tags$b("Italic", style = "font-style: italic"),
+                                 "styles applied where appropriate. Additional accessibility features have been implemented or are planned for future releases to further improve accessibility:"
+                              ),
+                              h5(style = "margin-left: 60px; text-align: justify;","	- Adjustable text size: A text size adjustment option is available, allowing users to change the font size from small to large to improve readability. The default text size is Medium."),
+                              p(style = "text-align: center;",
+                                tags$span(style = "font-size: 0.83em;margin-right:20px;","Small"),
+                                tags$span(style = "font-size: 1.17em;margin-right:20px;","Medium"),
+                                tags$span(style = "font-size: 2.00em;","Large")
+                              ),
+                              h5(style = "margin-left: 60px; text-align: justify;","  - Colorblind-friendly color palette: A color palette option is available, allowing users to switch between different plot color schemes. By default, the application uses the Viridis color palette, which is designed to be perceptually uniform and accessible for users with color vision deficiency. Users may also switch to a high-contrast color palette to enhance visibility."),
+                              h4("Browser Compatibility:"),
+                              h5(
+                                "This app can work on Edge, Chrome, Safari, and Firefox, as tested through version ",
+                                tags$code(paste0("v", APP_VERSION)),
+                                "."
+                              ),
+                              h4("Performance Standards: "),
+                              h5(style = "text-align: justify;","The machine-learning emulators and event horizon models complete predictions in 0-2 seconds,",
+                                 "while the accompanying data preparation and output processing can take ~30 seconds. ",
+                                 "Operations that retrieve external data, evaluate multiple archived ",
+                                 "scenarios, interpolate spatial results, or generate maps may contribute ",
+                                 "to longer load times."),
+                              h5(style = "text-align: justify;","Run times vary with the selected workflow, external-source availability, ",
+                                 "server load, and the number of scenarios evaluated."),
+                              h4("Mobile Responsiveness:"),
+                              h5("This application is usable also on mobile devices.")
+                              
+                          ),
+                          h3(
+                            id = "reference",
+                            "References"
+                          ),
+                          
+                          div(
+                            style = "margin-left: 60px;",
+                            
+                            h5(
+                              id = "ref-1",
+                              style = "text-align: justify; line-height: 1.6;",
+                              
+                              "Contra Costa Water District. (2026). ",
+                              
+                              tags$em(
+                                paste(
+                                  "Intuitive Quantitative Metrics for Rapid Assessment",
+                                  "of Entrainment Risks and Salmonid Responses in The Delta."
+                                )
+                              ),
+                              
+                              " ",
+                              
+                              tags$a(
+                                "[View PDF]",
+                                href = "20260512_CCWD_Entrainment_TM_Final.pdf",
+                                target = "_blank",
+                                rel = "noopener noreferrer"
+                              )
+                            )
+                          ),
+                          h3(
+                            id = "release-notes",
+                            "Release Notes:"
+                          ),
+                          
+                          div(
+                            style = "margin-left: 60px;",
+                            
+                            tags$div(
+                              style = paste(
+                                "margin-bottom: 24px;",
+                                "padding-left: 12px;",
+                                "border-left: 4px solid #3c8dbc;"
+                              ),
+                              
+                              h4(
+                                style = paste(
+                                  "margin-bottom: 8px;",
+                                  "font-weight: 600;"
+                                ),
+                                
+                                "Version ",
+                                
+                                tags$code(
+                                  "1.1.0",
+                                  style = paste(
+                                    "font-weight: 400;",
+                                    "margin-left: 10px;"
+                                  )
+                                ),
+                                
+                                tags$small(
+                                  style = paste(
+                                    "margin-left: 10px;",
+                                    "color: #777777;",
+                                    "font-weight: normal;"
+                                  ),
+                                  "December 1, 2026"
+                                )
+                              ),
+                              
+                              h5(
+                                style = paste(
+                                  "line-height: 1.6;",
+                                  "margin-top: 6px;",
+                                  "margin-bottom: 6px;",
+                                  "margin-left: 30px;",
+                                  "font-weight: normal;"
+                                ),
+                                tags$b("-Added: "),
+                                "First installment of Shiny app"
+                              ),
+                              
+                              h5(
+                                style = paste(
+                                  "line-height: 1.6;",
+                                  "margin-top: 6px;",
+                                  "margin-bottom: 6px;",
+                                  "margin-left: 30px;",
+                                  "font-weight: normal;"
+                                ),
+                                tags$b("-Improved: "),
+                                "NA"
+                              ),
+                              
+                              h5(
+                                style = paste(
+                                  "line-height: 1.6;",
+                                  "margin-top: 6px;",
+                                  "margin-bottom: 6px;",
+                                  "margin-left: 30px;",
+                                  "font-weight: normal;"
+                                ),
+                                tags$b("-Fixed: "),
+                                "NA"
+                              )
+                            )
                           )
+                          
                       )
                     )
                   )
@@ -3412,30 +3454,69 @@ ui <- dashboardPage(
                             width = 6,
                             
                             div(
-                              class = "data-access-resource-card",
+                              class = "data-access-resource-stack",
                               
-                              tags$h4(
-                                icon("github"),
-                                " Model Automation Repository"
-                              ),
-                              
-                              p(
-                                "Access the DSM2 weekly modeling workflow, PTM and ECO-PTM ",
-                                "post-processing tools, SacPAS reporting code, model ",
-                                "documentation, and Emulator/Event Horizon Shiny application."
-                              ),
-                              
-                              tags$a(
-                                class = "btn btn-success",
-                                href = "https://github.com/BDO-Science/delta-model-automation",
-                                target = "_blank",
-                                rel = "noopener noreferrer",
-                                title = paste(
-                                  "Open the BDO-Science delta-model-automation",
-                                  "repository in a new browser tab"
+                              # ------------------------------------------------------------------------
+                              # CCWD machine-learning model repository
+                              # ------------------------------------------------------------------------
+                              div(
+                                class = "data-access-resource-card",
+                                
+                                tags$h4(
+                                  icon("github"),
+                                  " CCWD Hydraulic Footprint Model Repository"
                                 ),
-                                icon("github"),
-                                " View on GitHub"
+                                
+                                p(
+                                  "Access the public set of machine-learning models developed through ",
+                                  "the Contra Costa Water District's hydraulic footprint project, ",
+                                  "including PTM, ECO-PTM emulator, and event horizon models and supporting Delta ",
+                                  "location resources."
+                                ),
+                                
+                                tags$a(
+                                  class = "btn btn-success",
+                                  href = "https://github.com/cchang-ccwater/CCWD_Hydraulic_Footprints/tree/main",
+                                  target = "_blank",
+                                  rel = "noopener noreferrer",
+                                  title = paste(
+                                    "Open the CCWD Hydraulic Footprints model repository",
+                                    "in a new browser tab"
+                                  ),
+                                  icon("github"),
+                                  " View Model Repository"
+                                )
+                              ),
+                              
+                              # ------------------------------------------------------------------------
+                              # DSM2 model-automation and Shiny application repository
+                              # ------------------------------------------------------------------------
+                              div(
+                                class = "data-access-resource-card",
+                                
+                                tags$h4(
+                                  icon("github"),
+                                  " Model Automation Repository"
+                                ),
+                                
+                                p(
+                                  "Access the DSM2 weekly modeling workflow, PTM and ECO-PTM ",
+                                  "post-processing tools, SacPAS reporting code, model documentation, ",
+                                  "and the Emulator/Event Horizon Shiny application."
+                                ),
+                                
+                                tags$a(
+                                  class = "btn btn-success",
+                                  href = "https://github.com/BDO-Science/delta-model-automation",
+                                  target = "_blank",
+                                  rel = "noopener noreferrer",
+                                  title = paste(
+                                    "Open the BDO-Science delta-model-automation",
+                                    "repository in a new browser tab"
+                                  ),
+                                  icon("github"),
+                                  " View Application Repository"
+                                )
                               )
                             )
                           ),

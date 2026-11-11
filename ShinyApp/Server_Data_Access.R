@@ -1,55 +1,137 @@
-make_station_set <- function(MIA, Map_Label = MIA) {
-  if (length(MIA) != length(Map_Label)) {
-    stop("MIA and Map_Label must have the same length.")
+make_station_set <- function(
+    MIA,
+    Map_Label = MIA,
+    Model_Input,
+    Source_Type
+) {
+  lengths <- c(
+    length(MIA),
+    length(Map_Label),
+    length(Model_Input),
+    length(Source_Type)
+  )
+  
+  if (length(unique(lengths)) != 1L) {
+    stop(
+      "MIA, Map_Label, Model_Input, and Source_Type must have the same length."
+    )
   }
   
   data.frame(
     MIA = MIA,
     Map_Label = Map_Label,
+    Model_Input = Model_Input,
+    Source_Type = Source_Type,
     stringsAsFactors = FALSE
   )
 }
 
 
+# Map markers represent spatial monitoring or operational locations only.
+# QGCD is a DAYFLOW-based reference series and has no single point location.
+# Event Horizon Risk Threshold is user-selected and has no point location.
 STATION_SETS <- list(
   
+  # New PTM 7-day model:
+  # DSM2 Node, EXP, VER, SAC, QGCD, QPREC, EAST
   ptm_day7 = make_station_set(
     MIA = c(
-      "CCF", "TPP", "VNS", "FPT", "MOK",
-      "CAL", "COS", "XGEO_A", "XGEO_C"
+      "CCF", "TPP", "VNS", "FPT",
+      "MOK", "CAL", "COS", "SCKC1"
     ),
     Map_Label = c(
-      "CCF", "TPP", "VNS", "SAC", "MOK",
-      "CAL", "COS", "XGEO_A", "XGEO_C"
+      "CCF", "TPP", "VNS", "FPT",
+      "MOK", "CAL", "COS", "SCKC1"
+    ),
+    Model_Input = c(
+      "EXP", "EXP", "VER", "SAC",
+      "EAST", "EAST", "EAST", "QPREC"
+    ),
+    Source_Type = c(
+      "Operational/export location",
+      "Operational/export location",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed precipitation station"
     )
   ),
   
+  # New PTM 30-day model:
+  # DSM2 Node, EXP, VER, SAC, QGCD, QPREC, EAST, DCC Flow
   ptm_day30 = make_station_set(
     MIA = c(
-      "CCF", "TPP", "VNS", "FPT", "MOK",
-      "CAL", "COS", "XGEO_A", "XGEO_C"
+      "CCF", "TPP", "VNS", "FPT",
+      "MOK", "CAL", "COS", "SCKC1", "DLC"
     ),
     Map_Label = c(
-      "CCF", "TPP", "VNS", "SAC", "MOK",
-      "CAL", "COS", "XGEO_A", "XGEO_C"
+      "CCF", "TPP", "VNS", "FPT",
+      "MOK", "CAL", "COS", "SCKC1", "DLC"
+    ),
+    Model_Input = c(
+      "EXP", "EXP", "VER", "SAC",
+      "EAST", "EAST", "EAST", "QPREC", "DCC Flow"
+    ),
+    Source_Type = c(
+      "Operational/export location",
+      "Operational/export location",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed precipitation station",
+      "Observed DCC flow station"
     )
   ),
   
+  # ECO-PTM predictors are unchanged:
+  # SAC, YOL, MOKE, DCC Gate Status
   eco_ptm = make_station_set(
     MIA = c(
       "FPT", "SACWEIR", "FREWEIR", "MOK", "XGEO_A"
     ),
     Map_Label = c(
       "FPT", "SACWEIR", "FREWEIR", "MOK", "DCC"
+    ),
+    Model_Input = c(
+      "SAC", "YOL", "YOL", "MOKE", "DCC Gate Status"
+    ),
+    Source_Type = c(
+      "Observed flow station",
+      "Observed weir component",
+      "Observed weir component",
+      "Observed flow station",
+      "DCC gate/location reference"
     )
   ),
   
+  # New Event Horizon model:
+  # Risk Threshold, EXP, VER, SAC, QGCD, QPREC, EAST
   horizon = make_station_set(
     MIA = c(
-      "FPT", "CCF", "TPP", "MOK", "CAL", "COS", "XGEO_A", "XGEO_C"
+      "CCF", "TPP", "VNS", "FPT",
+      "MOK", "CAL", "COS", "SCKC1"
     ),
     Map_Label = c(
-      "SAC", "CCF", "TPP", "MOK", "CAL", "COS", "XGEO_A", "XGEO_C"
+      "CCF", "TPP", "VNS", "FPT",
+      "MOK", "CAL", "COS", "SCKC1"
+    ),
+    Model_Input = c(
+      "EXP", "EXP", "VER", "SAC",
+      "EAST", "EAST", "EAST", "QPREC"
+    ),
+    Source_Type = c(
+      "Operational/export location",
+      "Operational/export location",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed flow station",
+      "Observed precipitation station"
     )
   )
 )
@@ -109,7 +191,8 @@ MAP_DEFINITIONS <- list(
     node_set = "ptm_day7",
     include_nodes = TRUE,
     node_color = "orange",
-    station_color = "green"
+    station_color = "green",
+    map_note = paste0("<strong>PTM 7-day inputs:</strong> DSM2 Node, EXP, VER, SAC, EAST, QGCD, and QPREC.<br>", "QGCD is a DAYFLOW-based reference-series input and does not have a single station marker." )
   ),
   
   ptm_combined_30day = list(
@@ -120,7 +203,8 @@ MAP_DEFINITIONS <- list(
     node_set = "all_nodes",
     include_nodes = TRUE,
     node_color = "blue",
-    station_color = "green"
+    station_color = "green",
+    map_note = paste0("<strong>PTM 30-day inputs:</strong> DSM2 Node, EXP, VER, SAC, EAST, QGCD, QPREC, and DCC Flow.<br>", "QGCD has no single station marker. DCC Flow is represented by DLC." )
   ),
   
   ptm_station_only_7day = list(
@@ -131,7 +215,8 @@ MAP_DEFINITIONS <- list(
     node_set = NULL,
     include_nodes = FALSE,
     node_color = "orange",
-    station_color = "green"
+    station_color = "green",
+    map_note = paste0("<strong>PTM 7-day input locations:</strong> EXP, VER, SAC, EAST, and QPREC.<br>", "QGCD is a DAYFLOW-based reference series and has no single station marker." )
   ),
   
   ptm_station_only_30day = list(
@@ -142,7 +227,8 @@ MAP_DEFINITIONS <- list(
     node_set = NULL,
     include_nodes = FALSE,
     node_color = "blue",
-    station_color = "green"
+    station_color = "green",
+    map_note = paste0("<strong>PTM 30-day input locations:</strong> EXP, VER, SAC, EAST, QPREC, and DCC Flow.<br>", "QGCD has no single station marker. DCC Flow is represented by DLC." )
   ),
   
   eco_ptm = list(
@@ -153,7 +239,8 @@ MAP_DEFINITIONS <- list(
     node_set = NULL,
     include_nodes = FALSE,
     node_color = "blue",
-    station_color = "green"
+    station_color = "green",
+    map_note = paste0("<strong>ECO-PTM input locations:</strong> SAC, YOL, MOKE, and DCC Gate Status.<br>", "YOL is calculated from SACWEIR and FREWEIR." )
   ),
   
   horizon = list(
@@ -164,7 +251,12 @@ MAP_DEFINITIONS <- list(
     node_set = NULL,
     include_nodes = FALSE,
     node_color = "blue",
-    station_color = "green"
+    station_color = "green",
+    map_note = paste0(
+      "<strong>Event Horizon inputs:</strong> Risk Threshold, EXP, VER, SAC, EAST, QGCD, and QPREC.<br>",
+      "SCKC1 marks Stockton 3NNW Fire Station #4, the precipitation gage used to derive QPREC. ",
+      "Risk Threshold is user-selected, and QGCD is a reference series; neither has a single station marker."
+    )
   )
 )
 
@@ -591,12 +683,33 @@ apply_map_extent <- function(map, longitude, latitude) {
 }
 
 
+add_model_input_note <- function(map, note) {
+  if (is.null(note) || !nzchar(note)) {
+    return(map)
+  }
+  
+  leaflet::addControl(
+    map,
+    html = paste0(
+      "<div style='max-width:340px;padding:8px 10px;",
+      "background:rgba(255,255,255,0.94);",
+      "border:1px solid #b7cbd1;border-radius:4px;",
+      "font-size:12px;line-height:1.35;color:#263238;'>",
+      note,
+      "</div>"
+    ),
+    position = "bottomleft"
+  )
+}
+
+
 create_model_map <- function(
     station_points,
     node_points = NULL,
     include_nodes = FALSE,
     node_color = "blue",
-    station_color = "green"
+    station_color = "green",
+    map_note = NULL
 ) {
   
   map <- leaflet::leaflet() |>
@@ -745,6 +858,11 @@ create_model_map <- function(
       latitude
     )
   }
+  
+  map <- add_model_input_note(
+    map = map,
+    note = map_note
+  )
   
   apply_map_extent(
     map = map,
@@ -918,7 +1036,8 @@ model_maps_server <- function(input, output, session) {
           node_points = node_points,
           include_nodes = map_config$include_nodes,
           node_color = map_config$node_color,
-          station_color = map_config$station_color
+          station_color = map_config$station_color,
+          map_note = map_config$map_note
         )
       })
       
