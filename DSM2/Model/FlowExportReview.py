@@ -1,6 +1,7 @@
 from calendar import week
 import code
 import sys
+import re
 from pathlib import Path
 import pandas as pd
 from datetime import datetime, timedelta
@@ -21,6 +22,12 @@ import plotly.io as pio
 
 DATA_EXTERNAL = Path.cwd() / "DataExternal"
 
+# The weekly OMR scenario files are identified by their NAME, e.g. "02_02_OMRI -5000.csv".
+# This is the same rule used by scenario_discovery.py, so both always agree on what the
+# scenarios are. Any other csv in the week folder (zoi_bins.csv, scenarios_<week>.csv, ...)
+# is ignored.
+OMRI_STEM_RE = re.compile(r"OMRI\s*(-?\d+)\s*$", re.IGNORECASE)
+
 # ---------------------------------------------------------
 # List files in a week folder
 # ---------------------------------------------------------
@@ -29,15 +36,26 @@ def get_week_folder(week: str):
     if not folder.exists():
         raise FileNotFoundError(f"Week folder not found: {folder}")
 
-    all_csvs = list(folder.glob("*.csv"))
-    weeklyflow_data = [
-        f for f in all_csvs
-        if f.name not in {
-            "DSM2_Historic_data.csv",
-            "zoi_bins.csv",
-            "average_exports_by_week.csv"
-        }
-]
+    weeklyflow_data = sorted(
+        f for f in folder.glob("*.csv")
+        if OMRI_STEM_RE.search(f.stem)
+    )
+
+    if not weeklyflow_data:
+        raise FileNotFoundError(
+            f"No OMRI files (named like '*OMRI -5000.csv') found in {folder}"
+        )
+
+    # Each OMR value must appear in exactly one file
+    seen = {}
+    for f in weeklyflow_data:
+        code = OMRI_STEM_RE.search(f.stem).group(1)
+        if code in seen:
+            raise ValueError(
+                f"Two files share OMRI {code}: {seen[code].name} and {f.name}. "
+                "Remove or rename one so each scenario has a single file."
+            )
+        seen[code] = f
 
     return folder, weeklyflow_data
 
@@ -312,7 +330,7 @@ def plot_cvp_exports(flow_csvs, measured, forecast_start, required_end, ax, use_
         {"linestyle": "-",  "linewidth": 1.5},
     ]
 
-    for i, (code, df) in enumerate(sorted(flow_csvs.items(), reverse=True)):
+    for i, (code, df) in enumerate(sorted(flow_csvs.items(), key=lambda kv: int(kv[0]))):
         df = df[df["DATE"] >= forecast_start_ts].copy()
         style = styles[i % len(styles)]
         color = colors[i % len(colors)]
@@ -413,7 +431,7 @@ def plot_swp_exports(flow_csvs, measured, forecast_start, required_end, ax, use_
         {"linestyle": "-",  "linewidth": 1.5},
     ]
 
-    for i, (code, df) in enumerate(sorted(flow_csvs.items(), reverse=True)):
+    for i, (code, df) in enumerate(sorted(flow_csvs.items(), key=lambda kv: int(kv[0]))):
         df = df[df["DATE"] >= forecast_start_ts].copy()
         style = styles[i % len(styles)]
         color = colors[i % len(colors)]
@@ -568,10 +586,11 @@ def average_exports_by_week(flow_csvs: dict, start_date: datetime.date, output_f
     summary_df = pd.DataFrame(rows)
 
     # Sort: Week1 → Week2 → Week3, scenarios descending
+    summary_df["_omr_sort"] = summary_df["OMR Bins"].astype(int)
     summary_df = summary_df.sort_values(
-        by=["Week", "OMR Bins"],
-        ascending=[True, False]
-    )
+        by=["Week", "_omr_sort"],
+        ascending=[True, True]       # most negative OMR first (e.g. -6,500, -5,000, ...)
+    ).drop(columns="_omr_sort")
 
     # Reorder columns
     summary_df = summary_df[
@@ -886,7 +905,7 @@ def write_flow_export_html(flow_csvs, measured, forecast_start, required_end, ou
 
     row2_y_values = []
 
-    for i, (code, df) in enumerate(sorted(flow_csvs.items(), reverse=True)):
+    for i, (code, df) in enumerate(sorted(flow_csvs.items(), key=lambda kv: int(kv[0]))):
         plot_df = df.copy()
         plot_df["DATE"] = pd.to_datetime(plot_df["DATE"])
         plot_df = plot_df[plot_df["DATE"] >= forecast_start_ts]
@@ -944,7 +963,7 @@ def write_flow_export_html(flow_csvs, measured, forecast_start, required_end, ou
 
     row3_y_values = []
 
-    for i, (code, df) in enumerate(sorted(flow_csvs.items(), reverse=True)):
+    for i, (code, df) in enumerate(sorted(flow_csvs.items(), key=lambda kv: int(kv[0]))):
         plot_df = df.copy()
         plot_df["DATE"] = pd.to_datetime(plot_df["DATE"])
         plot_df = plot_df[plot_df["DATE"] >= forecast_start_ts]
@@ -1183,11 +1202,9 @@ def main():
         df_extended = extend_to_required_end(df, required_end)
         df_extended.to_csv(f, index=False)
 
-        #store extended version in memory
-        stem = f.stem
-        if len(stem) >= 5 and stem[-5:].lstrip("-").isdigit():
-            flow_code = stem[-5:]
-            flow_csvs[flow_code] = df_extended
+        #store extended version in memory, keyed by the OMR value in the file name (e.g. "-5000")
+        flow_code = OMRI_STEM_RE.search(f.stem).group(1)
+        flow_csvs[flow_code] = df_extended
 
     #generate plots 
     fig, axes = plt.subplots(3, 1, figsize=(8.5, 11))  # portrait-friendly

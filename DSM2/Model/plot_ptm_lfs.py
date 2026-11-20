@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.lines import Line2D
 from pyhecdss import DSSFile
+
+from scenario_discovery import load_scenarios
 import plotly.graph_objects as go
 import plotly.io as pio
 
@@ -275,19 +277,28 @@ NODE_LINESTYLES = {
 
 # SCENARIOS
 # Map PTM scenario letters from DSS filenames to OMR labels used in plot titles and summary rows.
+# The letters and OMR values come from the names of this week's OMRI files
+# (written by scenario_discovery.py), not from a fixed A-D table.
+try:
+    _SCEN = load_scenarios(WEEK_STR, MODEL_DIR / "DataExternal")
+except FileNotFoundError as exc:
+    print(f"ERROR: {exc}")
+    sys.exit(1)
+
 SCENARIO_OMR = {
-    "D": "-6,500",
-    "A": "-5,000",
-    "B": "-3,500",
-    "C": "-2,000",
+    letter: f"{int(d['omri']):,}"      # e.g. -5000 -> "-5,000"
+    for letter, d in _SCEN.items()
 }
+print("Active OMR scenarios: " + ", ".join(f"{k} = {v}" for k, v in SCENARIO_OMR.items()))
 
 # HELPER FUNCTIONS
 # Parse scenario ID, scenario letter, and DSM2 node number from the DSS filename.
 # Assumes every DSS filename in PTM_DIR follows the expected naming convention.
 # If a filename does not match this pattern, the script will fail at match.group().
 def parse_dss_filename(dss_path):
-    match = re.match(r"(\d{8}-\d+[A-D]).*_(\d+)\.dss", dss_path.name)
+    match = re.match(r"(\d{8}-\d+[A-Z]).*_(\d+)\.dss", dss_path.name)
+    if not match:
+        return None
     return match.group(1), match.group(1)[-1], int(match.group(2))
 
 # Search all DSS pathnames for the requested flux time series and scenario ID.
@@ -433,8 +444,18 @@ data_plot = {}
 
 # Load each DSS file for the requested week.
 # Each file is expected to represent one DSM2 node and one PTM scenario.
+ignored_files = {}   # DSS files belonging to scenarios that are not active this week
 for dss_path in sorted(PTM_DIR.glob("*.dss")):
-    scenario_id, scen, node = parse_dss_filename(dss_path)
+    parsed = parse_dss_filename(dss_path)
+    if parsed is None:
+        print(f"WARNING: skipping {dss_path.name} (does not match the PTM DSS file naming convention)")
+        continue
+    scenario_id, scen, node = parsed
+
+    # Only the scenarios found in this week's OMRI files are processed.
+    if scen not in SCENARIO_OMR:
+        ignored_files.setdefault(scen, []).append(dss_path.name)
+        continue
 
     # Read CVP and SWP export entrainment time series from the DSS file.
     # If either required series is missing, this DSS file is skipped.
@@ -462,6 +483,28 @@ for dss_path in sorted(PTM_DIR.glob("*.dss")):
     # Nodes not listed in REGION_NODES remain available in data_all for table calculations.
     if any(node in nodes for nodes in REGION_NODES.values()):
         data_plot[(node, scen)] = df
+
+for _s, _names in sorted(ignored_files.items()):
+    print(f"WARNING: ignored {len(_names)} DSS file(s) for scenario {_s}, which is not an active "
+          f"scenario this week (e.g. {_names[0]})")
+
+# Every active scenario must have PTM data; otherwise the summary tables would silently
+# leave that OMR scenario out.
+missing_scenarios = [s for s in SCENARIO_OMR if not any(k[1] == s for k in data_all)]
+if missing_scenarios:
+    raise RuntimeError(
+        "No PTM data were loaded for active scenario(s): "
+        + ", ".join(f"{s} (OMR {SCENARIO_OMR[s]})" for s in missing_scenarios)
+        + f". Check the PTM output in {PTM_DIR}."
+    )
+
+# A missing node is not fatal (its table value is reported as 0.0), but make it visible.
+_needed_nodes = set(SUBREGION_TO_NODE.values())
+for _s, _omr in SCENARIO_OMR.items():
+    _absent = sorted(_needed_nodes - {n for (n, sc) in data_all if sc == _s})
+    if _absent:
+        print(f"WARNING: scenario {_s} (OMR {_omr}) has no PTM data for node(s) {_absent}; "
+              "those table values are reported as 0.0")
 
 # Build scenario labels only from scenarios that were actually loaded from DSS files.
 available_scenarios = dict(

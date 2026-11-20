@@ -9,6 +9,7 @@ Converts R workflow to Python using pandas, matplotlib, and openpyxl
 
 import sys
 import os
+import re
 import glob
 import pandas as pd
 import numpy as np
@@ -24,17 +25,62 @@ from openpyxl.utils import get_column_letter
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+# scenario_discovery.py lives in the Model folder (sibling of the ZOI folder)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Model"))
+from scenario_discovery import load_scenarios
+
 def parse_omr_flow(filename: str) -> str:
-    mapping = {
-        "Neg6500": "-6500",
-        "Neg5000": "-5000",
-        "Neg3500": "-3500",
-        "Neg2000": "-2000"
-    }
-    for key, val in mapping.items():
-        if key in filename:
-            return val
-    raise ValueError(f"Could not parse OMR flow from filename: {filename}")
+    """Extract the OMR value from a DEZOI filename (DEZOI_OMR_Neg6500_... -> '-6500')."""
+    m = re.search(r"OMR_(Neg)?(\d+)_", filename)
+    if not m:
+        raise ValueError(f"Could not parse OMR flow from filename: {filename}")
+    return ("-" if m.group(1) else "") + str(int(m.group(2)))
+
+
+def omr_tag(v) -> str:
+    """'-6500' -> 'Neg6500' (positive values are returned unchanged)."""
+    v = str(v).strip()
+    return "Neg" + v[1:] if v.startswith("-") else v
+
+
+def week_files(zoi_path, week, active_omrs):
+    """
+    DEZOI csv files for one week, restricted to the OMR scenarios active this week.
+    Returns (files, missing_omrs). Files from non-active scenarios (left over from an
+    earlier run of the same week folder) are reported and ignored.
+    """
+    files = sorted(glob.glob(os.path.join(zoi_path, f"DEZOI_OMR*{week}*.csv")))
+    keep, seen = [], set()
+    for f in files:
+        v = int(parse_omr_flow(os.path.basename(f)))
+        if v in active_omrs:
+            keep.append(f)
+            seen.add(v)
+        else:
+            print(f"  Ignoring file from non-active OMR scenario: {os.path.basename(f)}")
+    return keep, [o for o in active_omrs if o not in seen]
+
+
+# Bar colours. The standard bins keep their existing colours; any other OMR value is
+# placed on viridis by value (-6500 -> 0, -2000 -> 1) so new values still get a colour.
+PLOTLY_COLORS = {-6500: "#440154", -5000: "#31688e", -3500: "#35b779", -2000: "#fde725"}
+MPL_COLORS = {-6500: "#2b0b3f", -5000: "#1de9b6", -3500: "#fbc02d", -2000: "#7f0000"}
+
+
+def _fallback_hex(omr):
+    from matplotlib.colors import to_hex
+    x = (float(omr) - (-6500.0)) / ((-2000.0) - (-6500.0))
+    return to_hex(plt.get_cmap("viridis")(min(max(x, 0.0), 1.0)))
+
+
+def plotly_color(omr):
+    return PLOTLY_COLORS.get(int(omr), _fallback_hex(omr))
+
+
+def mpl_color(omr):
+    return MPL_COLORS.get(int(omr), _fallback_hex(omr))
+
+
 def main():
     # Parse command line arguments
     args = sys.argv[1:]
@@ -55,19 +101,28 @@ def main():
     week_dir     = os.path.join(script_dir, Week)
     ZOI_path = os.path.join(week_dir, "output_csvs")
     print(f"Z0I_path: {ZOI_path}")
+    # OMR scenarios for this week come from the OMRI file names (scenario_discovery.py)
+    try:
+        scen = load_scenarios(Week)
+    except FileNotFoundError as e:
+        print(f"ERROR: {e}")
+        sys.exit(1)
+    active_omrs = sorted(int(d["omri"]) for d in scen.values())   # most negative first
+    print("Active OMR scenarios:", active_omrs)
+    n_bins = len(active_omrs)
     os.chdir(Week)
     
     # Define orderings
     alt_order = ["EXP1", "EXP3", "NAA", "ALT1", "ALT2d", "ALT2b", "ALT2c", "ALT2a", "ALT3", "ALT4"]
     alt_order2 = ["NAA", "Alt1", "Alt2woTUCPwoVA", "Alt2woTUCPDeltaVA", "Alt2woTUCPAllVA", "Alt2wTUCPwoVA", "Alt3", "Alt4"]
     inflow_order = ["lolo", "lomed", "lohi", "medlo", "medmed", "medhi", "hilo", "himed", "hihi", "NA"]
-    scenario_order = [-6500, -5000, -3500, -2000]
+    scenario_order = list(active_omrs)
 
     
     # Create template dataframe
     weeks_list = ["Week 1", "Week 2", "Week 3"]
-    omr_bins = [-6500, -5000, -3500, -2000]
-    omr_levels = [-2000, -3500, -5000, -6500]
+    omr_bins = list(active_omrs)
+    omr_levels = sorted(active_omrs, reverse=True)
     template_df = pd.DataFrame([
         {"Week": w, "OMR_Bin": omr}
         for w in weeks_list
@@ -89,10 +144,11 @@ def main():
         print(f"\nProcessing {week}...")
         
         # Find CSV files for this week
-        pattern = f"DEZOI_OMR.*{week}.*csv$"
-        fp = glob.glob(os.path.join("output_csvs", f"*{week}*.csv"))
-        if not fp:
-            fp = glob.glob(os.path.join("output_csvs", f"DEZOI_OMR*{week}*.csv"))
+        fp, missing_omrs = week_files(ZOI_path, week, active_omrs)
+        if missing_omrs:
+            print(f"ERROR: {week} has no DEZOI file for active OMR scenario(s) {missing_omrs}. "
+                  f"Did ZOI preprocessing (Section 10) finish for every scenario?")
+            sys.exit(1)
         
         print(f"Found {len(fp)} files for {week}")
         
@@ -132,8 +188,8 @@ def main():
         bins = bins.drop_duplicates()
         
         # Convert to categorical with proper ordering
-        bins['OMR_bin'] = pd.Categorical(bins['OMR_bin'], categories=[-2000, -3500, -5000, -6500], ordered=True)
-        bins['FileTag'] = pd.Categorical(bins['FileTag'], categories=["Neg2000", "Neg3500", "Neg5000", "Neg6500"], ordered=True)
+        bins['OMR_bin'] = pd.Categorical(bins['OMR_bin'], categories=omr_levels, ordered=True)
+        bins['FileTag'] = pd.Categorical(bins['FileTag'], categories=[omr_tag(o) for o in omr_levels], ordered=True)
         bins['Sub.group'] = pd.Categorical(bins['Sub.group'], categories=inflow_order, ordered=True)
         
         # Calculate sample sizes
@@ -174,8 +230,7 @@ def main():
         
         # Read ZOI data for this week
         # Read ZOI data for this week
-        pattern  = os.path.join(ZOI_path, f"DEZOI_OMR*{week}*.csv")
-        csv_files = glob.glob(pattern)
+        csv_files = fp
         if not csv_files:
             print(f"  No CSV files found for {week}, skipping.")
             continue
@@ -215,58 +270,14 @@ def main():
         print("OMR dtype:", zoi_channel_long["OMR_Flow"].dtype)
         print("OMR unique:", zoi_channel_long["OMR_Flow"].unique())
         
-        print("\n================ DEBUG WEEK3 -2000 =================")
-
-        debug_2000 = zoi_channel_group[
-            zoi_channel_group['OMR_Flow'].astype(str).str.strip() == '-2000'
-        ].copy()
-
-        print("Total rows:", len(debug_2000))
-
-        print("\nOverlap summary:")
-        print(debug_2000['overlap'].describe())
-
-        print("\nRows in each category:")
-
-        high_ct = (debug_2000['overlap'] < 0.25).sum()
-
-        med_ct = (
-            (debug_2000['overlap'] >= 0.25) &
-            (debug_2000['overlap'] <= 0.75)
-        ).sum()
-
-        low_ct = (debug_2000['overlap'] > 0.75).sum()
-
-        print("HIGH:", high_ct)
-        print("MED :", med_ct)
-        print("LOW :", low_ct)
-
-        print("\nSmallest overlap values:")
-        print(
-            debug_2000[['overlap']]
-            .sort_values('overlap')
-            .head(20)
-        )
-
-        print("\nClosest to 0.25:")
-        print(
-            debug_2000.assign(
-                dist=lambda x: abs(x['overlap'] - 0.25)
-            )
-            .sort_values('dist')[['overlap']]
-            .head(20)
-        )
-
-        print("\nClosest to 0.75:")
-        print(
-            debug_2000.assign(
-                dist=lambda x: abs(x['overlap'] - 0.75)
-            )
-            .sort_values('dist')[['overlap']]
-            .head(20)
-        )
-
-        print("====================================================")
+        print("\n========= OMR scenario summary (overlap categories) =========")
+        for omr_chk in available_omrs:
+            sub = zoi_channel_group.loc[zoi_channel_group['OMR_Flow'] == omr_chk, 'overlap']
+            print(f"OMR {omr_chk}: rows={len(sub)}  "
+                  f"HIGH(<0.25)={(sub < 0.25).sum()}  "
+                  f"MED={((sub >= 0.25) & (sub <= 0.75)).sum()}  "
+                  f"LOW(>0.75)={(sub > 0.75).sum()}")
+        print("=============================================================")
 
         # Filter to contours of interest
         filtered_dat_high = zoi_channel_group[zoi_channel_group['overlap'] < 0.25].copy()
@@ -337,12 +348,7 @@ def main():
             filtered2['OMR_Flow'] = filtered2['OMR_Flow'].astype(str).str.strip()
 
             # Step 3: map FileTag
-            filtered2['FileTag'] = filtered2['OMR_Flow'].map({
-                '-2000': 'Neg2000',
-                '-3500': 'Neg3500',
-                '-5000': 'Neg5000',
-                '-6500': 'Neg6500'
-            })
+            filtered2['FileTag'] = filtered2['OMR_Flow'].map(omr_tag)
 
             # 🚨 SAFETY CHECK (keep this!!)
             if filtered2['FileTag'].isna().any():
@@ -373,7 +379,7 @@ def main():
 
             grouped['FileTag'] = pd.Categorical(
                 grouped['FileTag'],
-                categories=["Neg2000", "Neg3500", "Neg5000", "Neg6500"],
+                categories=[omr_tag(o) for o in omr_levels],
                 ordered=True
             )
 
@@ -400,7 +406,7 @@ def main():
         all_combos = pd.MultiIndex.from_product(
             [
                 [inflowbin],
-                available_omrs,
+                active_omrs,
                 [
                     "Low hydrologic influence",
                     "Medium hydrologic influence",
@@ -457,12 +463,7 @@ def main():
             ]
         )
 
-        color_map = {
-            -6500: "#440154",
-            -5000: "#31688e",
-            -3500: "#35b779",
-            -2000: "#fde725"
-        }
+        color_map = {o: plotly_color(o) for o in active_omrs}
 
         for col_idx, h_inf in enumerate(influences, start=1):
             plot_data = filtered_dat[
@@ -470,7 +471,7 @@ def main():
                 (filtered_dat["group"] == inflowbin)
             ]
 
-            for omr in available_omrs:
+            for omr in active_omrs:
                 filtered_dat["OMR_Flow"] = filtered_dat["OMR_Flow"].astype(float)
                 val_series = plot_data.loc[plot_data["OMR_Flow"] == omr, "pLength"]
 
@@ -509,14 +510,9 @@ def main():
         png_out = f"ZOI_Proportional_ChannelLength_{week}.png"
 
         # Match Plotly / R-style colors
-        color_map = {
-            -6500: "#2b0b3f",  # dark purple
-            -5000: "#1de9b6",  # teal
-            -3500: "#fbc02d",  # yellow
-            -2000: "#7f0000",  # dark red
-        }
+        color_map = {o: mpl_color(o) for o in active_omrs}
 
-        omr_order = [-6500, -5000, -3500, -2000]
+        omr_order = list(active_omrs)
 
         fig, axes = plt.subplots(
             1, 3,
@@ -608,11 +604,11 @@ def main():
         if week == "week1":
             row_start = 0
         elif week == "week2":
-            row_start = 4
+            row_start = n_bins
         else:
-            row_start = 8
+            row_start = 2 * n_bins
         
-        row_end = row_start + 4
+        row_end = row_start + n_bins
         
         # Extract values in correct order
         # filtered_dat is sorted by h_influence, group, OMR_Flow
@@ -625,7 +621,7 @@ def main():
         template_df.loc[row_start:row_end-1, 'Dates'] = Week_dates
         
         # Match OMR bins and assign values
-        for idx, omr_bin in enumerate([-6500, -5000, -3500, -2000]):
+        for idx, omr_bin in enumerate(omr_order):
             template_row = row_start + idx
             
             # Low data
@@ -647,7 +643,7 @@ def main():
                 template_df.loc[template_row, 'High_pct'] = high_row['pLength'].values[0]
     
     # Create Excel workbook
-    create_excel_output(template_df, Week1_dates, Week2_dates, Week3_dates)
+    create_excel_output(template_df, Week1_dates, Week2_dates, Week3_dates, active_omrs)
     
     # Clean up CSV files
     csv_files = glob.glob("*.csv")
@@ -660,7 +656,7 @@ def main():
     print("\nProcessing complete!")
 
 
-def create_excel_output(template_df, Week1_dates, Week2_dates, Week3_dates):
+def create_excel_output(template_df, Week1_dates, Week2_dates, Week3_dates, omr_values):
     """Create Excel workbook with formatted channel length data"""
     
     wb = Workbook()
@@ -739,7 +735,8 @@ def create_excel_output(template_df, Week1_dates, Week2_dates, Week3_dates):
         cell.border = border
     
     # Data rows
-    omr_bins = ["-6,500", "-5,000", "-3,500", "-2,000"]
+    omr_bins = [f"{int(v):,}" for v in omr_values]
+    n_bins = len(omr_values)
     weeks_data = [
         ("Week 1:", Week1_dates),
         ("Week 2:", Week2_dates),
@@ -755,20 +752,21 @@ def create_excel_output(template_df, Week1_dates, Week2_dates, Week3_dates):
         week_text = f"{week_label}\n\n{start_date} -\n{end_date}"
         
         # Merged cell for week
-        ws.merge_cells(f'A{row}:A{row+3}')
+        if n_bins > 1:
+            ws.merge_cells(f'A{row}:A{row+n_bins-1}')
         ws[f'A{row}'] = week_text
         ws[f'A{row}'].alignment = cell_left_top
         ws[f'A{row}'].border = border
         
         # OMR bins and data
-        for i in range(4):
+        for i in range(n_bins):
             # OMR bin
             ws.cell(row=row+i, column=2, value=omr_bins[i])
             ws.cell(row=row+i, column=2).alignment = cell_align
             ws.cell(row=row+i, column=2).border = border
             
             # Get data from template_df
-            df_row = week_idx * 4 + i
+            df_row = week_idx * n_bins + i
             
             # Low columns
             ws.cell(row=row+i, column=3, value=template_df.loc[df_row, 'Low_Sum_mi'])
@@ -789,7 +787,7 @@ def create_excel_output(template_df, Week1_dates, Week2_dates, Week3_dates):
             
             ws.row_dimensions[row+i].height = 20
         
-        row += 4
+        row += n_bins
     
     # Save workbook
     wb.save("ChannelLength_Data.xlsx")

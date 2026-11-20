@@ -27,6 +27,8 @@ from pyhecdss import DSSFile
 from pyproj import Transformer
 from scipy.interpolate import griddata
 
+from scenario_discovery import load_scenarios
+
 # Repository-relative directories. entrainment_map.py is stored in DSM2/Model.
 MODEL_DIR = Path(__file__).resolve().parent
 DSM2_DIR = MODEL_DIR.parent
@@ -42,8 +44,9 @@ EDSM_SHAPEFILE = (
     / "fmwt_regions_contiguous.shp"
 )
 
-SCENARIO_OMR = {"A": -5000, "B": -3500, "C": -2000, "D": -6500}
-ZOI_SCENARIO_ROW = {-2000: 0, -3500: 1, -5000: 2, -6500: 3}
+# Scenario letters and OMR values are not hard-coded: they are read from
+# DSM2/Model/DataExternal/<week>/scenarios_<week>.csv (see main), which
+# scenario_discovery.py writes from the names of the weekly OMRI files.
 PTM_NODES = [
     293, 323, 350, 304, 249, 34, 41, 46, 351, 353, 29,
     86, 99, 225, 75, 145, 329, 420, 227, 365, 359,
@@ -65,11 +68,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--omr",
         type=int,
-        choices=sorted(SCENARIO_OMR.values()),
         default=None,
         help=(
-            "Optional single OMR scenario. If omitted, maps are generated for "
-            "all simulated scenarios found in the PTM DSS output."
+            "Optional single OMR scenario (must be one of this week's OMRI "
+            "scenarios). If omitted, maps are generated for every scenario."
         ),
     )
     return parser.parse_args()
@@ -198,7 +200,7 @@ def load_sls(run_date: pd.Timestamp, sls_dir: Path):
 
 
 def parse_dss_filename(path: Path):
-    match = re.match(r"(\d{8}-\d+[A-D]).*_(\d+)\.dss$", path.name, re.I)
+    match = re.match(r"(\d{8}-\d+[A-Z]).*_(\d+)\.dss$", path.name, re.I)
     if not match:
         return None
     scenario_id = match.group(1)
@@ -301,7 +303,12 @@ def load_regions() -> gpd.GeoDataFrame:
     return regions.to_crs("EPSG:4326")
 
 
-def load_zoi(run_string: str, row_number: int):
+def load_zoi(run_string: str, omr_value: int):
+    """Load the 0.75 ZOI contour for one OMR scenario for weeks 1-3.
+
+    The row is selected by its OMR_flow attribute (written by zoi_pp_html.py),
+    not by a fixed row position, so it works for any set of scenarios.
+    """
     features = []
     for week in range(1, 4):
         path = (
@@ -312,13 +319,18 @@ def load_zoi(run_string: str, row_number: int):
         frame = gpd.read_file(path)
         if frame.crs is None:
             raise ValueError(f"Week {week} ZOI shapefile has no CRS: {path}")
-        if len(frame) <= row_number:
+        if "OMR_flow" not in frame.columns:
+            raise ValueError(f"Week {week} ZOI shapefile has no OMR_flow field: {path}")
+        mask = pd.to_numeric(frame["OMR_flow"], errors="coerce") == int(omr_value)
+        if int(mask.sum()) != 1:
+            found = sorted(frame["OMR_flow"].astype(str).unique())
             raise ValueError(
-                f"Week {week} ZOI shapefile has {len(frame)} rows; "
-                f"row {row_number} is required."
+                f"Week {week} ZOI shapefile has {int(mask.sum())} row(s) for "
+                f"OMR {omr_value}; OMR_flow values present: {found}. "
+                "Was ZOI plotting (Section 11) run for this week's scenarios?"
             )
         frame = frame.to_crs("EPSG:4326")
-        feature = json.loads(frame.iloc[[row_number]].to_json())
+        feature = json.loads(frame.loc[mask].to_json())
         feature["features"][0]["properties"]["line_color"] = WEEK_COLORS[week - 1]
         features.append(feature)
     return features
@@ -360,9 +372,16 @@ def build_map(
 ):
     result = folium.Map(
         location=[grid["latitude"].mean(), grid["longitude"].mean()],
-        tiles="CartoDB positron",
+        tiles=None,
         zoom_start=10,
     )
+    folium.TileLayer(
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        attr="Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
+        name="Esri Light Gray",
+        max_native_zoom=16,
+        max_zoom=20,
+    ).add_to(result)
 
     folium.GeoJson(
         json.loads(regions.to_json()),
@@ -516,6 +535,15 @@ def main() -> int:
     run_date = parse_date(args.date)
     run_string = run_date.strftime("%Y%m%d")
 
+    # Active OMR scenarios for this week (from the OMRI file names)
+    scenario_manifest = load_scenarios(run_string, MODEL_DIR / "DataExternal")
+    scenario_omr = {
+        letter: int(d["omri"]) for letter, d in scenario_manifest.items()
+    }
+    print("Active OMR scenarios: " + ", ".join(
+        f"{k} = {v:,}" for k, v in scenario_omr.items()
+    ))
+
     ptm_dir = PTM_OUTPUT_ROOT / run_string / "PTM" / "pp"
     sls_dir = SLS_ROOT / run_string
     output_dir = FIGURE_ROOT / run_string / "LFS"
@@ -539,12 +567,17 @@ def main() -> int:
     regions = load_regions()
 
     if args.omr is None:
-        scenarios_to_run = list(SCENARIO_OMR.items())
+        scenarios_to_run = list(scenario_omr.items())
     else:
-        scenario_letter = next(
-            key for key, value in SCENARIO_OMR.items() if value == args.omr
-        )
-        scenarios_to_run = [(scenario_letter, args.omr)]
+        scenarios_to_run = [
+            (key, value) for key, value in scenario_omr.items()
+            if value == args.omr
+        ]
+        if not scenarios_to_run:
+            raise ValueError(
+                f"--omr {args.omr} is not one of this week's OMR scenarios: "
+                f"{sorted(scenario_omr.values())}"
+            )
 
     saved_files = []
     failed_scenarios = []
@@ -559,7 +592,7 @@ def main() -> int:
                 + ", ".join(x.strftime("%Y-%m-%d %H:%M") for x in week_times)
             )
 
-            zoi = load_zoi(run_string, ZOI_SCENARIO_ROW[omr_value])
+            zoi = load_zoi(run_string, omr_value)
             contours = create_contours(grid, values)
             result = build_map(
                 grid=grid,

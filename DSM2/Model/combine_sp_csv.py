@@ -10,7 +10,10 @@ import pandas as pd
 import glob
 import os
 import argparse
+import sys
 from pathlib import Path
+
+from scenario_discovery import load_scenarios
 
 #%%############################################################################
 # Function to check valid date input to python command line
@@ -56,7 +59,19 @@ def combine_sp(forecast_start):
     # DEFINE GLOBAL PARAMETERS ###############################################
     realtime_date = forecast_start
 
-    master_fpath = Path.cwd().parent
+    # Active scenarios for this week: {'A': {'omri': '-5000', ...}, ...}
+    scen = load_scenarios(forecast_start)
+    # Order: most negative OMR first (e.g. -6500, -5000, -3500, -2000), which is the
+    # order the previous hard-coded D, A, B, C produced. Letters follow the week's files.
+    scenario_order = {
+        letter: i for i, (letter, d) in enumerate(
+            sorted(scen.items(), key=lambda kv: int(kv[1]["omri"])))
+    }
+    omr_by_letter = {letter: int(d["omri"]) for letter, d in scen.items()}
+    print("Active scenarios (combine order): " + ", ".join(
+        f"{l} (OMR {omr_by_letter[l]})" for l in scenario_order))
+
+    master_fpath = Path(__file__).resolve().parent.parent   # DSM2 folder (parent of Model)
     folder_path = master_fpath / "Model" / "Output" / realtime_date / "PTM" / "sp"
 
     def combine_files(pattern, output_filename):
@@ -74,14 +89,6 @@ def combine_sp(forecast_start):
             print(f"No files found matching {pattern}")
             return
 
-        # Desired scenario order
-        scenario_order = {
-            "D": 0,
-            "A": 1,
-            "B": 2,
-            "C": 3
-        }
-
         def get_scenario(filepath):
             """
             Extract scenario from filename.
@@ -91,10 +98,24 @@ def combine_sp(forecast_start):
             """
             return os.path.basename(filepath).split("_")[-1].split(".")[0]
 
-        # Sort files by desired scenario order
+        # Keep only the active scenarios; flag anything else as stale
+        active_files, stale_files = [], []
+        for f in all_files:
+            (active_files if get_scenario(f) in scenario_order else stale_files).append(f)
+        for f in stale_files:
+            print(f"WARNING: ignoring file from a non-active scenario: {os.path.basename(f)}")
+
+        # Every active scenario must be present, otherwise the combined file is incomplete
+        found = {get_scenario(f) for f in active_files}
+        missing = [l for l in scenario_order if l not in found]
+        if missing:
+            raise FileNotFoundError(
+                f"{pattern}: no file for scenario(s) {missing} in {folder_path}")
+
+        # Sort files by scenario order (most negative OMR first)
         all_files = sorted(
-            all_files,
-            key=lambda f: scenario_order.get(get_scenario(f), 999)
+            active_files,
+            key=lambda f: scenario_order[get_scenario(f)]
         )
 
         print("\nFiles being combined:")
@@ -109,6 +130,7 @@ def combine_sp(forecast_start):
 
             scenario = get_scenario(filename)
             df["Model_Run"] = scenario
+            df["OMR"] = omr_by_letter[scenario]
 
             df_list.append(df)
 
@@ -142,7 +164,7 @@ if __name__ == "__main__":
     
     #collect forecast start date from code input
     parser = argparse.ArgumentParser()
-    parser.add_argument("--forecast_start", "-fs", type=valid_date,
+    parser.add_argument("--forecast_start", "-fs", type=valid_date, required=True,
                         help="Provide a valid forecast start date \
                         e.g. 20180823")
     # creates an args object from the parsed user input
@@ -152,4 +174,8 @@ if __name__ == "__main__":
     forecast_start = ini_dict.get("forecast_start")
     
     #run code to combine csvs into one
-    combine_sp(forecast_start)
+    try:
+        combine_sp(forecast_start)
+    except (FileNotFoundError, ValueError) as e:
+        print(f"ERROR: {e}")
+        sys.exit(1)

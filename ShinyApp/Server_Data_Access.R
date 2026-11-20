@@ -33,7 +33,7 @@ make_station_set <- function(
 STATION_SETS <- list(
   
   # New PTM 7-day model:
-  # DSM2 Node, EXP, VER, SAC, QGCD, QPREC, EAST
+  # DSM2 Node, EXP, VNS, SAC, QGCD, QPREC, EAST
   ptm_day7 = make_station_set(
     MIA = c(
       "CCF", "TPP", "VNS", "FPT",
@@ -44,7 +44,7 @@ STATION_SETS <- list(
       "MOK", "CAL", "COS", "SCKC1"
     ),
     Model_Input = c(
-      "EXP", "EXP", "VER", "SAC",
+      "EXP", "EXP", "VNS", "SAC",
       "EAST", "EAST", "EAST", "QPREC"
     ),
     Source_Type = c(
@@ -60,7 +60,7 @@ STATION_SETS <- list(
   ),
   
   # New PTM 30-day model:
-  # DSM2 Node, EXP, VER, SAC, QGCD, QPREC, EAST, DCC Flow
+  # DSM2 Node, EXP, VNS, SAC, QGCD, QPREC, EAST, DCC Flow
   ptm_day30 = make_station_set(
     MIA = c(
       "CCF", "TPP", "VNS", "FPT",
@@ -71,7 +71,7 @@ STATION_SETS <- list(
       "MOK", "CAL", "COS", "SCKC1", "DLC"
     ),
     Model_Input = c(
-      "EXP", "EXP", "VER", "SAC",
+      "EXP", "EXP", "VNS", "SAC",
       "EAST", "EAST", "EAST", "QPREC", "DCC Flow"
     ),
     Source_Type = c(
@@ -109,7 +109,7 @@ STATION_SETS <- list(
   ),
   
   # New Event Horizon model:
-  # Risk Threshold, EXP, VER, SAC, QGCD, QPREC, EAST
+  # Risk Threshold, EXP, VNS, SAC, QGCD, QPREC, EAST
   horizon = make_station_set(
     MIA = c(
       "CCF", "TPP", "VNS", "FPT",
@@ -120,7 +120,7 @@ STATION_SETS <- list(
       "MOK", "CAL", "COS", "SCKC1"
     ),
     Model_Input = c(
-      "EXP", "EXP", "VER", "SAC",
+      "EXP", "EXP", "VNS", "SAC",
       "EAST", "EAST", "EAST", "QPREC"
     ),
     Source_Type = c(
@@ -192,7 +192,7 @@ MAP_DEFINITIONS <- list(
     include_nodes = TRUE,
     node_color = "orange",
     station_color = "green",
-    map_note = paste0("<strong>PTM 7-day inputs:</strong> DSM2 Node, EXP, VER, SAC, EAST, QGCD, and QPREC.<br>", "QGCD is a DAYFLOW-based reference-series input and does not have a single station marker." )
+    map_note = paste0("<strong>PTM 7-day inputs:</strong> DSM2 Node, EXP, VNS, SAC, EAST, QGCD, and QPREC.<br>", "QGCD is a DAYFLOW-based reference-series input and does not have a single station marker." )
   ),
   
   ptm_combined_30day = list(
@@ -204,7 +204,7 @@ MAP_DEFINITIONS <- list(
     include_nodes = TRUE,
     node_color = "blue",
     station_color = "green",
-    map_note = paste0("<strong>PTM 30-day inputs:</strong> DSM2 Node, EXP, VER, SAC, EAST, QGCD, QPREC, and DCC Flow.<br>", "QGCD has no single station marker. DCC Flow is represented by DLC." )
+    map_note = paste0("<strong>PTM 30-day inputs:</strong> DSM2 Node, EXP, VNS, SAC, EAST, QGCD, QPREC, and DCC Flow.<br>", "QGCD has no single station marker. DCC Flow is represented by DLC." )
   ),
   
   ptm_station_only_7day = list(
@@ -216,7 +216,7 @@ MAP_DEFINITIONS <- list(
     include_nodes = FALSE,
     node_color = "orange",
     station_color = "green",
-    map_note = paste0("<strong>PTM 7-day input locations:</strong> EXP, VER, SAC, EAST, and QPREC.<br>", "QGCD is a DAYFLOW-based reference series and has no single station marker." )
+    map_note = paste0("<strong>PTM 7-day input locations:</strong> EXP, VNS, SAC, EAST, and QPREC.<br>", "QGCD is a DAYFLOW-based reference series and has no single station marker." )
   ),
   
   ptm_station_only_30day = list(
@@ -228,7 +228,7 @@ MAP_DEFINITIONS <- list(
     include_nodes = FALSE,
     node_color = "blue",
     station_color = "green",
-    map_note = paste0("<strong>PTM 30-day input locations:</strong> EXP, VER, SAC, EAST, QPREC, and DCC Flow.<br>", "QGCD has no single station marker. DCC Flow is represented by DLC." )
+    map_note = paste0("<strong>PTM 30-day input locations:</strong> EXP, VNS, SAC, EAST, QPREC, and DCC Flow.<br>", "QGCD has no single station marker. DCC Flow is represented by DLC." )
   ),
   
   eco_ptm = list(
@@ -253,7 +253,7 @@ MAP_DEFINITIONS <- list(
     node_color = "blue",
     station_color = "green",
     map_note = paste0(
-      "<strong>Event Horizon inputs:</strong> Risk Threshold, EXP, VER, SAC, EAST, QGCD, and QPREC.<br>",
+      "<strong>Event Horizon inputs:</strong> Risk Threshold, EXP, VNS, SAC, EAST, QGCD, and QPREC.<br>",
       "SCKC1 marks Stockton 3NNW Fire Station #4, the precipitation gage used to derive QPREC. ",
       "Risk Threshold is user-selected, and QGCD is a reference series; neither has a single station marker."
     )

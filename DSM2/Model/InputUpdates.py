@@ -3,10 +3,12 @@ import shutil
 import sys
 from pathlib import Path
 
+from scenario_discovery import discover, write_outputs, load_scenarios
+
 # --------------------------------------------------
 # Project paths (robust to where script is run from)
 # --------------------------------------------------
-PROJECT_ROOT = Path.cwd()          # e.g. D:\Model
+PROJECT_ROOT = Path(__file__).resolve().parent   # the Model folder this script lives in
 INPUT_ROOT = PROJECT_ROOT / "Input"
 BACKUP_ROOT = PROJECT_ROOT / "backup"
 
@@ -433,6 +435,58 @@ def prepare_project_structure(week: str):
     return inputs_file
 
 # --------------------------------------------------
+# Scenario check (driven by the OMRI file names for this week)
+# --------------------------------------------------
+def get_active_scenarios(week: str):
+    """
+    Return {'A': {'omri':..., 'file':...}, ...} for this week.
+    Uses scenarios_<week>.csv written by scenario_discovery.py; creates it if missing.
+    """
+    try:
+        return load_scenarios(week, DATA_EXTERNAL)
+    except FileNotFoundError:
+        week_dir, scen = discover(week, DATA_EXTERNAL)
+        write_outputs(week, week_dir, scen)
+        return scen
+
+
+def validate_scenario_inputs(week: str):
+    """
+    Confirm the static DSM2 input templates exist for every active scenario
+    BEFORE anything is modified or deleted. Fails early with a clear message.
+    Templates for inactive scenarios are simply reported and ignored.
+    """
+    scen = get_active_scenarios(week)
+    print(f"\nActive OMR scenarios for {week}: {len(scen)}")
+    for letter, d in scen.items():
+        print(f"  Scenario {letter} = OMRI {d['omri']}  ({d['file']})")
+
+    problems = []
+    for letter in scen:
+        hydro = INPUT_ROOT / f"hydro{letter}.inp"
+        if not hydro.exists():
+            problems.append(f"Missing {hydro.relative_to(PROJECT_ROOT)}")
+        for sub in ["np", "pp", "sp"]:
+            folder = INPUT_ROOT / "PTM" / sub
+            if folder.exists() and not list(folder.glob(f"ptm{letter}_*.inp")):
+                problems.append(f"No ptm{letter}_*.inp files in {folder.relative_to(PROJECT_ROOT)}")
+
+    if problems:
+        raise FileNotFoundError(
+            "Scenario input templates are missing:\n  " + "\n  ".join(problems)
+        )
+
+    # Informational: templates that exist for scenarios not run this week
+    extras = sorted(
+        p.stem[len("hydro"):] for p in INPUT_ROOT.glob("hydro[A-Z].inp")
+        if p.stem[len("hydro"):] not in scen
+    )
+    if extras:
+        print(f"  (Templates exist for inactive scenario(s) {', '.join(extras)} - they will not be run)")
+    return scen
+
+
+# --------------------------------------------------
 # Main
 # --------------------------------------------------
 if __name__ == "__main__":
@@ -449,6 +503,9 @@ if __name__ == "__main__":
 
     if not date_folder.exists():
         raise FileNotFoundError(f"DataExternal folder not found: {week_id}")
+
+    # Check scenario templates BEFORE touching any files
+    validate_scenario_inputs(week_id)
 
     # Generate InputUpdates file + refresh timeseries + ensure Output folder
     inputs_file = prepare_project_structure(week_id)

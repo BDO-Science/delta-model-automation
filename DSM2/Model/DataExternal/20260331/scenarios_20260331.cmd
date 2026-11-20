@@ -1,0 +1,11 @@
+@echo off
+set "SCEN_COUNT=4"
+set "SCEN_LIST=A B C D"
+set "SCEN_A_OMRI=-5000"
+set "SCEN_A_FILE=03_30_OMRI -5000.csv"
+set "SCEN_B_OMRI=-3500"
+set "SCEN_B_FILE=03_30_OMRI -3500.csv"
+set "SCEN_C_OMRI=-2000"
+set "SCEN_C_FILE=03_30_OMRI -2000.csv"
+set "SCEN_D_OMRI=-6500"
+set "SCEN_D_FILE=03_30_OMRI -6500.csv"

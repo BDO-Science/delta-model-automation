@@ -1,7 +1,7 @@
 
      HECDSS Complete Catalog of Record Pathnames in File ..\DataExternal\20260616\dicu.dss
 
-     Catalog Created on Jun 18, 2026 at 12:23    File Created on Jun 3, 2026
+     Catalog Created on Nov 19, 2026 at 13:19    File Created on Jun 3, 2026
      Number of Records:   8514                   DSS Version 6-WE,  File 6-WA
      Sort Order: ABCFED
 

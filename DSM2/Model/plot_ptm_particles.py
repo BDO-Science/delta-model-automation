@@ -12,6 +12,8 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.io as pio
 
+from scenario_discovery import load_scenarios
+
 # ==============================================================
 # GLOBAL PLOT STYLE
 # ==============================================================
@@ -79,7 +81,19 @@ FLUX_NAMES = [
 ]
 
 REQUIRED_NODES = {99, 350, 465, 469}
-REQUIRED_SCENARIOS = {"A", "B", "C", "D"}
+
+# ==============================================================
+# ACTIVE OMR SCENARIOS
+# Scenario letters and OMR values come from the names of this week's OMRI files
+# (written by scenario_discovery.py), not from a fixed A-D table.
+# ==============================================================
+try:
+    _SCEN = load_scenarios(WEEK_STR, MODEL_DIR / "DataExternal")
+except FileNotFoundError as exc:
+    print(f"ERROR: {exc}")
+    sys.exit(1)
+
+REQUIRED_SCENARIOS = set(_SCEN)
 
 
 # ==============================================================
@@ -87,12 +101,9 @@ REQUIRED_SCENARIOS = {"A", "B", "C", "D"}
 # ==============================================================
 
 SCENARIO_OMR_LOOKUP = {
-    "A": "-5,000",
-    "B": "-3,500",
-    "C": "-2,000",
-    "D": "-6,500",
+    letter: f"{int(d['omri']):,}"      # e.g. -5000 -> "-5,000"
+    for letter, d in _SCEN.items()
 }
-
 SCENARIO_TO_FLOW = SCENARIO_OMR_LOOKUP.copy()
 
 NODE_NAME_LOOKUP = {
@@ -120,7 +131,7 @@ PARTICLE_TYPES = {
 
 def parse_dss_filename(dss_path):
     match = re.match(
-        r"(?P<scenario>\d{8}-\d+[A-D]).*_(?P<node>\d+)\.dss",
+        r"(?P<scenario>\d{8}-\d+[A-Z]).*_(?P<node>\d+)\.dss",
         dss_path.name
     )
     if not match:
@@ -384,6 +395,10 @@ for ptype, cfg in PARTICLE_TYPES.items():
         scenario_id, scenario_letter, node = parse_dss_filename(dss_path)
         if node not in REQUIRED_NODES:
             continue
+        if scenario_letter not in SCENARIO_OMR_LOOKUP:
+            print(f"[WARNING] Ignoring {dss_path.name}: scenario {scenario_letter} "
+                  f"is not an active scenario this week")
+            continue
 
         with DSSFile(str(dss_path)) as dss:
             data = {
@@ -497,7 +512,11 @@ for ptype, cfg in PARTICLE_TYPES.items():
     for node_id, rows in node_weekly_results.items():
         df_out = pd.DataFrame(rows)
 
-        flow_order = ["-6,500", "-5,000", "-3,500", "-2,000"]
+        # Most negative OMR first, using this week's active scenarios
+        flow_order = sorted(
+            SCENARIO_OMR_LOOKUP.values(),
+            key=lambda label: int(label.replace(",", ""))
+        )
         df_out["FlowOrder"] = df_out["OMR Flow Bin"].apply(flow_order.index)
         df_out["WeekOrder"] = df_out["Forecast Week"].str.extract(r"(\d)").astype(int)
 

@@ -5,6 +5,7 @@ import datetime
 import sys
 import logging
 import argparse
+import re
 # This tool originally used vtools (written by Jon Shu CADWR)
 # to read *.dss data, but vtools required Py2.7
 # This tool now uses pyhecdss which is a tool written by Nicky Sandhu for Py3.*
@@ -59,43 +60,14 @@ def CreateLogger(log_file):
 def valid_scenario_id(c):
     """ An ArgParse Validator for Scenario ID Input by the User on CMD
 
-    The argparse library can accept a user created validation function for
-    custom data types. This function makes sure that the input is a capital
-    letter. If the letter is 'A' then the function double checks with a cmd
-    line prompt to double check that the user wants to over-ride the baseline.
-    Typically 'A' is reserved as the baseline identifier for running DSM2
-    scenarios from DWR OCO's Excel WorkSheet.
-
-    Parameters
-    ----------
-    c: string
-        `c` must be a capital letter formatted as a string
-
-    Returns
-    -------
-    c: string
-        `c` is returned unchanged if it passes the logic tests
-
-    Raises
-    ------
-    AssertionError:
-        `msg` is passed to argparse.ArgumentTypeError to stop the script at
-        the command line input checks/parsing to immediately notify the user
-
+    Makes sure the input is a single capital letter (A-Z). The old interactive
+    "are you sure you want to use 'A'?" prompt now lives in main so that it can
+    be bypassed with --yes when this tool is run from WeeklyWorkflow.bat.
     """
-    try:
-        assert c >= 'A'
-        assert c <= 'Z'
-        if c == 'A':
-            ans = input("Are you sure you want to use 'A'? \n" +
-                        "'A' is typically used as the baseline identifier?"
-                        + "[Y/N]")
-            if not ans == 'Y':
-                sys.exit(0)
-        return c
-    except AssertionError:
+    if not re.fullmatch(r"[A-Z]", c):
         msg = "Not a valid single uppercase letter: '{}'.".format(c)
         raise argparse.ArgumentTypeError(msg)
+    return c
 
 
 def valid_date(s):
@@ -147,11 +119,24 @@ def ExtractExcelToDF(ini_dict, mapping_dict):
     end_date   = ini_dict.get("forecast_end")       # pandas Timestamp
 
     # --- Read CSV robustly ---
-    # Use the 3rd row as header (0-based index -> header=2)
+    # The weekly files can have extra title/unit rows above the real header, so
+    # locate the header row = first row whose first cell is 'DATE'.
+    header_row = None
+    with open(excel_path, "r", encoding="utf-8-sig", errors="replace") as fh:
+        for n, raw in enumerate(fh):
+            first_cell = re.split(r"[,\t;]", raw.strip(), maxsplit=1)[0].strip().strip('"')
+            if first_cell.upper() == "DATE":
+                header_row = n
+                break
+    if header_row is None:
+        raise KeyError(f"No header row starting with 'DATE' found in {excel_path}")
+    logging.info("Header row found at line {} of {}".format(header_row + 1, excel_path))
+
     # Auto-detect delimiter; strip spaces; remove BOM if present.
     df_data = pd.read_csv(
         excel_path,
-        header=0,                # third row with real column names
+        skiprows=header_row,     # skip title/unit rows above the header
+        header=0,
         engine='python',         # allows sep=None auto-detect
         sep=None,                # sniff delimiter (tabs, commas, etc.)
         skipinitialspace=True,
@@ -180,6 +165,16 @@ def ExtractExcelToDF(ini_dict, mapping_dict):
     time_selection = df_data[df_data['DATE'].between(start_date, end_date)].copy()
     time_selection.set_index('DATE', inplace=True)
 
+    # Every day of the forecast window must be present in the file
+    expected = pd.date_range(start_date, end_date, freq='1D', normalize=True)
+    missing_dates = expected.difference(time_selection.index.normalize())
+    if len(missing_dates) > 0:
+        raise ValueError(
+            "{} is missing {} day(s) in the forecast window {} to {}: {}".format(
+                os.path.basename(excel_path), len(missing_dates),
+                start_date.date(), end_date.date(),
+                [d.strftime('%Y-%m-%d') for d in missing_dates]))
+
     # --- Select the variables defined in mapping_dict keys ---
     requested_cols = list(mapping_dict.keys())
 
@@ -200,7 +195,7 @@ def ExtractExcelToDF(ini_dict, mapping_dict):
     # --- Unit conversions (keep your existing logic) ---
     for col in ['CCF', 'TPP']:
         if col in var_selection.columns:
-            var_selection.loc[:, col] = var_selection[col] / 1.983
+            var_selection[col] = var_selection[col].astype(float) / 1.983
         else:
             print(f"[INFO] Skipping conversion for missing column: {col}")
 
@@ -259,7 +254,7 @@ def Retrieve_DICU_DssRecord(dss_file):
     if not len(pathnames_lst) == 1:
         logging.error('More than one dss record found for {},{} \n {}'
                       .format(selector_B, selector_C, pathnames_lst))
-        sys.exit(0)
+        sys.exit(1)
     else:
         logging.info("Success: single record isolated for {},{}"
                      .format(selector_B, selector_C))
@@ -497,29 +492,45 @@ if __name__ == "__main__":
     start = datetime.datetime.now()
     # creates a parser object from argparse library for cmd line args
     parser = argparse.ArgumentParser()
-    parser.add_argument("--convert", "-c", type=str,
+    parser.add_argument("--convert", "-c", type=str, required=True,
                         help="Provide the absolute file pathname to the \
                         Input Data Excel file from Tom for BDO DSM2 \
                         simulation")
-    parser.add_argument("--forecast", "-f", type=str,
+    parser.add_argument("--forecast", "-f", type=str, required=True,
                         help="Provide the absolute file pathname to the \
                         forecast input *.dss file that Ian provided")
-    parser.add_argument("--dicu", "-d", type=str,
+    parser.add_argument("--dicu", "-d", type=str, required=True,
                         help="Provide the absolute filepath name to the \
                         dicu input *.dss file that Ian provided")
-    parser.add_argument("--forecast_start", "-fs", type=valid_date,
+    parser.add_argument("--forecast_start", "-fs", type=valid_date, required=True,
                         help="Provide a valid forecast start date \
                         e.g. 2018-08-23")
-    parser.add_argument("--forecast_end", "-fe", type=valid_date,
+    parser.add_argument("--forecast_end", "-fe", type=valid_date, required=True,
                         help="Provide a valid forecast end date \
                         e.g. 2018-08-24")
-    parser.add_argument("--scenario_id", "-sd", type=valid_scenario_id,
+    parser.add_argument("--scenario_id", "-sd", type=valid_scenario_id, required=True,
                         help="Provide a single capital letter as the scenario \
                         id to be used in the *.dss file as an unique \
                         identifier. The baseline scenario is usually 'A'. So \
                         the scenario id is usually 'B'")
+    parser.add_argument("--yes", "-y", action="store_true",
+                        help="Skip the interactive confirmation when the \
+                        scenario id is 'A' (used by WeeklyWorkflow.bat)")
     # creates an args object from the parsed user input
     args = parser.parse_args()
+
+    # confirm overwriting the baseline letter unless --yes was supplied
+    if args.scenario_id == 'A' and not args.yes:
+        ans = input("Are you sure you want to use 'A'? \n" +
+                    "'A' is typically used as the baseline identifier? [Y/N] ")
+        if ans.strip().upper() != 'Y':
+            sys.exit(1)
+
+    # fail early if an input file is missing
+    for _k in ("convert", "forecast", "dicu"):
+        if not os.path.isfile(args.__dict__[_k]):
+            print("ERROR: file not found for --{}: {}".format(_k, args.__dict__[_k]))
+            sys.exit(1)
     # assigns args object into a pythong dictionary
     ini_dict = vars(args)
     # creates global logger object for logging

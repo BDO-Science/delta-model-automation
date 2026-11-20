@@ -14,8 +14,9 @@ Description: Script prepared to compute proportion overlap ratios to compare
 hourly time series of velocities in the Delta for two different real time scenarios 
 (e.g., with puming and without puming out of the Delta).
 
-The current configuration of the code uses the following OMR bins:
-    '-6500', '-5000', '-3500', '-2000'. 
+The OMR bins (and their scenario letters) are NOT hard-coded: they are read from
+    Model/DataExternal/<week>/scenarios_<week>.csv, which scenario_discovery.py writes
+    from the names of the weekly OMRI csv files.
 The current configuration of the code computes weekly overlap ratios for 3 separate 
 weeks - week 1, week 2, and week 3 - representing three weeks of a forward
 looking Delta operation + boundary conditions 
@@ -46,7 +47,12 @@ import scipy.integrate
 import datetime as dt
 from concurrent.futures import ProcessPoolExecutor
 import argparse
+import sys
 from pathlib import Path
+
+# scenario_discovery.py lives in the Model folder (one level up, then Model)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "Model"))
+from scenario_discovery import load_scenarios
 #%%#############################################################################
 # Function to compute proportion ratios for two scenarios for all channels
 def return_proportion_ratio_df(n_stat, NAA_gdf_daily_f, NAA_NP_gdf_daily_f,
@@ -187,7 +193,7 @@ def valid_date(fs):
 #define function to generate proportional overlap data in parallel
 #previous code: forecast_start was defined as global parameter and manually updated
 #current code: forecast_start provided as input in command line
-def generate_weekly_data(run_week_loop, scenario, forecast_start):
+def generate_weekly_data(run_week_loop, scn, omr_val, forecast_start):
         
     #DEFINE INITIAL CUSTOM GLOBAL PARAMETERS #####################################################
     #define starting date for analysis, must match same date used to name DSM2 Model\Output\ folder
@@ -201,13 +207,9 @@ def generate_weekly_data(run_week_loop, scenario, forecast_start):
     
     
     #DEFINE OTHER INITIAL PARAMETERS #####################################################
-    #define OMR scenario dictionary
-    scn_dict = {'A': -5000, 'B': -3500, 'C': -2000, 'D': -6500}
-    #A: OMRNeg5000
-    #B: OMRNeg3500
-    #C: OMRNeg2000
-    #D: OMRNeg6500
-    
+    #scenario letter (scn) and OMR value (omr_val, e.g. -5000) are passed in from the
+    #scenario manifest for this week (see main block)
+
     #define flow bins from input data
     #code not currently necessary - can delete but requires changing res_df exception in prop overlap code
     flow_bins = ['na','na','na']
@@ -237,19 +239,9 @@ def generate_weekly_data(run_week_loop, scenario, forecast_start):
     ################################################################################
     #LOOP THROUGH EACH SCENARIO AND WEEK TO CALCULATE VELOVITY OVERLAPS ############
     
-    #loop through OMR scenario (4 total)
-    #for sss in range(4): #should be (4) for all 4 scenarios
-    #define scenario
-    #sss=1
-    sss=scenario
-    
-    #define scenario for this loop
-    scn = list(scn_dict.keys())[sss]
-    print ('\n\nNow starting scenario %s' % scn)
-    
-    #OMR value and flow bin for this scenario - need to define for each realtime run
-    omr_val = scn_dict.get(scn)
-    
+    #this call handles ONE scenario letter (scn) for ONE week (run_week_loop)
+    print ('\n\nNow starting scenario %s (OMR %s)' % (scn, omr_val))
+
     # Inputs: Input Filepaths and Filenames for HDF5 files (DSM2 output h5 files for each OMR scenario)
     #currently, csv files are generated with separate code, h5py_to_csv
     # Alt NAA (current realtime model run with pumping)
@@ -532,18 +524,55 @@ if __name__ == "__main__":
        os.mkdir(csvoutputFolder)
     
     
-    #define inputs for parallel code (1 input per parallel process = 12 inputs)
-    weeks = [1,2,3,1,2,3,1,2,3,1,2,3] 
-    #define OMR scenarios to be run in analaysis
-    #0 = A = -5,000
-    #1 = B = -3,500
-    #2 = C = -2,000
-    #3 = D = -6,250
-    scenarios = [0,0,0,1,1,1,2,2,2,3,3,3]
-    forecast_starts = [forecast_start]*12
-    
-    #run parallel process (spawn 12 processes, one for each scenario (4) and week (3))
+    #read the active OMR scenarios for this week (written by scenario_discovery.py)
+    try:
+        scen = load_scenarios(forecast_start)
+    except FileNotFoundError as e:
+        print("ERROR: %s" % e)
+        sys.exit(1)
+    scn_dict = {letter: int(d["omri"]) for letter, d in scen.items()}
+    print("Active OMR scenarios for %s:" % forecast_start)
+    for letter, omr in scn_dict.items():
+        print("  %s = OMR %s" % (letter, omr))
+
+    #check that hydro output exists for every active scenario, with and without pumping
+    missing = []
+    for letter in scn_dict:
+        for folder in ("Model", "Model_NOPUMP"):
+            h5 = os.path.join(master_fpath1, folder, "Output", forecast_start, "hydro",
+                              "%s-21%s.h5" % (forecast_start, letter))
+            if not os.path.isfile(h5):
+                missing.append(h5)
+    if missing:
+        print("ERROR: missing DSM2 hydro output for the active scenarios:")
+        for m in missing:
+            print("  %s" % m)
+        sys.exit(1)
+
+    #warn about csv files left over from scenarios that are not active this week
+    active_tags = set("Neg%d" % abs(o) if o < 0 else "%d" % o for o in scn_dict.values())
+    for f in sorted(os.listdir(csvoutputFolder)):
+        if f.startswith("DEZOI_OMR_"):
+            tag = f.split("_")[2]
+            if tag not in active_tags:
+                print("WARNING: stale file from a non-active OMR scenario (ignored by plotting scripts): %s" % f)
+
+    #define inputs for parallel code (1 input per parallel process = 3 weeks x number of scenarios)
+    jobs = [(w, letter, omr) for letter, omr in scn_dict.items() for w in (1, 2, 3)]
+    print("Running %d parallel jobs (%d scenarios x 3 weeks)" % (len(jobs), len(scn_dict)))
+
+    #run parallel process (one for each scenario and week) and surface any worker errors
+    failed = []
     with ProcessPoolExecutor() as executor:
-        executor.map(generate_weekly_data, weeks, scenarios, forecast_starts)
-    
-   
+        futures = [(job, executor.submit(generate_weekly_data, job[0], job[1], job[2], forecast_start))
+                   for job in jobs]
+        for (w, letter, omr), fut in futures:
+            try:
+                fut.result()
+            except Exception as e:
+                failed.append((letter, w))
+                print("ERROR: scenario %s (OMR %s) week %s failed: %r" % (letter, omr, w, e))
+    if failed:
+        print("ZOI preprocessing FAILED for %d job(s)." % len(failed))
+        sys.exit(1)
+    print("ZOI preprocessing completed for scenarios: %s" % ", ".join(scn_dict))

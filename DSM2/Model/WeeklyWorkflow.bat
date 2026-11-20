@@ -14,11 +14,18 @@ exit /b
 :main
 shift
 setlocal enabledelayedexpansion
+set "MODEL_DIR=%CD%"
 
 rem =========================================================
 rem Interactive control flag
 rem =========================================================
 set RUNALL=0
+rem =========================================================
+rem PTM station lists (edit here; same stations for every scenario)
+rem =========================================================
+set "NP_STATIONS=350 469 465 99"
+set "PP_STATIONS=314 352 361 367 362 356 463 459 354 404 322 462 42 39 323 350 249 261 34 41 46 469 465 353 29 86 99 225 329 420 359 75 145 227 293 304 351 365"
+set "SP_STATIONS=350"
 
 echo.
 echo ======================================
@@ -37,6 +44,31 @@ if not exist "DataExternal\%NEWEST%" (
 echo Using folder: %NEWEST%
 
 rem =========================================================
+rem 0. Scenario discovery (always runs, not skippable)
+rem =========================================================
+call :logEcho Discovering OMR scenarios in DataExternal\%NEWEST%
+
+python scenario_discovery.py "%NEWEST%"
+if errorlevel 1 (
+    call :logEcho ERROR: Scenario discovery failed!
+    pause
+    exit /b 1
+)
+
+set "SCEN_FILE=DataExternal\%NEWEST%\scenarios_%NEWEST%.cmd"
+if not exist "%SCEN_FILE%" (
+    call :logEcho ERROR: %SCEN_FILE% not found!
+    pause
+    exit /b 1
+)
+call "%SCEN_FILE%"
+
+call :logEcho Scenarios found: %SCEN_COUNT%
+for %%S in (%SCEN_LIST%) do call :logEcho   Scenario %%S = OMRI !SCEN_%%S_OMRI!
+set "RUN_D=0"
+if defined SCEN_D_OMRI set "RUN_D=1"
+
+rem =========================================================
 rem 1. InputUpdates
 rem =========================================================
 call :AskRun "Section 1 - InputUpdates"
@@ -48,94 +80,101 @@ call :logEcho ======================================
 
 python InputUpdates.py "%NEWEST%"
 if errorlevel 1 (
-echo ERROR: InputUpdates.py failed!
-pause
-exit /b 1
+    call :logEcho ERROR: InputUpdates.py failed!
+    pause
+    exit /b 1
 )
-
-set INPUTFILE=DataExternal\%NEWEST%\InputUpdates_%NEWEST%.txt
-
-if not exist "%INPUTFILE%" (
-call :logEcho ERROR: InputUpdates file not found!
-exit /b 1
-)
-
-call :logEcho Reading dates from InputUpdates file
-set "FORE="
-set "END="
-
-for /f "usebackq tokens=1,* delims==" %%A in ("%INPUTFILE%") do (
-    set "KEY=%%A"
-    set "VALUE=%%B"
-
-    set "KEY=!KEY: =!"
-    set "VALUE=!VALUE: =!"
-
-    if /I "!KEY!"=="FORE_START_DATE" set "FORE=!VALUE!"
-    if /I "!KEY!"=="END_DATE" set "END=!VALUE!"
-)
-
-call :ConvertDate %FORE% FORE_ISO
-call :ConvertDate %END% END_ISO
 
 :skip1
+rem ---- Always read dates (Section 2 needs them even if Section 1 was skipped)
+set "INPUTFILE=DataExternal\%NEWEST%\InputUpdates_%NEWEST%.txt"
+set "FORE="
+set "END="
+set "FORE_ISO="
+set "END_ISO="
+
+if exist "%INPUTFILE%" (
+    call :logEcho Reading dates from InputUpdates file
+    for /f "usebackq tokens=1,* delims==" %%A in ("%INPUTFILE%") do (
+        set "KEY=%%A"
+        set "VALUE=%%B"
+        set "KEY=!KEY: =!"
+        set "VALUE=!VALUE: =!"
+        if /I "!KEY!"=="FORE_START_DATE" set "FORE=!VALUE!"
+        if /I "!KEY!"=="END_DATE" set "END=!VALUE!"
+    )
+    if defined FORE call :ConvertDate !FORE! FORE_ISO
+    if defined END  call :ConvertDate !END! END_ISO
+) else (
+    call :logEcho WARNING: %INPUTFILE% not found - run Section 1 before Section 2
+)
+
 call :logEcho Skipping or completed Section 1
+
 
 rem =========================================================
 rem 2. Preprocessor
 rem =========================================================
-set "RUN_D=0"
-
 call :AskRun "Section 2 - Preprocessor"
 if errorlevel 1 goto skip2
 
-call :logEcho Running Preprocessor workflow
+if not defined FORE_ISO (
+    call :logEcho ERROR: Forecast dates not available. Run Section 1 first.
+    pause
+    exit /b 1
+)
+if not defined END_ISO (
+    call :logEcho ERROR: End date not available. Run Section 1 first.
+    pause
+    exit /b 1
+)
+
+call :logEcho Running Preprocessor workflow for scenarios: %SCEN_LIST%
 
 cd Preprocessor
 set "BASE=..\DataExternal\%NEWEST%"
 
-call :RunOMRI "-5000" A
-call :RunOMRI "-3500" B
-call :RunOMRI "-2000" C
-
-set "D_FILE="
-
-for %%F in ("%BASE%\*_OMRI *.csv") do (
-    if exist "%%F" (
-        echo %%~nxF| findstr /E /C:"_OMRI -5000.csv" /C:"_OMRI -3500.csv" /C:"_OMRI -2000.csv" >nul
-        if errorlevel 1 set "D_FILE=%%F"
+for %%S in (%SCEN_LIST%) do (
+    call :RunOMRIFile "%BASE%\!SCEN_%%S_FILE!" %%S
+    if errorlevel 1 (
+        call :logEcho ERROR: Preprocessing failed for scenario %%S
+        pause
+        exit /b 1
     )
 )
 
-if defined D_FILE (
-    set "RUN_D=1"
-    call :RunOMRIFile "!D_FILE!" D
-) else (
-    call :logEcho No Scenario D OMRI file found
+python ForecastDuplicate_STN.py -f ..\Input\timeseries\forecast.dss --scenarios %SCEN_LIST% --yes
+if errorlevel 1 (
+    call :logEcho ERROR: ForecastDuplicate_STN.py failed
+    pause
+    exit /b 1
 )
-
-python ForecastDuplicate_STN.py --forecast "Y" -f ..\Input\timeseries\forecast.dss
 
 cd ..
 
 :skip2
 call :logEcho Skipping or completed Section 2
-
 rem =========================================================
 rem 3. Hydro binaries
 rem =========================================================
 call :AskRun "Section 3 - Hydro binaries"
 if errorlevel 1 goto skip3
 
-call :logEcho Running hydro binaries
+call :logEcho Running hydro binaries for scenarios: %SCEN_LIST%
 
-.\bin\hydro .\Input\hydroA.inp || exit /b 1
-.\bin\hydro .\Input\hydroB.inp
-.\bin\hydro .\Input\hydroC.inp
-if "!RUN_D!"=="1" (
-.\bin\hydro .\Input\hydroD.inp
-) else (
-    call :logEcho Skipping Scenario D hydro
+for %%S in (%SCEN_LIST%) do (
+    if not exist ".\Input\hydro%%S.inp" (
+        call :logEcho ERROR: .\Input\hydro%%S.inp not found
+        pause
+        exit /b 1
+    )
+    call :logEcho Running hydro for scenario %%S
+    .\bin\hydro .\Input\hydro%%S.inp
+    if errorlevel 1 (
+        call :logEcho ERROR: hydro failed for scenario %%S
+        pause
+        exit /b 1
+    )
 )
 
 :skip3
@@ -148,7 +187,7 @@ call :AskRun "Section 4 - PTM NP"
 if errorlevel 1 goto skip4
 
 set "PTM=.\bin\ptm.bat"
-call :RunPTMNP || goto :fail_NP
+call :RunPTMType np "%NP_STATIONS%" || goto :fail_NP
 
 :skip4
 call :logEcho Skipping or completed Section 4
@@ -160,7 +199,7 @@ call :AskRun "Section 5 - PTM PP"
 if errorlevel 1 goto skip5
 
 set "PTM=.\bin\ptm.bat"
-call :RunPTMPP || goto :fail_PP
+call :RunPTMType pp "%PP_STATIONS%" || goto :fail_PP
 
 :skip5
 call :logEcho Skipping or completed Section 5
@@ -172,7 +211,7 @@ call :AskRun "Section 6 - PTM SP"
 if errorlevel 1 goto skip6
 
 set "PTM=.\bin\ptm.bat"
-call :RunPTMSP || goto :fail_SP
+call :RunPTMType sp "%SP_STATIONS%" || goto :fail_SP
 
 :skip6
 call :logEcho Skipping or completed Section 6
@@ -183,7 +222,13 @@ rem =========================================================
 call :AskRun "Section 7 - NoPumping"
 if errorlevel 1 goto skip7
 
-python "..\Model_NOPUMP\NoPumping.py" || exit /b 1
+call :logEcho Running NoPumping for scenarios: %SCEN_LIST%
+python "..\Model_NOPUMP\NoPumping.py" --scenarios %SCEN_LIST%
+if errorlevel 1 (
+    call :logEcho ERROR: NoPumping.py failed
+    pause
+    exit /b 1
+)
 
 :skip7
 call :logEcho Skipping or completed Section 7
@@ -199,17 +244,23 @@ pushd "..\Model_NOPUMP" || (
     exit /b 1
 )
 
-.\bin\hydro ".\Input\hydroA.inp" || (
-    popd
-    exit /b 1
-)
+call :logEcho Running NoPumping hydro for scenarios: %SCEN_LIST%
 
-.\bin\hydro ".\Input\hydroB.inp"
-.\bin\hydro ".\Input\hydroC.inp"
-if "!RUN_D!"=="1" (
-.\bin\hydro ".\Input\hydroD.inp"
-) else (
-    call :logEcho Skipping Scenario D NoPumping hydro
+for %%S in (%SCEN_LIST%) do (
+    if not exist ".\Input\hydro%%S.inp" (
+        call :logEcho ERROR: .\Input\hydro%%S.inp not found in Model_NOPUMP
+        popd
+        pause
+        exit /b 1
+    )
+    call :logEcho Running NoPumping hydro for scenario %%S
+    .\bin\hydro ".\Input\hydro%%S.inp"
+    if errorlevel 1 (
+        call :logEcho ERROR: NoPumping hydro failed for scenario %%S
+        popd
+        pause
+        exit /b 1
+    )
 )
 
 popd
@@ -280,12 +331,12 @@ rem =========================================================
 rem 13. PTM Plots
 rem =========================================================
 call :AskRun "Section 13 - PTM Plots"
+if errorlevel 1 goto skip13
 
 call :logEcho ======================================
 call :logEcho Running PTM plotting script
 call :logEcho ======================================
 
-if errorlevel 1 goto skip13
 pushd "..\Model" || (
     echo ERROR: Could not change to Model folder
     exit /b 1
@@ -295,7 +346,6 @@ python plot_ptm_particles.py %NEWEST% || exit /b 1
 
 :skip13
 call :logEcho Skipping or completed Section 13
-
 rem =========================================================
 rem STOP BEFORE LFS PRODUCTS
 rem =========================================================
@@ -317,17 +367,25 @@ if errorlevel 2 (
     pause
     exit /b 0
 )
+call :PrepareSLS
+if errorlevel 1 (
+    echo.
+    echo WARNING: DSM2\SLS\%NEWEST% could not be prepared.
+    echo Sections 14 and 15 will fail until it exists with a survey CSV in it.
+    pause
+)
 
 rem =========================================================
 rem 14. LFS Plots
 rem =========================================================
 call :AskRun "Section 14 - LFS Plots"
+if errorlevel 1 goto skip14
 
 call :logEcho ======================================
 call :logEcho Running LFS plotting script
 call :logEcho ======================================
 
-if errorlevel 1 goto skip14
+
 pushd "..\Model" || (
     echo ERROR: Could not change to Model folder
     exit /b 1
@@ -342,12 +400,12 @@ rem =========================================================
 rem 15. Entrainment Plots
 rem =========================================================
 call :AskRun "Section 15 - Entrainment Plots"
+if errorlevel 1 goto skip15
 
 call :logEcho ======================================
 call :logEcho Running Entrainment plotting script
 call :logEcho ======================================
 
-if errorlevel 1 goto skip15
 pushd "..\Model" || (
     echo ERROR: Could not change to Model folder
     exit /b 1
@@ -388,45 +446,30 @@ exit /b 0
 
 
 :ConvertDate
-:: %1 = DDMonYYYY
-:: %2 = output variable
-set DATE=%1
-set DAY=%DATE:~0,2%
-set MON=%DATE:~2,3%
-set YEAR=%DATE:~5,4%
-if "%MON%"=="Jan" set MM=01
-if "%MON%"=="Feb" set MM=02
-if "%MON%"=="Mar" set MM=03
-if "%MON%"=="Apr" set MM=04
-if "%MON%"=="May" set MM=05
-if "%MON%"=="Jun" set MM=06
-if "%MON%"=="Jul" set MM=07
-if "%MON%"=="Aug" set MM=08
-if "%MON%"=="Sep" set MM=09
-if "%MON%"=="Oct" set MM=10
-if "%MON%"=="Nov" set MM=11
-if "%MON%"=="Dec" set MM=12
-set %2=%YEAR%-%MM%-%DAY%
-exit /b
-
-:RunOMRI
-set SUFFIX=%~1
-set SD=%2
-for %%F in ("%BASE%\*_OMRI %SUFFIX%.csv") do (
-    if exist "%%F" (
-        call :logEcho Running %%~nxF  (Scenario %SD%)
-        python CSVToDSM2_pyhecdss.py ^
-            -c "%%F" ^
-            -f "..\Input\timeseries\forecast.dss" ^
-            -d "%BASE%\dicu.dss" ^
-            -fs %FORE_ISO% ^
-            -fe %END_ISO% ^
-            -sd %SD%
-        exit /b
-    )
+:: %1 = DDMonYYYY   %2 = output variable
+set "CD_IN=%~1"
+set "CD_DAY=%CD_IN:~0,2%"
+set "CD_MON=%CD_IN:~2,3%"
+set "CD_YEAR=%CD_IN:~5,4%"
+set "CD_MM="
+if /I "%CD_MON%"=="Jan" set "CD_MM=01"
+if /I "%CD_MON%"=="Feb" set "CD_MM=02"
+if /I "%CD_MON%"=="Mar" set "CD_MM=03"
+if /I "%CD_MON%"=="Apr" set "CD_MM=04"
+if /I "%CD_MON%"=="May" set "CD_MM=05"
+if /I "%CD_MON%"=="Jun" set "CD_MM=06"
+if /I "%CD_MON%"=="Jul" set "CD_MM=07"
+if /I "%CD_MON%"=="Aug" set "CD_MM=08"
+if /I "%CD_MON%"=="Sep" set "CD_MM=09"
+if /I "%CD_MON%"=="Oct" set "CD_MM=10"
+if /I "%CD_MON%"=="Nov" set "CD_MM=11"
+if /I "%CD_MON%"=="Dec" set "CD_MM=12"
+if not defined CD_MM (
+    call :logEcho ERROR: Could not parse date "%~1"
+    exit /b 1
 )
-call :logEcho WARNING: No OMRI file found for suffix %SUFFIX%
-exit /b
+set "%~2=%CD_YEAR%-%CD_MM%-%CD_DAY%"
+exit /b 0
 
 :RunOMRIFile
 set "OMRI_FILE=%~1"
@@ -445,224 +488,40 @@ python CSVToDSM2_pyhecdss.py ^
     -d "%BASE%\dicu.dss" ^
     -fs %FORE_ISO% ^
     -fe %END_ISO% ^
-    -sd %SD%
+    -sd %SD% ^
+    --yes
+exit /b %errorlevel%
 
-exit /b
+:RunPTMType
+rem %1 = run type (np|pp|sp)   %2 = space-separated station list
+set "PT_TYPE=%~1"
+set "PT_STATIONS=%~2"
+set "PT_FAIL=0"
 
-:RunPTMNP
-rem -----------------------
-rem NP PTM runs
-rem -----------------------
-
-call "%PTM%" ".\Input\PTM\np\ptmA_350.inp"
-call "%PTM%" ".\Input\PTM\np\ptmA_469.inp"
-call "%PTM%" ".\Input\PTM\np\ptmA_465.inp"
-call "%PTM%" ".\Input\PTM\np\ptmA_99.inp"
-
-call "%PTM%" ".\Input\PTM\np\ptmB_350.inp"
-call "%PTM%" ".\Input\PTM\np\ptmB_469.inp"
-call "%PTM%" ".\Input\PTM\np\ptmB_465.inp"
-call "%PTM%" ".\Input\PTM\np\ptmB_99.inp"
-
-call "%PTM%" ".\Input\PTM\np\ptmC_350.inp"
-call "%PTM%" ".\Input\PTM\np\ptmC_469.inp"
-call "%PTM%" ".\Input\PTM\np\ptmC_465.inp"
-call "%PTM%" ".\Input\PTM\np\ptmC_99.inp"
-
-if "!RUN_D!"=="1" (
-call "%PTM%" ".\Input\PTM\np\ptmD_350.inp"
-call "%PTM%" ".\Input\PTM\np\ptmD_469.inp"
-call "%PTM%" ".\Input\PTM\np\ptmD_465.inp"
-call "%PTM%" ".\Input\PTM\np\ptmD_99.inp"
-) else (
-    call :logEcho Skipping Scenario D NP PTM runs
+rem ---- Pass 1: check every input file exists BEFORE starting long runs
+for %%S in (%SCEN_LIST%) do (
+    for %%N in (%PT_STATIONS%) do (
+        if not exist ".\Input\PTM\%PT_TYPE%\ptm%%S_%%N.inp" (
+            call :logEcho ERROR: Missing .\Input\PTM\%PT_TYPE%\ptm%%S_%%N.inp
+            set "PT_FAIL=1"
+        )
+    )
 )
-exit /b
+if "!PT_FAIL!"=="1" exit /b 1
 
-:RunPTMPP
-rem -----------------------
-rem PP PTM runs
-rem -----------------------
-call "%PTM%" ".\Input\PTM\pp\ptmA_314.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_352.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_361.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_367.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_362.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_356.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_463.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_459.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_354.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_404.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_322.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_462.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_42.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_39.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_323.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_350.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_249.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_261.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_34.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_41.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_46.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_469.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_465.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_353.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_29.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_86.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_99.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_225.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_329.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_420.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_359.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_75.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_145.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_227.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_293.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_304.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_351.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmA_365.inp"
-
-call "%PTM%" ".\Input\PTM\pp\ptmB_352.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_361.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_367.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_362.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_356.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_463.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_459.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_354.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_404.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_322.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_462.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_42.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_39.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_314.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_323.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_350.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_249.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_261.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_34.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_41.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_46.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_469.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_465.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_353.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_29.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_86.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_99.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_225.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_329.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_420.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_359.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_75.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_145.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_227.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_293.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_304.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_351.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmB_365.inp"
-
-call "%PTM%" ".\Input\PTM\pp\ptmC_352.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_361.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_367.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_362.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_356.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_463.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_459.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_354.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_404.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_322.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_462.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_42.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_39.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_314.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_323.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_350.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_249.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_261.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_34.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_41.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_46.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_469.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_465.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_353.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_29.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_86.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_99.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_225.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_329.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_420.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_359.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_75.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_145.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_227.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_293.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_304.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_351.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmC_365.inp"
-if "!RUN_D!"=="1" (
-call "%PTM%" ".\Input\PTM\pp\ptmD_352.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_361.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_367.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_362.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_356.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_463.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_459.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_354.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_404.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_322.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_462.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_42.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_39.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_314.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_323.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_350.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_249.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_261.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_34.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_41.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_46.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_469.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_465.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_353.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_29.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_86.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_99.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_225.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_329.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_420.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_359.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_75.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_145.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_227.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_293.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_304.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_351.inp"
-call "%PTM%" ".\Input\PTM\pp\ptmD_365.inp"
-) else (
-    call :logEcho Skipping Scenario D PP PTM runs
+rem ---- Pass 2: run them (scenario outer loop, station inner loop)
+for %%S in (%SCEN_LIST%) do (
+    for %%N in (%PT_STATIONS%) do (
+        call :logEcho Running PTM %PT_TYPE% - scenario %%S - station %%N
+        call "%PTM%" ".\Input\PTM\%PT_TYPE%\ptm%%S_%%N.inp"
+        if errorlevel 1 (
+            call :logEcho ERROR: PTM failed for ptm%%S_%%N.inp ^(%PT_TYPE%^)
+            set "PT_FAIL=1"
+        )
+    )
 )
-exit /b
-
-:RunPTMSP
-rem -----------------------
-rem SP PTM runs
-rem -----------------------
-call "%PTM%" ".\Input\PTM\sp\ptmA_350.inp"
-if errorlevel 1 (
-    echo ERROR: SPptmA_350.inp failed
-    pause
-    exit /b 1
-)
-call "%PTM%" ".\Input\PTM\sp\ptmB_350.inp"
-call "%PTM%" ".\Input\PTM\sp\ptmC_350.inp"
-if "!RUN_D!"=="1" (
-call "%PTM%" ".\Input\PTM\sp\ptmD_350.inp"
-) else (
-    call :logEcho Skipping Scenario D SP PTM runs
-)
-
-rem (Repeat similar for B, C, D as in NP and PP)
-exit /b
+if "!PT_FAIL!"=="1" exit /b 1
+exit /b 0
 
 :fail_NP
 call :logEcho ERROR: PTM NP failed
@@ -682,3 +541,47 @@ exit /b 1
 :logEcho
 echo %*
 exit /b
+:PrepareSLS
+rem Create DSM2\SLS\<NEWEST> by copying the most recent EARLIER weekly SLS folder
+set "SLS_ROOT="
+for %%I in ("%MODEL_DIR%\..\SLS") do set "SLS_ROOT=%%~fI"
+set "SLS_DEST=%SLS_ROOT%\%NEWEST%"
+
+if not exist "%SLS_ROOT%\" (
+    call :logEcho ERROR: SLS folder not found: !SLS_ROOT!
+    exit /b 1
+)
+
+if exist "%SLS_DEST%\" (
+    call :logEcho SLS folder %NEWEST% already exists - using it as is
+    exit /b 0
+)
+
+set "SLS_SRC="
+for /f "delims=" %%D in ('dir /b /ad /o-n "%SLS_ROOT%" 2^>nul') do (
+    if not defined SLS_SRC (
+        echo %%D| findstr /r /x "[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]" >nul
+        if not errorlevel 1 (
+            if %%D lss %NEWEST% set "SLS_SRC=%%D"
+        )
+    )
+)
+
+if not defined SLS_SRC (
+    call :logEcho ERROR: No weekly SLS folder earlier than %NEWEST% was found to copy from
+    exit /b 1
+)
+
+call :logEcho Copying SLS folder !SLS_SRC! to %NEWEST%
+xcopy "%SLS_ROOT%\!SLS_SRC!" "%SLS_DEST%\" /E /I /Y /Q >nul
+if errorlevel 1 (
+    call :logEcho ERROR: Copy of the SLS folder failed
+    exit /b 1
+)
+
+dir /b "%SLS_DEST%\*.csv" >nul 2>&1
+if errorlevel 1 call :logEcho WARNING: No CSV files found in !SLS_DEST!
+
+call :logEcho Created !SLS_DEST! from !SLS_SRC!
+call :logEcho NOTE: This reuses the survey from !SLS_SRC!. If a newer SLS survey is out, replace the CSV in !SLS_DEST!.
+exit /b 0
