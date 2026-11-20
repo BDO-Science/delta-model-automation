@@ -22,6 +22,9 @@ format:
     toc: true
     toc-depth: 4
     number-sections: false
+    include-in-header:
+      text: |
+        \usepackage{pdflscape}
 editor: visual
 ---
 
@@ -244,6 +247,11 @@ figure_type = "standard"
 )
 ```
 
+```{=latex}
+\clearpage
+```
+
+
 ::: notes
 **Notes:** Contours indicate the proportional overlap of hourly average velocity Gaussian KDEs for a one-week period from DSM2 hydro simulations with and without Delta exports active. DSM2 nodes that were sufficiently different from neighboring nodes to create isolated contours at several OMR flows were removed.
 :::
@@ -274,6 +282,28 @@ figure_type = "standard"
 *Key: cfs = cubic feet per second, OMR = Old and Middle River*
 :::
 
+
+
+```{=latex}
+\clearpage
+\begin{landscape}
+```
+
+
+```{=openxml}
+<w:p>
+  <w:pPr>
+    <w:sectPr>
+      <w:type w:val="nextPage"/>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"
+               w:header="720" w:footer="720" w:gutter="0"/>
+      <w:cols w:space="720"/>
+    </w:sectPr>
+  </w:pPr>
+</w:p>
+```
+
 ```{r}
 #| label: tbl-channel-length
 #| tbl-cap: "Proportion of DSM2 Channel Length with Hydrologic Alteration from Pumping"
@@ -282,6 +312,29 @@ create_channel_length_table(
 run_paths$zoi
 )
 ```
+
+
+```{=openxml}
+<w:p>
+  <w:pPr>
+    <w:sectPr>
+      <w:type w:val="nextPage"/>
+      <w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/>
+      <w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720"
+               w:header="360" w:footer="360" w:gutter="0"/>
+      <w:cols w:space="720"/>
+    </w:sectPr>
+  </w:pPr>
+</w:p>
+```
+
+
+```{=latex}
+\end{landscape}
+\clearpage
+```
+
+
 
 ::: notes
 **Notes:** Sum channel length includes the length of channels within the Delta that have a calculated hydrologic alteration level falling within each category.
@@ -353,6 +406,11 @@ insert_static_figure(
 "ptm_injection_flux_locations.png"
 )
 ```
+
+```{=latex}
+\clearpage
+```
+
 
 ### Neutrally Buoyant Particles (NP)
 
@@ -700,6 +758,11 @@ insert_static_figure(
 )
 ```
 
+```{=latex}
+\clearpage
+```
+
+
 ::: notes
 **Note:** No DSM2 nodes are west of the West Suisun Bay subregion, so the furthest west node in the DSM2 domain is used to represent particle entrainment for all subregions west of West Suisun Bay.
 :::
@@ -715,6 +778,18 @@ insert_static_figure(
 )
 ```
 
+```{=latex}
+\clearpage
+```
+
+
+
+
+```{=latex}
+\clearpage
+\begin{landscape}
+```
+
 ```{r}
 #| label: tbl-sls-processing
 #| tbl-cap: "Percent of Smelt Larva Survey Sample Results Processed"
@@ -723,6 +798,13 @@ create_static_csv_table(
 "static_sls_processing.csv"
 )
 ```
+
+```{=latex}
+\end{landscape}
+\clearpage
+```
+
+
 
 ::: key
 *Key: SLS = Smelt Larva Survey*
@@ -739,6 +821,30 @@ create_static_csv_table(
 )
 ```
 
+
+
+```{=latex}
+\clearpage
+\begin{landscape}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+```
+
+
+```{=openxml}
+<w:p>
+  <w:pPr>
+    <w:sectPr>
+      <w:type w:val="nextPage"/>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"
+               w:header="720" w:footer="720" w:gutter="0"/>
+      <w:cols w:space="720"/>
+    </w:sectPr>
+  </w:pPr>
+</w:p>
+```
+
 ```{r}
 #| label: tbl-lfs-week1
 #| tbl-cap: !expr cap_lfsentr_week1
@@ -751,6 +857,30 @@ run_paths$dataexternal
 )
 ```
 
+
+```{=openxml}
+<w:p>
+  <w:pPr>
+    <w:sectPr>
+      <w:type w:val="nextPage"/>
+      <w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/>
+      <w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720"
+               w:header="360" w:footer="360" w:gutter="0"/>
+      <w:cols w:space="720"/>
+    </w:sectPr>
+  </w:pPr>
+</w:p>
+```
+
+
+```{=latex}
+\normalsize
+\end{landscape}
+\clearpage
+```
+
+
+
 ::: notes
 **Notes:** Values between 0.0 and 0.1 are indicated with \<0.1.
 
@@ -760,6 +890,30 @@ The PTM entrained (%) value reflects the total entrained particles from all subr
 ::: key
 *Key: cfs = cubic feet per second, LFS = Longfin Smelt, OMR = Old and Middle River*
 :::
+
+
+
+```{=latex}
+\clearpage
+\begin{landscape}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+```
+
+
+```{=openxml}
+<w:p>
+  <w:pPr>
+    <w:sectPr>
+      <w:type w:val="nextPage"/>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"
+               w:header="720" w:footer="720" w:gutter="0"/>
+      <w:cols w:space="720"/>
+    </w:sectPr>
+  </w:pPr>
+</w:p>
+```
 
 ```{r}
 #| label: tbl-lfs-week2
@@ -773,6 +927,30 @@ run_paths$dataexternal
 )
 ```
 
+
+```{=openxml}
+<w:p>
+  <w:pPr>
+    <w:sectPr>
+      <w:type w:val="nextPage"/>
+      <w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/>
+      <w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720"
+               w:header="360" w:footer="360" w:gutter="0"/>
+      <w:cols w:space="720"/>
+    </w:sectPr>
+  </w:pPr>
+</w:p>
+```
+
+
+```{=latex}
+\normalsize
+\end{landscape}
+\clearpage
+```
+
+
+
 ::: notes
 **Notes:** Values between 0.0 and 0.1 are indicated with \<0.1.
 
@@ -782,6 +960,30 @@ The PTM entrained (%) value reflects the total entrained particles from all subr
 ::: key
 *Key: cfs = cubic feet per second, LFS = Longfin Smelt, OMR = Old and Middle River*
 :::
+
+
+
+```{=latex}
+\clearpage
+\begin{landscape}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+```
+
+
+```{=openxml}
+<w:p>
+  <w:pPr>
+    <w:sectPr>
+      <w:type w:val="nextPage"/>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"
+               w:header="720" w:footer="720" w:gutter="0"/>
+      <w:cols w:space="720"/>
+    </w:sectPr>
+  </w:pPr>
+</w:p>
+```
 
 ```{r}
 #| label: tbl-lfs-week3
@@ -794,6 +996,30 @@ results_date,
 run_paths$dataexternal
 )
 ```
+
+
+```{=openxml}
+<w:p>
+  <w:pPr>
+    <w:sectPr>
+      <w:type w:val="nextPage"/>
+      <w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/>
+      <w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720"
+               w:header="360" w:footer="360" w:gutter="0"/>
+      <w:cols w:space="720"/>
+    </w:sectPr>
+  </w:pPr>
+</w:p>
+```
+
+
+```{=latex}
+\normalsize
+\end{landscape}
+\clearpage
+```
+
+
 
 ::: notes
 **Notes:** Values between 0.0 and 0.1 are indicated with \<0.1.

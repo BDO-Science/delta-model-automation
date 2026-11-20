@@ -311,9 +311,11 @@ clean_table_for_non_html <- function(table_data) {
 render_non_html_table <- function(table_data, col_names = NULL, align = "c") {
   table_data <- clean_table_for_non_html(table_data)
 
-  if (!is.null(col_names)) {
-    col_names <- strip_html_for_non_html(col_names)
+  if (is.null(col_names)) {
+    col_names <- names(table_data)
   }
+
+  col_names <- strip_html_for_non_html(col_names)
 
   # Use a plain Markdown pipe table for BOTH Word and PDF.
   # Pandoc/Quarto converts this table to the target format.
@@ -375,12 +377,6 @@ insert_html_snapshot_figure <- function(
     results_folder, file_name, figure_id, figure_title,
     vwidth = 1400, vheight = 900, delay = 1
 ) {
-  html_path <- file.path(results_folder, file_name)
-
-  if (!file.exists(html_path)) {
-    stop(paste("Interactive HTML file not found:", html_path))
-  }
-
   static_file <- get_static_png_match(
     html_file = file_name,
     results_folder = results_folder
@@ -393,13 +389,64 @@ insert_html_snapshot_figure <- function(
     caption_text <- gsub("\\[", "\\\\[", figure_title)
     caption_text <- gsub("\\]", "\\\\]", caption_text)
 
+    html_name <- basename(file_name)
+
+    figure_width <- if (
+      grepl("^ZOI_Map_week[123]\\.html$", html_name, ignore.case = TRUE)
+    ) {
+      "72%"
+    } else if (
+      grepl("^ZOI_Proportional_ChannelLength_", html_name, ignore.case = TRUE)
+    ) {
+      "95%"
+    } else if (
+      grepl("^PTM_(NP|PP)_", html_name, ignore.case = TRUE)
+    ) {
+      "92%"
+    } else if (
+      grepl("^LFS", html_name, ignore.case = TRUE)
+    ) {
+      "92%"
+    } else if (
+      identical(html_name, "FlowExportReviewPlots.html")
+    ) {
+      "92%"
+    } else {
+      "88%"
+    }
+
     cat(
       paste0(
         "\n![", caption_text, "](",
         static_file_md,
-        "){#", figure_id, " width=100%}\n\n"
+        "){#",
+        figure_id,
+        " width=",
+        figure_width,
+        " fig-align=\"center\" fig-pos=\"!htbp\"}\n\n"
       )
     )
+
+    # Figure 1 belongs to the Reclamation section.
+    # Force LaTeX to place it before the following ZOI section.
+    if (
+      knitr::is_latex_output() &&
+      identical(html_name, "FlowExportReviewPlots.html")
+    ) {
+      cat("\n\\clearpage\n")
+    }
+
+    # Figures 5-7 and their key must remain together before PTM begins.
+    if (
+      knitr::is_latex_output() &&
+      grepl(
+        "^ZOI_Proportional_ChannelLength_week3\\.html$",
+        html_name,
+        ignore.case = TRUE
+      )
+    ) {
+      cat("\n\\clearpage\n")
+    }
 
   } else {
 
@@ -1302,20 +1349,7 @@ insert_interactive_figure <- function(
     results_folder,
     file_name
   )
-  
-  if (!file.exists(html_path)) {
-    stop(
-      paste(
-        "Interactive HTML file not found:",
-        normalizePath(
-          html_path,
-          winslash = "/",
-          mustWork = FALSE
-        )
-      )
-    )
-  }
-  
+
   if (!grepl("^fig-", figure_id)) {
     stop(
       paste0(
@@ -1324,7 +1358,9 @@ insert_interactive_figure <- function(
       )
     )
   }
-  
+
+  # Word/PDF use static PNGs. They should not depend on the
+  # interactive HTML source file being present.
   if (!knitr::is_html_output()) {
     snapshot_width <- if (figure_type == "proportional") 1400 else 1200
     snapshot_height <- max(as.integer(height), 700L)
@@ -1336,6 +1372,20 @@ insert_interactive_figure <- function(
         figure_title = figure_title,
         vwidth = snapshot_width,
         vheight = snapshot_height
+      )
+    )
+  }
+
+  # HTML output still requires the interactive source file.
+  if (!file.exists(html_path)) {
+    stop(
+      paste(
+        "Interactive HTML file not found:",
+        normalizePath(
+          html_path,
+          winslash = "/",
+          mustWork = FALSE
+        )
       )
     )
   }
@@ -1890,6 +1940,13 @@ insert_static_figure <- function(file_name) {
     )
   }
   
+  if (knitr::is_latex_output()) {
+    knitr::opts_current$set(
+      fig.pos = "!htbp",
+      out.width = "85%"
+    )
+  }
+
   knitr::include_graphics(
     normalizePath(
       file_name,
@@ -2374,6 +2431,12 @@ insert_ptm_html_figures <- function(
     )
   }
   
+  # In PDF, finish placing this complete PTM figure group
+  # before proceeding to the next table/node/section.
+  if (knitr::is_latex_output()) {
+    cat("\n\\clearpage\n")
+  }
+
   invisible(length(figure_specs))
 }
 
@@ -2711,7 +2774,7 @@ create_eco_ptm_table <- function(
   }
   
   if (!knitr::is_html_output()) {
-    return(render_non_html_table(output, align = "c"))
+    return(render_non_html_table(output, col_names = names(output), align = "c"))
   }
   table_html <- output |>
     knitr::kable(format = "html", escape = FALSE, align = "c") |>
@@ -2772,7 +2835,7 @@ create_static_csv_table <- function(file_name) {
   }
   
   if (!knitr::is_html_output()) {
-    return(render_non_html_table(table_data, align = "c"))
+    return(render_non_html_table(table_data, col_names = names(table_data), align = "c"))
   }
   table_html <- table_data |>
     knitr::kable(format = "html", escape = FALSE, align = "c") |>
@@ -2786,6 +2849,49 @@ create_static_csv_table <- function(file_name) {
 
 
 
+
+
+
+############################################################
+# Function: render_lfs_pdf_table
+#
+# Description:
+# PDF-only renderer for Tables 16-18.
+# The QMD already places these tables on landscape pages.
+# This renderer lets LaTeX calculate each column's natural
+# width from the full values, then fits the complete table to
+# the available landscape line width. This prevents large
+# abundance/entrainment values from running into adjacent
+# columns.
+#
+# HTML and Word do not use this function.
+############################################################
+
+render_lfs_pdf_table <- function(table_data) {
+
+  table_data <- clean_table_for_non_html(table_data)
+
+  latex_table <- knitr::kable(
+    table_data,
+    format = "latex",
+    booktabs = FALSE,
+    escape = TRUE,
+    align = rep("c", ncol(table_data)),
+    col.names = names(table_data)
+  )
+
+  knitr::asis_output(
+    paste0(
+      "\n\\begin{center}\n",
+      "\\setlength{\\tabcolsep}{2pt}\n",
+      "\\renewcommand{\\arraystretch}{1.08}\n",
+      "\\resizebox{\\linewidth}{!}{%\n",
+      latex_table,
+      "\n}\n",
+      "\\end{center}\n"
+    )
+  )
+}
 
 
 ############################################################
@@ -3334,6 +3440,20 @@ create_lfs_entrainment_table <- function(
   ##########################################################
 
   if (!knitr::is_html_output()) {
+
+    # PDF-only: Tables 16-18 are already placed on landscape
+    # pages by the QMD. Fit the full natural-width table to
+    # that landscape page so large numeric values remain in
+    # their own columns.
+    if (knitr::is_latex_output()) {
+      return(
+        render_lfs_pdf_table(
+          output
+        )
+      )
+    }
+
+    # Word remains unchanged.
     return(
       render_non_html_table(
         output,
@@ -3527,6 +3647,12 @@ insert_lfs_html_figures <- function(
     )
   }
   
+  # In PDF, keep the LFS scenario figures in the Longfin
+  # Smelt section and finish them before proceeding.
+  if (knitr::is_latex_output()) {
+    cat("\n\\clearpage\n")
+  }
+
   invisible(
     length(figure_specs)
   )
