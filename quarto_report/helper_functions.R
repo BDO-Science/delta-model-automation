@@ -172,6 +172,83 @@ get_selected_run_paths <- function(
 }
 
 
+############################################################
+# Function: detect_model_product_availability
+#
+# Description:
+# Detects whether optional PTM, ECO-PTM, and LFS model
+# products exist for the selected weekly run.
+#
+# Important:
+# - This function only determines whether a MODEL PRODUCT
+#   exists for the selected run.
+# - Existing PTM/LFS/ECO table and figure functions retain
+#   their current strict error checking. Therefore, if a
+#   product exists but one expected file is unexpectedly
+#   missing, the report still raises an error.
+# - Runs with no PTM/LFS products can render normally.
+############################################################
+
+detect_model_product_availability <- function(run_paths) {
+
+  has_matching_file <- function(folder, pattern) {
+
+    if (is.null(folder) ||
+        length(folder) == 0 ||
+        is.na(folder) ||
+        !dir.exists(folder)) {
+      return(FALSE)
+    }
+
+    length(
+      list.files(
+        folder,
+        pattern = pattern,
+        full.names = FALSE,
+        ignore.case = TRUE
+      )
+    ) > 0
+  }
+
+  # PTM is considered available when at least one weekly
+  # summary product exists in either the NP or PP folder.
+  # Once available, the existing strict PTM functions continue
+  # to validate every expected file used by the report.
+  has_ptm <- (
+    has_matching_file(
+      run_paths$np,
+      "^PTM_NP_Node[0-9]+_WeeklySummary\\.csv$"
+    ) ||
+    has_matching_file(
+      run_paths$pp,
+      "^PTM_PP_Node[0-9]+_WeeklySummary\\.csv$"
+    )
+  )
+
+  # ECO-PTM has its own independent product.
+  has_eco_ptm <- file.exists(
+    file.path(
+      run_paths$eco_ptm,
+      "survival_combined.csv"
+    )
+  )
+
+  # LFS is considered available when at least one weekly
+  # grouped summary exists. Once available, the existing LFS
+  # functions continue to validate the files they require.
+  has_lfs <- has_matching_file(
+    run_paths$lfs,
+    "^LFS_Summary_Grouped_Week[123]_.*\\.csv$"
+  )
+
+  list(
+    ptm = has_ptm,
+    eco_ptm = has_eco_ptm,
+    lfs = has_lfs
+  )
+}
+
+
 
 ############################################################
 # Function: format_cfs

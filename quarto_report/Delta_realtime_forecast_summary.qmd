@@ -48,6 +48,14 @@ config_file = "report_config.yml"
 
 results_date <- run_paths$results_date
 
+model_products <- detect_model_product_availability(
+run_paths
+)
+
+has_ptm_results <- model_products$ptm
+has_eco_ptm_results <- model_products$eco_ptm
+has_lfs_results <- model_products$lfs
+
 forecast_start_date <- as.Date(
 results_date,
 format = "%Y%m%d"
@@ -392,12 +400,23 @@ figure_type = "proportional"
 
 ## PTM (Particle Tracking Model) Results
 
+```{r}
+#| label: ptm-results-availability-note
+#| echo: false
+#| results: asis
+
+if (!has_ptm_results) {
+  cat("*PTM results are not available for this forecast run.*\n\n")
+}
+```
+
 **PTM Flux Evaluation Period:** `r fmt_date(forecast_start_date)` – `r fmt_date(forecast_end_date)`
 
 **Particles Injected:** `r fmt_date(week1_start)`
 
 ```{r}
 #| label: fig-ptm-injection-flux-locations
+#| eval: !expr has_ptm_results
 #| fig-cap: "Map of PTM Injection and Flux Locations"
 #| out-width: "85%"
 #| fig-align: center
@@ -416,6 +435,7 @@ insert_static_figure(
 
 ```{r}
 #| label: tbl-np-chipps
+#| eval: !expr has_ptm_results
 #| tbl-cap: "Neutral Particle Fate (percent flux across boundary) for Particles Injected at Chipps (DSM2 Node 465)"
 
 create_ptm_fate_table(
@@ -434,6 +454,7 @@ run_paths$np,
 
 ```{r}
 #| label: tbl-np-cache-slough
+#| eval: !expr has_ptm_results
 #| tbl-cap: "Neutral Particle Fate (percent flux across boundary) for Particles Injected at Cache Slough (DSM2 Node 350)"
 
 create_ptm_fate_table(
@@ -452,6 +473,7 @@ run_paths$np,
 
 ```{r}
 #| label: tbl-np-jersey-point
+#| eval: !expr has_ptm_results
 #| tbl-cap: "Neutral Particle Fate (percent flux across boundary) for Particles Injected at Jersey Point (DSM2 Node 469)"
 
 create_ptm_fate_table(
@@ -470,6 +492,7 @@ run_paths$np,
 
 ```{r}
 #| label: tbl-np-old-river
+#| eval: !expr has_ptm_results
 #| tbl-cap: "Neutral Particle Fate (percent flux across boundary) for Particles Injected at Old River (DSM2 Node 99)"
 
 create_ptm_fate_table(
@@ -488,6 +511,7 @@ run_paths$np,
 
 ```{r}
 #| label: render-np-node465
+#| eval: !expr has_ptm_results
 #| results: asis
 
 insert_ptm_html_figures(
@@ -503,6 +527,7 @@ height = 585
 
 ```{r}
 #| label: render-np-node350
+#| eval: !expr has_ptm_results
 #| results: asis
 
 insert_ptm_html_figures(
@@ -518,6 +543,7 @@ height = 585
 
 ```{r}
 #| label: render-np-node469
+#| eval: !expr has_ptm_results
 #| results: asis
 
 insert_ptm_html_figures(
@@ -533,6 +559,7 @@ height = 585
 
 ```{r}
 #| label: render-np-node99
+#| eval: !expr has_ptm_results
 #| results: asis
 
 insert_ptm_html_figures(
@@ -550,6 +577,7 @@ height = 585
 
 ```{r}
 #| label: tbl-pp-chipps
+#| eval: !expr has_ptm_results
 #| tbl-cap: "Surface Oriented Particle Fate (percent flux across boundary) for Particles Injected at Chipps (DSM2 Node 465)"
 
 create_ptm_fate_table(
@@ -568,6 +596,7 @@ run_paths$pp,
 
 ```{r}
 #| label: tbl-pp-cache-slough
+#| eval: !expr has_ptm_results
 #| tbl-cap: "Surface Oriented Particle Fate (percent flux across boundary) for Particles Injected at Cache Slough (DSM2 Node 350)"
 
 create_ptm_fate_table(
@@ -586,6 +615,7 @@ run_paths$pp,
 
 ```{r}
 #| label: tbl-pp-jersey-point
+#| eval: !expr has_ptm_results
 #| tbl-cap: "Surface Oriented Particle Fate (percent flux across boundary) for Particles Injected at Jersey Point (DSM2 Node 469)"
 
 create_ptm_fate_table(
@@ -604,6 +634,7 @@ run_paths$pp,
 
 ```{r}
 #| label: tbl-pp-old-river
+#| eval: !expr has_ptm_results
 #| tbl-cap: "Surface Oriented Particle Fate (percent flux across boundary) for Particles Injected at Old River (DSM2 Node 99)"
 
 create_ptm_fate_table(
@@ -622,6 +653,7 @@ run_paths$pp,
 
 ```{r}
 #| label: render-pp-node465
+#| eval: !expr has_ptm_results
 #| results: asis
 
 insert_ptm_html_figures(
@@ -637,6 +669,7 @@ height = 585
 
 ```{r}
 #| label: render-pp-node350
+#| eval: !expr has_ptm_results
 #| results: asis
 
 insert_ptm_html_figures(
@@ -652,6 +685,7 @@ height = 585
 
 ```{r}
 #| label: render-pp-node469
+#| eval: !expr has_ptm_results
 #| results: asis
 
 insert_ptm_html_figures(
@@ -667,6 +701,7 @@ height = 585
 
 ```{r}
 #| label: render-pp-node99
+#| eval: !expr has_ptm_results
 #| results: asis
 
 insert_ptm_html_figures(
@@ -697,6 +732,16 @@ ending_date
 
 ## ECO-PTM (Ecological Particle Tracking Model)
 
+```{r}
+#| label: eco-ptm-results-availability-note
+#| echo: false
+#| results: asis
+
+if (!has_eco_ptm_results) {
+  cat("*ECO-PTM results are not available for this forecast run.*\n\n")
+}
+```
+
 **ECO-PTM Results Evaluation Period:** `r fmt_date(forecast_start_date)` – `r fmt_date(forecast_end_date)`
 
 **Particles Injected:** `r fmt_date(forecast_start_date)`
@@ -705,6 +750,7 @@ ending_date
 
 ```{r}
 #| label: tbl-eco-route-ratio
+#| eval: !expr has_eco_ptm_results
 #| tbl-cap: !expr cap_salmon_Ratio
 
 create_eco_ptm_table(
@@ -724,6 +770,7 @@ table_type = "ratio"
 
 ```{r}
 #| label: tbl-eco-survival
+#| eval: !expr has_eco_ptm_results
 #| tbl-cap: !expr cap_salmon_survival
 
 create_eco_ptm_table(
@@ -739,6 +786,16 @@ table_type = "survival"
 
 ## Longfin Smelt Larval Population and PTM Analysis
 
+```{r}
+#| label: lfs-results-availability-note
+#| echo: false
+#| results: asis
+
+if (!has_lfs_results) {
+  cat("*Longfin Smelt PTM results are not available for this forecast run.*\n\n")
+}
+```
+
 **PTM Results Evaluation Period:** `r fmt_date(forecast_start_date)` – `r fmt_date(forecast_end_date)`
 
 **Particles Injected:** `r fmt_date(forecast_start_date)`
@@ -749,6 +806,7 @@ table_type = "survival"
 
 ```{r}
 #| label: fig-longfin-subregions
+#| eval: !expr has_lfs_results
 #| fig-cap: "Map of Delta Showing Longfin Smelt Subregions and DSM2 Nodes"
 #| out-width: "90%"
 #| fig-align: center
@@ -769,6 +827,7 @@ insert_static_figure(
 
 ```{r}
 #| label: fig-longfin-regions
+#| eval: !expr has_lfs_results
 #| fig-cap: "Map of Delta Showing Longfin Smelt Regions and DSM2 Nodes"
 #| out-width: "90%"
 #| fig-align: center
@@ -792,6 +851,7 @@ insert_static_figure(
 
 ```{r}
 #| label: tbl-sls-processing
+#| eval: !expr has_lfs_results
 #| tbl-cap: "Percent of Smelt Larva Survey Sample Results Processed"
 
 create_static_csv_table(
@@ -814,6 +874,7 @@ The DSM2 node used as an injection point, EDSM subregion, and LFS Region for rep
 
 ```{r}
 #| label: tbl-longfin-nodes
+#| eval: !expr has_lfs_results
 #| tbl-cap: "DSM2 Injection Node, EDSM Subregion, and LFS Region"
 
 create_static_csv_table(
@@ -847,6 +908,7 @@ create_static_csv_table(
 
 ```{r}
 #| label: tbl-lfs-week1
+#| eval: !expr has_lfs_results
 #| tbl-cap: !expr cap_lfsentr_week1
 
 create_lfs_entrainment_table(
@@ -917,6 +979,7 @@ The PTM entrained (%) value reflects the total entrained particles from all subr
 
 ```{r}
 #| label: tbl-lfs-week2
+#| eval: !expr has_lfs_results
 #| tbl-cap: !expr cap_lfsentr_week2
 
 create_lfs_entrainment_table(
@@ -987,6 +1050,7 @@ The PTM entrained (%) value reflects the total entrained particles from all subr
 
 ```{r}
 #| label: tbl-lfs-week3
+#| eval: !expr has_lfs_results
 #| tbl-cap: !expr cap_lfsentr_week3
 
 create_lfs_entrainment_table(
@@ -1033,6 +1097,7 @@ The PTM entrained (%) value reflects the total entrained particles from all subr
 
 ```{r}
 #| label: render-lfs-html-figures
+#| eval: !expr has_lfs_results
 #| results: asis
 
 insert_lfs_html_figures(
@@ -1044,6 +1109,7 @@ height = 700
 
 ```{r}
 #| label: render-date-entrainment-html-figures
+#| eval: !expr has_lfs_results
 #| results: asis
 
 insert_date_entrainment_html_figures(
